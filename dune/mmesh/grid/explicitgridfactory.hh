@@ -1,0 +1,562 @@
+// -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+// vi: set et ts=4 sw=2 sts=2:
+
+#ifndef DUNE_MMESH_GRID_EXPLICITGRIDFACTORY_HH
+#define DUNE_MMESH_GRID_EXPLICITGRIDFACTORY_HH
+
+// System includes
+#include <algorithm>
+#include <array>
+#include <limits>
+#include <map>
+#include <memory>
+
+// Dune includes
+#include <dune/common/to_unique_ptr.hh>
+#include <dune/geometry/referenceelements.hh>
+#include <dune/grid/common/gridfactory.hh>
+#include <dune/grid/common/boundarysegment.hh>
+
+// MMesh includes
+#include <dune/mmesh/mmesh.hh>
+#include <dune/mmesh/grid/common.hh>
+
+namespace Dune
+{
+
+  /** \brief specialization of the explicit GridFactory for MMesh
+   *
+   *  \ingroup GridFactory
+   */
+
+  //! The explicit grid factory for MMesh
+  template< class Grid >
+  class MMeshExplicitGridFactory
+    : public GridFactoryInterface< Grid >
+  {
+    typedef MMeshExplicitGridFactory< Grid > This;
+
+  public:
+    //! type of (scalar) coordinates
+    typedef typename Grid::ctype ctype;
+    typedef typename Grid::HostGridType HostGrid;
+
+    //! dimension of the grid
+    static const int dimension = Grid::dimension;
+    //! dimension of the world
+    static const int dimensionworld = Grid::dimensionworld;
+
+    //! type of vector for world coordinates
+    typedef FieldVector< ctype, dimensionworld > WorldVector;
+    //! type of matrix from world coordinates to world coordinates
+    typedef FieldMatrix< ctype, dimensionworld, dimensionworld > WorldMatrix;
+
+    typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
+    typedef std::map< std::vector< unsigned int >, std::size_t > BoundarySegments;
+
+    template< int codim >
+    struct Codim
+    {
+      typedef typename Grid::template Codim< codim >::Entity Entity;
+    };
+
+  private:
+    typedef typename HostGrid::Point Point;
+    typedef typename HostGrid::Vertex_handle Vertex_handle;
+    typedef typename Grid::template HostGridEntity<0> Element_handle;
+
+  public:
+    //! are boundary ids supported by this factory?
+    static const bool supportsBoundaryIds = true;
+    //! the factory is not able to create periodic meshes
+    static const bool supportPeriodicity = false;
+
+    /** default constructor */
+    MMeshExplicitGridFactory ()
+    {
+      tr_.tds().clear();
+    }
+
+    /** \brief insert an element into the macro grid
+     *
+     *  \param[in]  type      GeometryType of the new element
+     *  \param[in]  v         indices of the element vertices (starting with 0)
+     */
+    void insertElement ( const GeometryType &type,
+                         const std::vector< unsigned int > &v )
+    {
+      assert( type == GeometryTypes::simplex(dimension) );
+      assert( v.size() == dimension+1 );
+      auto w = v;
+
+      // Create element
+      createElement( w, countElements );
+
+      // Increase element count
+      countElements++;
+
+      // Store vertices to check occurence of element later
+      elementVerticesList.push_back( w );
+    };
+
+    /** \brief Creates an element (face) in the underlying triangulation data structure
+     *  \ingroup 2D
+     *
+     *  \param[in]  v     indices of the element vertices
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 2, void >
+    createElement( std::vector< unsigned int >& v, const size_t insertionIndex )
+    {
+      auto& p0 = vhs_[v[0]]->point();
+      auto& p1 = vhs_[v[1]]->point();
+      auto& p2 = vhs_[v[2]]->point();
+
+      // Check orientation of vertices
+      auto orientation = (p1.y() - p0.y()) * (p2.x() - p1.x()) - (p1.x() - p0.x()) * (p2.y() - p1.y());
+       // if clockwise, swap two vertices
+      if( orientation > 0.0 )
+        std::swap(v[0], v[1]);
+
+      auto&& v0 = vhs_[v[0]];
+      auto&& v1 = vhs_[v[1]];
+      auto&& v2 = vhs_[v[2]];
+
+      // Create face with vertices v0, v1, v2
+      Element_handle face = tr_.tds().create_face(v0, v1, v2);
+
+      // Increase the element counter
+      face->info().id = insertionIndex;
+      face->info().idWasSet = true;
+
+      // Set this face in vertices v0, v1, v2
+      v0->set_face(face);
+      v1->set_face(face);
+      v2->set_face(face);
+
+      // Add facets to neighbor map to obtain connectivity
+      addFacetToMap( { v[0], v[1] }, face, 2 );
+      addFacetToMap( { v[0], v[2] }, face, 1 );
+      addFacetToMap( { v[1], v[2] }, face, 0 );
+    }
+
+    /** \brief Creates an element (cell) in the underlying triangulation data structure
+     *  \ingroup 3D
+     *
+     *  \param[in]  v     indices of the element vertices
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 3, void >
+    createElement( const std::vector< unsigned int >& v, const size_t insertionIndex )
+    {
+      auto&& v0 = vhs_[v[0]];
+      auto&& v1 = vhs_[v[1]];
+      auto&& v2 = vhs_[v[2]];
+      auto&& v3 = vhs_[v[3]];
+
+      // Create cell with vertices v0, v1, v2, v3
+      Element_handle cell = tr_.tds().create_cell(v0, v1, v2, v3);
+
+      // Increase the element counter
+      cell->info().id = insertionIndex;
+      cell->info().idWasSet = true;
+
+      // Set this cell in vertices v0, v1, v2, v3
+      v0->set_cell(cell);
+      v1->set_cell(cell);
+      v2->set_cell(cell);
+      v3->set_cell(cell);
+
+      // Add facets to neighbor map to obtain connectivity
+      addFacetToMap( { v[0], v[1], v[2] }, cell, 3 );
+      addFacetToMap( { v[0], v[1], v[3] }, cell, 2 );
+      addFacetToMap( { v[0], v[2], v[3] }, cell, 1 );
+      addFacetToMap( { v[1], v[2], v[3] }, cell, 0 );
+    }
+
+    /** \brief Adds the facet index tuples as set into a map to find neighbor relations
+     *
+     *  \param[in]  v        indices of the facet vertices
+     *  \param[in]  element  the element handle where facet belongs to
+     *  \param[in]  fi       the index of the facet (= index of neighbor) in element
+     */
+    void addFacetToMap( const std::vector< unsigned int >& v, const Element_handle& element, const int fi )
+    {
+      assert( v.size() == dimension );
+
+      // Make a set of the vertex indices
+      std::set< unsigned int > facetIndices ( v.begin(), v.end() );
+
+      // Try to insert this set into the neighborMap
+      auto entry = neighborMap.insert( { facetIndices, std::pair<Element_handle, int>( element, fi ) } );
+
+      // If facetIndices was already in neighborMap, connect the neighbors and remove the entry
+      if( !entry.second )
+      {
+        auto facet = entry.first->second;
+        Element_handle neighbor = facet.first;
+        int ni = facet.second;
+
+        element->set_neighbor(fi, neighbor);
+        neighbor->set_neighbor(ni, element);
+
+        neighborMap.erase( facetIndices );
+      }
+    }
+
+    /** \brief Returns if there is a face with the given vertices in the triangulation
+     *  \ingroup 2D
+     *
+     *  \param[in]  v        indices of the element vertices
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 2, bool >
+    isElement( const std::vector< unsigned int >& v ) const
+    {
+        assert( v.size() == dimension+1 );
+        return tr_.is_face( vhs_[v[0]], vhs_[v[1]], vhs_[v[2]] );
+    }
+
+    /** \brief Returns if there is a cell with the given vertices in the triangulation
+     *  \ingroup 3D
+     *
+     *  \param[in]  v        indices of the element vertices
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 3, bool >
+    isElement( const std::vector< unsigned int >& v ) const
+    {
+        assert( v.size() == dimension+1 );
+        Element_handle cell;
+        return tr_.is_cell( vhs_[v[0]], vhs_[v[1]], vhs_[v[2]], vhs_[v[3]], cell );
+    }
+
+    /** \brief insert a boundary segment into the macro grid
+     *
+     *  Only influences the ordering of the boundary segments
+     *  \param[in]  vertices         vertex indices of boundary face
+     */
+
+    virtual void insertBoundarySegment ( const std::vector< unsigned int >& vertices )
+    {
+      std::vector<unsigned int> sorted_vertices;
+      for ( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );  // vertices give the number of the vertex
+      std::sort(sorted_vertices.begin(), sorted_vertices.end());
+
+      if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
+        DUNE_THROW( GridError, "A boundary segment was inserted twice." );
+
+      boundarySegments_.insert( std::make_pair( sorted_vertices, countBoundarySegments++ ) );
+    }
+
+    void insertBoundarySegment ( const std::vector< unsigned int >& vertices,
+                                 const std::shared_ptr< BoundarySegment >& boundarySegment )
+    {
+      DUNE_THROW( NotImplemented, "insertBoundarySegments with Dune::BoundarySegment" );
+    }
+
+    /** \brief Insert a vertex into the macro grid
+     *
+     *  \param[in]  pos  position of the vertex (in world coordinates)
+     *  \note This method assumes that the vertices are inserted consecutively
+     *        with respect to their index.
+     */
+    void insertVertex ( const WorldVector &pos )
+    {
+      // Insert vertex
+      auto vh = tr_.tds().create_vertex();
+      vh->set_point( makePoint( pos ) );
+
+      // Store insertion index
+      vh->info().id = countVertices;
+      vh->info().idWasSet = true;
+
+      // Increase vertex counter
+      countVertices++;
+
+      // Store the inserted vertex handle for later use
+      vhs_.push_back( vh );
+    }
+
+    /** \brief return insertion index of entity
+     *
+     *  \param[in]  entity  Entity of codim 0
+     */
+    unsigned int insertionIndex ( const typename Codim<0>::Entity &entity ) const
+    {
+      return entity.impl().hostEntity()->info().id;
+    }
+
+    /** \brief return insertion index of vertex entity
+     *
+     *  \param[in]  entity  Entity of codim dimension
+     */
+    unsigned int insertionIndex ( const typename Codim< dimension >::Entity &entity ) const
+    {
+      return entity.impl().hostEntity()->info().id;
+    }
+
+    /** \brief finalize grid creation and hand over the grid
+     *
+     *  This version of createGrid is original to the MMesh grid factroy,
+     *  allowing to specity a grid name.
+     *
+     *  \returns a pointer to the newly created grid
+     *
+     *  \note The caller takes responsibility of freeing the memory allocated
+     *        for the grid.
+     *  \note MMesh's grid factory provides a static method for freeing the
+     *        grid (destroyGrid).
+     */
+
+    virtual typename Grid::GridPtrType createGrid ()
+    {
+      // Create the infinite cells (neighbors of boundary cells)
+      createInfiniteVertex();
+
+      // Create the infinite cells (neighbors of boundary cells)
+      createInfiniteCells();
+
+      // Check if all inserted elements really exist in the triangulation
+      checkOccurenceOfAllElements();
+
+      // Check if the Delaunay property is satisfied
+      checkDelaunay();
+
+      // Return pointer to grid
+      return makeGrid();
+    }
+
+    template< class HG = HostGrid, int d = dimension >
+    std::enable_if_t< std::is_same<Grid, MMesh<HostGrid, d>>::value, typename Grid::GridPtrType  >
+    makeGrid ()
+    {
+      // Return pointer to grid
+      return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_) );
+    }
+
+    /** \brief destroy a grid previously obtained from this factory
+     *
+     *  \param[in]  grid  pointer to the grid to destroy
+     */
+    static void destroyGrid ( Grid *grid )
+    {
+      delete grid;
+    }
+
+  private:
+    /** \brief Create the infinite vertex
+     *
+     */
+    void createInfiniteVertex()
+    {
+      if( countElements > 0 )
+        tr_.tds().set_dimension(dimension);
+      else
+        tr_.tds().set_dimension(0);
+
+      Vertex_handle infinite = tr_.tds().create_vertex();
+      infinite->info().idWasSet = true;
+      tr_.set_infinite_vertex(infinite);
+    }
+
+    /** \brief Create the infinite cells (neighbors of boundary cells)
+     *  \ingroup 2D
+     *
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 2, void >
+    createInfiniteCells()
+    {
+      // Iterate over all unique facets
+      for ( const auto& entry : neighborMap )
+      {
+        auto facet = entry.second;
+        Element_handle face = facet.first;
+        int fi = facet.second;
+
+        // Create infinite face with correct orientation
+        Element_handle iface = tr_.tds().create_face(
+          face->vertex( (fi+2)%3 ),
+          face->vertex( (fi+1)%3 ),
+          tr_.infinite_vertex()
+        );
+        iface->info().idWasSet = true;
+
+        tr_.infinite_vertex()->set_face( iface );
+
+        face->set_neighbor(fi, iface);
+        iface->set_neighbor(2, face);
+
+
+        // Map infinite neighbors
+        for( int i = 0; i < 2; ++i )
+        {
+          std::set< std::size_t > vertexIndex ( { iface->vertex(i)->info().id } );
+          auto entry = infiniteNeighborMap.insert( { vertexIndex, std::pair<Element_handle, int>( iface, (i+1)%2 ) } );
+
+           // If vertexIndex was already in map, connect neighbors and remove entry
+          if( !entry.second )
+          {
+            auto pair = entry.first->second;
+            Element_handle neighbor = pair.first;
+            int ni = pair.second;
+
+            iface->set_neighbor((i+1)%2, neighbor);
+            neighbor->set_neighbor(ni, iface);
+
+            infiniteNeighborMap.erase( vertexIndex );
+          }
+        }
+      }
+
+      // Assert that all boundary facets are mapped
+      assert( infiniteNeighborMap.size() == 0 );
+    }
+
+    /** \brief Create the infinite cells (neighbors of boundary cells)
+     *  \ingroup 3D
+     *
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 3, void >
+    createInfiniteCells()
+    {
+      // Iterate over all unique facets
+      for ( const auto& entry : neighborMap )
+      {
+        auto facet = entry.second;
+        Element_handle cell = facet.first;
+        int fi = facet.second;
+
+        // Create infinite cell with correct orientation
+        Element_handle icell = tr_.tds().create_cell(
+          cell->vertex( (fi%2==1) ? (fi+2)&3 : (fi+1)&3 ),
+          cell->vertex( (fi%2==1) ? (fi+1)&3 : (fi+2)&3 ),
+          cell->vertex((fi+3)&3),
+          tr_.infinite_vertex()
+        );
+        icell->info().idWasSet = true;
+
+        tr_.infinite_vertex()->set_cell( icell );
+
+        cell->set_neighbor(fi, icell);
+        icell->set_neighbor(3, cell);
+
+
+        // Map infinite neighbors
+        for( int i = 0; i < 3; ++i )
+        {
+          std::set< std::size_t > edgeIndices ( { icell->vertex(i)->info().id, icell->vertex((i+1)%3)->info().id } );
+          auto entry = infiniteNeighborMap.insert( { edgeIndices, std::pair<Element_handle, int>( icell, (i+2)%3 ) } );
+
+           // If edgeIndices was already in map, connect neighbors and remove entry
+          if( !entry.second )
+          {
+            auto pair = entry.first->second;
+            Element_handle neighbor = pair.first;
+            int ni = pair.second;
+
+            icell->set_neighbor((i+2)%3, neighbor);
+            neighbor->set_neighbor(ni, icell);
+
+            infiniteNeighborMap.erase( edgeIndices );
+          }
+        }
+      }
+
+      // Assert that all boundary facets are mapped
+      assert( infiniteNeighborMap.size() == 0 );
+    }
+
+    /** \brief Check if all inserted elements really exist in the triangulation
+     */
+    void checkOccurenceOfAllElements() const
+    {
+      for ( const auto& v : elementVerticesList )
+        if( !isElement( v ) )
+          DUNE_THROW( InvalidStateException, "Inserted element was not found in CGAL triangulation." );
+    }
+
+    /** \brief Check if the Delaunay property is satisfied
+     * \ingroup 2D
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 2, void >
+    checkDelaunay() const
+    {
+      ctype maxDist = 0;
+      int numNotDel = 0;
+      for(auto it = tr_.finite_faces_begin(), end = tr_.finite_faces_end(); it != end; ++it)
+      {
+        for(int i=0; i<3; i++)
+        {
+          auto ni = it->neighbor(i)->index(it);
+          auto vi = it->neighbor(i)->vertex(ni);
+          if ( !tr_.is_infinite(vi) )
+          {
+            if ( tr_.side_of_oriented_circle(it, vi->point()) == CGAL::ON_POSITIVE_SIDE )
+            {
+              CGAL::Circle_2<typename HostGrid::Geom_traits> sphere ( it->vertex(0)->point(), it->vertex(1)->point(), it->vertex(2)->point() );
+
+              const auto dist = std::sqrt(sphere.squared_radius()) - std::sqrt((sphere.center() - vi->point()).squared_length());
+
+              maxDist = std::max( maxDist, dist );
+              numNotDel++;
+            }
+          }
+        }
+      }
+
+      if ( numNotDel > 0)
+        std::cerr << "There are " << numNotDel << " cells that are not Delaunay! (maxDist = " << maxDist << ")" << std::endl;
+    }
+
+    /** \brief Check if the Delaunay property is satisfied
+     * \ingroup 3D
+     */
+    template< int d = dimension >
+    std::enable_if_t< d == 3, void >
+    checkDelaunay() const
+    {
+      ctype maxDist = 0;
+      int numNotDel = 0;
+      for(auto it = tr_.finite_cells_begin(), end = tr_.finite_cells_end(); it != end; ++it)
+      {
+        for(int i=0; i<4; i++)
+        {
+          auto ni = it->neighbor(i)->index(it);
+          auto vi = it->neighbor(i)->vertex(ni);
+          if ( !tr_.is_infinite(vi) )
+          {
+            if ( tr_.side_of_sphere(it, vi->point()) == CGAL::ON_BOUNDED_SIDE )
+            {
+              CGAL::Sphere_3<typename HostGrid::Geom_traits> sphere ( it->vertex(0)->point(), it->vertex(1)->point(), it->vertex(2)->point(), it->vertex(3)->point() );
+
+              const auto dist = std::sqrt(sphere.squared_radius()) - std::sqrt((sphere.center() - vi->point()).squared_length());
+
+              maxDist = std::max( maxDist, dist );
+              numNotDel++;
+            }
+          }
+        }
+      }
+
+      if ( numNotDel > 0)
+        std::cerr << "There are " << numNotDel << " cells that are not Delaunay! (maxDist = " << maxDist << ")" << std::endl;
+    }
+
+    //! Private members
+    HostGrid tr_;
+    std::vector< Vertex_handle > vhs_;
+    BoundarySegments boundarySegments_;
+    std::vector< std::vector< unsigned int > > elementVerticesList;
+    std::map< std::set< unsigned int >, std::pair<Element_handle, int> > neighborMap;
+    std::map< std::set< std::size_t >, std::pair<Element_handle, int> > infiniteNeighborMap;
+    std::size_t countElements = 0, countVertices = 0, countBoundarySegments = 0;
+  };
+
+} // end namespace Dune
+
+#endif

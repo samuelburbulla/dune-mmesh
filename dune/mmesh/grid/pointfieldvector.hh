@@ -1,0 +1,90 @@
+// -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+// vi: set et ts=4 sw=2 sts=2:
+#ifndef DUNE_GRID_MMESHPOINTFIELDVECTOR_HH
+#define DUNE_GRID_MMESHPOINTFIELDVECTOR_HH
+
+// Dune includes
+#include <dune/common/fvector.hh>
+
+// CGAL includes
+#include <CGAL/Point_2.h>
+#include <CGAL/Point_3.h>
+#include <CGAL/Vector_3.h>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+
+/** \file
+ * \brief Helpers for conversion from CGAL::Point_x to DUNE::FieldVector
+ */
+
+namespace Dune
+{
+
+  /** \brief Helper function to create DUNE::FieldVector from CGAL::Point_2
+   *
+   * \tparam Kernel     the kernel of CGAL::Point_2
+   */
+  template< class Kernel >
+  static inline FieldVector<typename Kernel::RT, 2> makeFieldVector( const CGAL::Point_2<Kernel>& p )
+  {
+      return FieldVector<typename Kernel::RT, 2>( { p.x(), p.y() } );
+  }
+
+  /** \brief Helper function to create DUNE::FieldVector from CGAL::Vector_2
+   *
+   * \tparam Kernel     the kernel of CGAL::Vector_2
+   */
+  template< class Kernel >
+  static inline FieldVector<typename Kernel::RT, 2> makeFieldVector( const CGAL::Vector_2<Kernel>& p )
+  {
+      return FieldVector<typename Kernel::RT, 2>( { p.x(), p.y() } );
+  }
+
+  /** \brief Helper function to create DUNE::FieldVector from CGAL::Point_3
+   *
+   * \tparam Kernel     the kernel of CGAL::Point_3
+   */
+  template< class Kernel >
+  static inline FieldVector<typename Kernel::RT, 3> makeFieldVector( const CGAL::Point_3<Kernel>& p )
+  {
+      return FieldVector<typename Kernel::RT, 3>( { p.x(), p.y(), p.z() } );
+  }
+
+  /** \brief Helper function to create DUNE::FieldVector from CGAL::Vector_3
+   *
+   * \tparam Kernel     the kernel of CGAL::Vector_3
+   */
+  template< class Kernel >
+  static inline FieldVector<typename Kernel::RT, 3> makeFieldVector( const CGAL::Vector_3<Kernel>& p )
+  {
+      return FieldVector<typename Kernel::RT, 3>( { p.x(), p.y(), p.z() } );
+  }
+
+
+  /** \brief Convert FieldVector to CGAL Point
+   */
+  typedef CGAL::Exact_predicates_inexact_constructions_kernel PointKernel;
+
+  template< typename ctype, int dim >
+  static inline auto makePoint( const Dune::FieldVector<ctype, dim>& v );
+
+  /** \brief Convert FieldVector to CGAL Point
+   *  \ingroup 2D
+   */
+  template< typename ctype >
+  static inline CGAL::Point_2<PointKernel> makePoint( const Dune::FieldVector<ctype, 2>& v )
+  {
+    return CGAL::Point_2<PointKernel> ( v[ 0 ], v[ 1 ] );
+  }
+
+  /** \brief Convert FieldVector to CGAL Point
+   *  \ingroup 3D
+   */
+  template< typename ctype >
+  static inline CGAL::Point_3<PointKernel> makePoint( const Dune::FieldVector<ctype, 3>& v )
+  {
+    return CGAL::Point_3<PointKernel> ( v[ 0 ], v[ 1 ], v[ 2 ] );
+  }
+
+}  // namespace Dune
+
+#endif

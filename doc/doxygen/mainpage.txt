@@ -1,0 +1,9 @@
+/** \mainpage dune-mmesh Automatic Documentation
+
+\section intro Introduction
+
+Welcome to the Dune-MMesh documentation pages. This documentation has been
+generated using Doxygen, a free source code documentation system for
+documenting C/C++ code.
+
+*/
