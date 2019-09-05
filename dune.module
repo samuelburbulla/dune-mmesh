@@ -1,4 +1,4 @@
 Module: dune-mmesh
-Version: 1.0
+Version: 1.1
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
 Depends: dune-grid (>= 2.6)

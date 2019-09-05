@@ -2,7 +2,7 @@ The `dune-mmesh` module
 =======================
 
 The `dune-mmesh` module is an implementation of the `dune-grid` interface that wraps CGAL Delaunay triangulations in 2D and 3D.
-
+It is also capable to export a prescribed set of cell facets as a dim-1 interface grid.
 
 Installation
 ------------
@@ -26,4 +26,8 @@ Short example using the GmshReader:
     GridFactory gridFactory( "grid.msh" );
 
     Grid& grid = *gridFactory.grid();
+
+    // obtain interface grid
+    using InterfaceGrid = typename Grid::InterfaceGrid;
+    const InterfaceGrid& igrid = grid.interfaceGrid();
 ````

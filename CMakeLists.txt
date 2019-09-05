@@ -22,7 +22,7 @@ dune_project()
 
 dune_enable_all_packages()
 
-add_subdirectory(examples)
+add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(lib)
 add_subdirectory(dune)
 add_subdirectory(doc)

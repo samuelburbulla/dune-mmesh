@@ -39,6 +39,7 @@ namespace Dune
   public:
     //! type of (scalar) coordinates
     typedef typename Grid::ctype ctype;
+    //! type of the hostgrid
     typedef typename Grid::HostGridType HostGrid;
 
     //! dimension of the grid
@@ -51,8 +52,13 @@ namespace Dune
     //! type of matrix from world coordinates to world coordinates
     typedef FieldMatrix< ctype, dimensionworld, dimensionworld > WorldMatrix;
 
+    //! type of a Dune boundary segment
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
-    typedef std::map< std::vector< unsigned int >, std::size_t > BoundarySegments;
+    //! type of the boundary segment id map
+    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
+
+    //! type of the interface segment set
+    typedef std::unordered_set< std::vector< std::size_t >, HashUIntVector > InterfaceSegments;
 
     template< int codim >
     struct Codim
@@ -239,7 +245,7 @@ namespace Dune
 
     virtual void insertBoundarySegment ( const std::vector< unsigned int >& vertices )
     {
-      std::vector<unsigned int> sorted_vertices;
+      std::vector< std::size_t > sorted_vertices;
       for ( const auto& v : vertices )
         sorted_vertices.push_back( vhs_[v]->info().id );  // vertices give the number of the vertex
       std::sort(sorted_vertices.begin(), sorted_vertices.end());
@@ -279,6 +285,23 @@ namespace Dune
       vhs_.push_back( vh );
     }
 
+    /** \brief insert an interface into the macro grid
+     *
+     *  \param[in]  v         indices of the interface vertices (starting with 0)
+     */
+    void insertInterface ( const std::vector< unsigned int > &v )
+    {
+      assert( v.size() == dimension );
+
+      // mark all vertices as interface
+      for( std::size_t i = 0; i < v.size(); ++i )
+        vhs_[v[i]]->info().isInterface = true;
+
+      std::vector< std::size_t > sorted_vertices( v.begin(), v.end() );
+      std::sort(sorted_vertices.begin(), sorted_vertices.end());
+      interfaceSegments_.insert( sorted_vertices );
+    }
+
     /** \brief return insertion index of entity
      *
      *  \param[in]  entity  Entity of codim 0
@@ -310,7 +333,7 @@ namespace Dune
      *        grid (destroyGrid).
      */
 
-    virtual typename Grid::GridPtrType createGrid ()
+    typename Grid::GridPtrType createGrid ()
     {
       // Create the infinite cells (neighbors of boundary cells)
       createInfiniteVertex();
@@ -325,15 +348,7 @@ namespace Dune
       checkDelaunay();
 
       // Return pointer to grid
-      return makeGrid();
-    }
-
-    template< class HG = HostGrid, int d = dimension >
-    std::enable_if_t< std::is_same<Grid, MMesh<HostGrid, d>>::value, typename Grid::GridPtrType  >
-    makeGrid ()
-    {
-      // Return pointer to grid
-      return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_) );
+      return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
     }
 
     /** \brief destroy a grid previously obtained from this factory
@@ -486,7 +501,6 @@ namespace Dune
     std::enable_if_t< d == 2, void >
     checkDelaunay() const
     {
-      ctype maxDist = 0;
       int numNotDel = 0;
       for(auto it = tr_.finite_faces_begin(), end = tr_.finite_faces_end(); it != end; ++it)
       {
@@ -495,22 +509,13 @@ namespace Dune
           auto ni = it->neighbor(i)->index(it);
           auto vi = it->neighbor(i)->vertex(ni);
           if ( !tr_.is_infinite(vi) )
-          {
             if ( tr_.side_of_oriented_circle(it, vi->point()) == CGAL::ON_POSITIVE_SIDE )
-            {
-              CGAL::Circle_2<typename HostGrid::Geom_traits> sphere ( it->vertex(0)->point(), it->vertex(1)->point(), it->vertex(2)->point() );
-
-              const auto dist = std::sqrt(sphere.squared_radius()) - std::sqrt((sphere.center() - vi->point()).squared_length());
-
-              maxDist = std::max( maxDist, dist );
               numNotDel++;
-            }
-          }
         }
       }
 
       if ( numNotDel > 0)
-        std::cerr << "There are " << numNotDel << " cells that are not Delaunay! (maxDist = " << maxDist << ")" << std::endl;
+        std::cerr << "Warning: There are " << numNotDel << " cells in the triangulation that do not satisfy the empty circle property!" << std::endl;
     }
 
     /** \brief Check if the Delaunay property is satisfied
@@ -520,7 +525,6 @@ namespace Dune
     std::enable_if_t< d == 3, void >
     checkDelaunay() const
     {
-      ctype maxDist = 0;
       int numNotDel = 0;
       for(auto it = tr_.finite_cells_begin(), end = tr_.finite_cells_end(); it != end; ++it)
       {
@@ -529,28 +533,20 @@ namespace Dune
           auto ni = it->neighbor(i)->index(it);
           auto vi = it->neighbor(i)->vertex(ni);
           if ( !tr_.is_infinite(vi) )
-          {
             if ( tr_.side_of_sphere(it, vi->point()) == CGAL::ON_BOUNDED_SIDE )
-            {
-              CGAL::Sphere_3<typename HostGrid::Geom_traits> sphere ( it->vertex(0)->point(), it->vertex(1)->point(), it->vertex(2)->point(), it->vertex(3)->point() );
-
-              const auto dist = std::sqrt(sphere.squared_radius()) - std::sqrt((sphere.center() - vi->point()).squared_length());
-
-              maxDist = std::max( maxDist, dist );
               numNotDel++;
-            }
-          }
         }
       }
 
       if ( numNotDel > 0)
-        std::cerr << "There are " << numNotDel << " cells that are not Delaunay! (maxDist = " << maxDist << ")" << std::endl;
+        std::cerr << "Warning: There are " << numNotDel << " cells in the triangulation that do not satisfy the empty circle property!" << std::endl;
     }
 
     //! Private members
     HostGrid tr_;
     std::vector< Vertex_handle > vhs_;
     BoundarySegments boundarySegments_;
+    InterfaceSegments interfaceSegments_;
     std::vector< std::vector< unsigned int > > elementVerticesList;
     std::map< std::set< unsigned int >, std::pair<Element_handle, int> > neighborMap;
     std::map< std::set< std::size_t >, std::pair<Element_handle, int> > infiniteNeighborMap;

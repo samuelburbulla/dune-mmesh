@@ -11,15 +11,25 @@ namespace Dune
 {
 
   struct HashUIntVector {
-    std::size_t operator() (const std::vector<unsigned int>& a) const
+    std::size_t operator() (const std::vector<std::size_t>& a) const
     {
-      std::size_t hash = std::hash<unsigned int>{}(a[0]);
-      for ( int i = 1; i < a.size(); ++i )
-        hash = hash ^ (std::hash<unsigned int>{}(a[i]) << i);
+      std::size_t hash = std::hash<std::size_t>{}(a[0]);
+      for ( std::size_t i = 1; i < a.size(); ++i )
+        hash = hash ^ (std::hash<std::size_t>{}(a[i]) << i);
       return hash;
     }
   };
 
+  struct HashUIntArray {
+    template< std::size_t dim >
+    std::size_t operator() (const std::array<std::size_t, dim>& a) const
+    {
+      std::size_t hash = std::hash<std::size_t>{}(a[0]);
+      for ( std::size_t i = 1; i < a.size(); ++i )
+        hash = hash ^ (std::hash<std::size_t>{}(a[i]) << i);
+      return hash;
+    }
+  };
 }
 
 #endif

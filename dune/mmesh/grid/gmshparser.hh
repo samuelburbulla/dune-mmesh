@@ -26,7 +26,7 @@ namespace Dune
 
   // GmshGridFactory for MMesh
   // ------------------------
-  template< class Grid, bool useExplicitGridFactory = true >
+  template< class Grid, bool useImplicitGridFactory = false >
   struct GmshGridFactory
   {
     const static int dimension = Grid::dimension;
@@ -37,9 +37,9 @@ namespace Dune
     typedef FieldVector< FieldType, dimension > GlobalPosition;
 
     // Choose explicit or implicit grid factory
-    typedef std::conditional_t< useExplicitGridFactory,
-      MMeshExplicitGridFactory<Grid>,
-      MMeshImplicitGridFactory<Grid>
+    typedef std::conditional_t< useImplicitGridFactory,
+      MMeshImplicitGridFactory<Grid>,
+      MMeshExplicitGridFactory<Grid>
     > GridFactory;
 
     //! Constructor using istream
@@ -73,7 +73,6 @@ namespace Dune
 #else
       return grid_;
 #endif
-
     }
 
     //! returns if intersection was inserted
@@ -81,20 +80,6 @@ namespace Dune
     bool wasInserted ( const Intersection &intersection ) const
     {
       return factory_.wasInserted( intersection );
-    }
-
-    //! return boundary id
-    template< class Intersection >
-    int boundaryId ( const Intersection &intersection ) const
-    {
-      auto hostIntersection = intersection.impl().getHostIntersection();
-      auto fh = hostIntersection.first;
-      auto vh1 = fh->vertex(fh->cw( hostIntersection.second ));
-      auto vh2 = fh->vertex(fh->ccw( hostIntersection.second ));
-
-      // TODO: This is not correct
-      std::size_t boundaryid = std::min( vh1->info().boundaryid, vh2->info().boundaryid );
-      return boundaryid;
     }
 
   private:
@@ -165,9 +150,12 @@ namespace Dune
           if ( gt.dim() == dimension )
               factory_.insertElement( gt, cornersIndices );
 
-          // insert interface
+          // insert interface and boundary segments
           if ( gt.dim() == dimension-1 )
+          {
+              factory_.insertInterface( cornersIndices );
               factory_.insertBoundarySegment( cornersIndices );
+          }
 
           // get next line
           std::getline(gridFile, line);

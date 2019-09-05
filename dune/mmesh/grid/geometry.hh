@@ -40,6 +40,11 @@ namespace Dune
     typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
 
   public:
+    enum { dimension = GridImp::dimension };
+    enum { dimensionworld = GridImp::dimensionworld };
+    enum { coorddimension = coorddim };
+    enum { mydimension = mydim };
+
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::template HostGridEntity<0>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim),
@@ -119,6 +124,11 @@ namespace Dune
     typedef FieldVector<ctype, coorddim> FVector;
 
   public:
+    enum { dimension = GridImp::dimension };
+    enum { dimensionworld = GridImp::dimensionworld };
+    enum { coorddimension = coorddim };
+    enum { mydimension = mydim };
+
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::template HostGridEntity<0>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim),

@@ -1,4 +1,5 @@
 add_subdirectory(grid)
+add_subdirectory(interface)
 add_subdirectory(test)
 
 set(HEADERS

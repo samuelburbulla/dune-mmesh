@@ -146,20 +146,61 @@ namespace Dune
 
     /** \brief Return true if the given entity is contained in the index set in 2d */
     template< class EntityType, int d = dim >
-    std::enable_if_t< d == 2, bool >
+    std::enable_if_t< d == 2 && EntityType::codimension == 0, bool >
     contains (const EntityType& e) const
     {
       const auto hostEntity = e.impl().hostEntity();
       return grid_->getHostGrid().is_face( hostEntity->vertex(0), hostEntity->vertex(1), hostEntity->vertex(2) );
     }
 
+    template< class EntityType, int d = dim >
+    std::enable_if_t< d == 2 && EntityType::codimension == 1, bool >
+    contains (const EntityType& e) const
+    {
+      const auto hostEntity = e.impl().hostEntity();
+      return grid_->getHostGrid().is_edge(
+        hostEntity.first->vertex((hostEntity.second+1)%3),
+        hostEntity.first->vertex((hostEntity.second+2)%3)
+      );
+    }
+
+    template< class EntityType, int d = dim >
+    std::enable_if_t< d == 2 && EntityType::codimension == 2, bool >
+    contains (const EntityType& e) const
+    {
+      const auto hostEntity = e.impl().hostEntity();
+      return grid_->getHostGrid().tds().is_vertex( hostEntity );
+    }
+
     /** \brief Return true if the given entity is contained in the index set in 3d */
     template< class EntityType, int d = dim >
-    std::enable_if_t< d == 3, bool >
+    std::enable_if_t< d == 3 && EntityType::codimension == 0, bool >
     contains (const EntityType& e) const
     {
       const auto hostEntity = e.impl().hostEntity();
       return grid_->getHostGrid().is_cell( hostEntity );
+    }
+
+    /** \brief Return true if the given entity is contained in the index set in 3d */
+    template< class EntityType, int d = dim >
+    std::enable_if_t< d == 3 && EntityType::codimension == 1, bool >
+    contains (const EntityType& e) const
+    {
+      const auto hostEntity = e.impl().hostEntity();
+      return grid_->getHostGrid().is_facet(
+        hostEntity.first->vertex((hostEntity.second+1)%4),
+        hostEntity.first->vertex((hostEntity.second+2)%4),
+        hostEntity.first->vertex((hostEntity.second+3)%4)
+      );
+    }
+
+    /** \brief Return true if the given entity is contained in the index set in 3d */
+    template< class EntityType, int d = dim >
+    std::enable_if_t< d == 3 && EntityType::codimension == 3, bool >
+    contains (const EntityType& e) const
+    {
+      const auto hostEntity = e.impl().hostEntity();
+      return grid_->getHostGrid().tds().is_vertex( hostEntity );
     }
 
     //! update index set in 2d

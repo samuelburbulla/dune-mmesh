@@ -57,8 +57,7 @@ namespace Dune
         std::size_t id;
         bool idWasSet = false;
         std::size_t index;
-        std::size_t boundaryid = 0;
-        std::size_t insertionLevel = 0;
+        bool isInterface = false;
       };
 
     private:
@@ -96,7 +95,7 @@ namespace Dune
         std::size_t id;
         bool idWasSet = false;
         std::size_t index;
-        std::size_t boundaryid = 0;
+        bool isInterface = false;
       };
 
     private:

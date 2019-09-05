@@ -70,13 +70,13 @@ int main(int argc, char *argv[])
   try {
     std::cout << "-- MMesh implementation test for 3D --" << std::endl;
 
-    std::cout << "Build two cell grid..." << std::endl;
+    std::cout << "Build simple grid..." << std::endl;
 
     // Create MMesh
     // ------------
     using Grid = Dune::MovingMesh<3>;
 
-    using GridFactory = Dune::GmshGridFactory< Grid >;
+    using GridFactory = Dune::GmshGridFactory< Grid, /*useImplictFactory=*/true >;
     GridFactory gridFactory( "grids/simple3d.msh" );
 
     Grid& mMesh = *gridFactory.grid();
@@ -92,6 +92,39 @@ int main(int argc, char *argv[])
     checkProperty( "size of face index set", indexSet.size(1), 7ul );
     checkProperty( "size of edge index set", indexSet.size(2), 9ul );
     checkProperty( "size of vertex index set", indexSet.size(3), 5ul );
+
+    // Test iterators
+    std::size_t countCells = 0;
+    for( const auto& cell : elements(gridView) )
+    {
+        cell.geometry();
+        countCells++;
+    }
+    checkProperty( "number of iterated elements", countCells, indexSet.size(0) );
+
+    std::size_t countFacets = 0;
+    for( const auto& facet : facets(gridView) )
+    {
+        facet.geometry();
+        countFacets++;
+    }
+    checkProperty( "number of iterated facets", countFacets, indexSet.size(1) );
+
+    std::size_t countEdges = 0;
+    for( const auto& edge : edges(gridView) )
+    {
+        edge.geometry();
+        countEdges++;
+    }
+    checkProperty( "number of iterated edges", countEdges, indexSet.size(2) );
+
+    std::size_t countVertices = 0;
+    for( const auto& vertex : vertices(gridView) )
+    {
+        vertex.geometry();
+        countVertices++;
+    }
+    checkProperty( "number of iterated vertices", countVertices, indexSet.size(3) );
 
     // Test MMesh mcmgmapper
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );

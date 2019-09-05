@@ -1,60 +1,49 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_MMESH_GRID_ENTITY_HH
-#define DUNE_MMESH_GRID_ENTITY_HH
+#ifndef DUNE_MMESH_INTERFACE_ENTITY_HH
+#define DUNE_MMESH_INTERFACE_ENTITY_HH
 
 /** \file
- * \brief The MMeshEntity class
+ * \brief The MMeshInterfaceGridEntity class
  */
 
 // Dune includes
 #include <dune/grid/common/grid.hh>
 
-namespace Dune
-{
-  // Forward declarations
-  template<int codim, int dim, class GridImp>
-  class MMeshEntity;
-}
-
+// CGAL includes
+#include <CGAL/utility.h>
 
 namespace Dune
 {
-  template<class GridImp>
-  class MMeshLeafIntersectionIterator;
-
-  template<class GridImp>
-  class MMeshHierarchicIterator;
-
   // External forward declarations
-  template< class Grid >
+  template<class Grid>
   struct HostGridAccess;
 
 
   //**********************************************************************
   //
-  // --MMeshEntity
+  // --MMeshInterfaceGridEntity
   // --Entity
   //
-  /** \brief The implementation of entities in a MMesh
-   *   \ingroup MMesh
+  /** \brief The implementation of entities in a MMesh interface grid
+   *   \ingroup MMeshInterfaceGrid
    *
    *  A Grid is a container of grid entities. An entity is parametrized by the codimension.
    *  An entity of codimension c in dimension d is a d-c dimensional object.
    *
    */
   template<int codim, int dim, class GridImp>
-  class MMeshEntity :
-    public EntityDefaultImplementation <codim,dim,GridImp,MMeshEntity>
+  class MMeshInterfaceGridEntity :
+    public EntityDefaultImplementation <codim,dim,GridImp,MMeshInterfaceGridEntity>
   {
     template <class GridImp_>
-    friend class MMeshLeafIndexSet;
+    friend class MMeshInterfaceGridLeafIndexSet;
 
     template <class GridImp_>
-    friend class MMeshLocalIdSet;
+    friend class MMeshInterfaceGridLocalIdSet;
 
     template <class GridImp_>
-    friend class MMeshGlobalIdSet;
+    friend class MMeshInterfaceGridGlobalIdSet;
 
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
@@ -62,7 +51,7 @@ namespace Dune
     typedef typename GridImp::ctype ctype;
 
     // equivalent entity in the host grid
-    typedef typename GridImp::template HostGridEntity<codim> HostGridEntity;
+    typedef typename GridImp::template MMeshInterfaceEntity<codim> MMeshInterfaceEntity;
 
   public:
     typedef typename GridImp::template Codim<codim>::Geometry Geometry;
@@ -70,45 +59,45 @@ namespace Dune
     //! The type of the EntitySeed interface class
     typedef typename GridImp::template Codim<codim>::EntitySeed EntitySeed;
 
-    MMeshEntity()
-      : mMesh_(nullptr)
+    MMeshInterfaceGridEntity()
+      : grid_(nullptr)
     {}
 
-    MMeshEntity(const GridImp* mMesh, const HostGridEntity& hostEntity)
+    MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
       : hostEntity_(hostEntity)
-      , mMesh_(mMesh)
+      , grid_(grid)
     {}
 
-    MMeshEntity(const GridImp* mMesh, HostGridEntity&& hostEntity)
+    MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
       : hostEntity_(std::move(hostEntity))
-      , mMesh_(mMesh)
+      , grid_(grid)
     {}
 
-    MMeshEntity(const MMeshEntity& original)
+    MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)
       : hostEntity_(original.hostEntity_)
-      , mMesh_(original.mMesh_)
+      , grid_(original.grid_)
     {}
 
-    MMeshEntity(MMeshEntity&& original)
+    MMeshInterfaceGridEntity(MMeshInterfaceGridEntity&& original)
       : hostEntity_(std::move(original.hostEntity_))
-      , mMesh_(original.mMesh_)
+      , grid_(original.grid_)
     {}
 
-    MMeshEntity& operator=(const MMeshEntity& original)
+    MMeshInterfaceGridEntity& operator=(const MMeshInterfaceGridEntity& original)
     {
       if (this != &original)
       {
-        mMesh_ = original.mMesh_;
+        grid_ = original.grid_;
         hostEntity_ = original.hostEntity_;
       }
       return *this;
     }
 
-    MMeshEntity& operator=(MMeshEntity&& original)
+    MMeshInterfaceGridEntity& operator=(MMeshInterfaceGridEntity&& original)
     {
       if (this != &original)
       {
-        mMesh_ = original.mMesh_;
+        grid_ = original.grid_;
         hostEntity_ = std::move(original.hostEntity_);
       }
       return *this;
@@ -117,7 +106,7 @@ namespace Dune
     // Comparator for vertices
     template <int cc = codim>
     std::enable_if_t< cc == dim, bool >
-    equals(const MMeshEntity& other) const
+    equals(const MMeshInterfaceGridEntity& other) const
     {
       return hostEntity_ == other.hostEntity_;
     }
@@ -125,23 +114,15 @@ namespace Dune
     // Comparator for edges
     template <int cc = codim>
     std::enable_if_t< cc == 1 && dim == 2, bool >
-    equals(const MMeshEntity& other) const
+    equals(const MMeshInterfaceGridEntity& other) const
     {
       return (hostEntity_ == other.hostEntity_)
-       || ( mMesh_->getHostGrid().mirror_edge( hostEntity_ ) == other.hostEntity_ );
-    }
-
-    // Comparator for facets
-    template <int cc = codim>
-    std::enable_if_t< cc == 1 && dim == 3, bool >
-    equals(const MMeshEntity& other) const
-    {
-      return (hostEntity_ == other.hostEntity_)
-       || ( mMesh_->getHostGrid().mirror_facet( hostEntity_ ) == other.hostEntity_ );
+       || ( hostEntity_ == grid_->getHostGrid().mirror_edge( other.hostEntity_ ) );
     }
 
     //! returns true if father entity exists
-    bool hasFather () const {
+    bool hasFather () const
+    {
       return false;
     }
 
@@ -165,59 +146,28 @@ namespace Dune
     //! Return the number of subEntities of codimension codim
     unsigned int subEntities (unsigned int cc) const
     {
-      // we have a simplex grid
-      int n = dim-codim+1;
-      int k = dim-cc+1;
+      if( dim == 1 )
+        return (cc == 0) ? 0 : 2;
 
-      // binomial: n over k
-      int binomial=1;
-      for (int i=n-k+1; i<=n; i++)
-        binomial *= i;
-      for (long i=2; i<=k; i++)
-        binomial /= i;
-
-      return binomial;
+      if( dim == 2 )
+        return (cc == 0) ? 0 : 3;
     }
 
     //! Obtain a cc 2 subEntity of a codim 1 entity
     template <int cc>
     std::enable_if_t< codim == 1 && cc == dim, typename GridImp::template Codim<dim>::Entity >
-    subEntity (unsigned int i) const
+    subEntity (std::size_t i) const
     {
       assert( i < subEntities( cc ) );
       // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE,
       // but the mapping should do the right thing here
       auto& edgeIdx = hostEntity_.second;
-      return MMeshEntity<cc, dim, GridImp> (
-        mMesh_,
-        typename GridImp::template HostGridEntity<dim> (
-          hostEntity_.first->vertex( (edgeIdx+1+i)%(dim+1) )
+      return MMeshInterfaceGridEntity<cc, dim, GridImp> (
+        grid_,
+        typename GridImp::template MMeshInterfaceEntity<dim> (
+          hostEntity_.first->vertex( (edgeIdx+1+i)%(dim+2) )
         )
       );
-    }
-
-    //! First incident element
-    MMeshIncidentIterator<GridImp> incidentBegin () const {
-      using Impl = typename MMeshIncidentIterator<GridImp>::Implementation;
-      return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_) );
-    }
-
-    //! Last incident element
-    MMeshIncidentIterator<GridImp> incidentEnd () const {
-      using Impl = typename MMeshIncidentIterator<GridImp>::Implementation;
-      return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
-    }
-
-    //! First incident facet
-    MMeshIncidentFacetsIterator<GridImp> incidentFacetsBegin () const {
-      using Impl = typename MMeshIncidentFacetsIterator<GridImp>::Implementation;
-      return MMeshIncidentFacetsIterator<GridImp>( Impl( mMesh_, hostEntity_) );
-    }
-
-    //! Last incident facet
-    MMeshIncidentFacetsIterator<GridImp> incidentFacetsEnd () const {
-      using Impl = typename MMeshIncidentFacetsIterator<GridImp>::Implementation;
-      return MMeshIncidentFacetsIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
     //! geometry of this entity
@@ -233,23 +183,23 @@ namespace Dune
     }
 
     //! returns the host entity
-    const HostGridEntity& hostEntity () const
+    const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
     }
 
   private:
     //! the host entity of this entity
-    HostGridEntity hostEntity_;
+    MMeshInterfaceEntity hostEntity_;
 
     //! the grid implementation
-    const GridImp* mMesh_;
+    const GridImp* grid_;
   };
 
 
   //***********************
   //
-  //  --MMeshEntity
+  //  --MMeshInterfaceGridEntity
   //
   //***********************
   /** \brief Specialization for codim-0-entities.
@@ -260,21 +210,21 @@ namespace Dune
    * For example, Entities of codimension 0 allow to visit all neighbors.
    */
   template<int dim, class GridImp>
-  class MMeshEntity<0,dim,GridImp> :
-    public EntityDefaultImplementation<0,dim,GridImp, MMeshEntity>
+  class MMeshInterfaceGridEntity<0,dim,GridImp> :
+    public EntityDefaultImplementation<0,dim,GridImp, MMeshInterfaceGridEntity>
   {
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
   public:
     // equivalent entity in the host grid
-    typedef typename GridImp::template HostGridEntity<0> HostGridEntity;
+    typedef typename GridImp::template MMeshInterfaceEntity<0> MMeshInterfaceEntity;
 
     typedef typename GridImp::template Codim<0>::Geometry Geometry;
 
     typedef typename GridImp::template Codim<0>::LocalGeometry LocalGeometry;
 
     //! The Iterator over intersections on the leaf level
-    typedef MMeshLeafIntersectionIterator<GridImp> LeafIntersectionIterator;
+    typedef MMeshInterfaceGridLeafIntersectionIterator<GridImp> LeafIntersectionIterator;
 
     //! Iterator over descendants of the entity
     typedef MMeshHierarchicIterator<GridImp> HierarchicIterator;
@@ -282,72 +232,72 @@ namespace Dune
     //! The type of the EntitySeed interface class
     typedef typename GridImp::template Codim<0>::EntitySeed EntitySeed;
 
-    MMeshEntity()
-      : mMesh_(nullptr)
+    MMeshInterfaceGridEntity()
+      : grid_(nullptr)
     {}
 
-    MMeshEntity(const GridImp* mMesh, const HostGridEntity& hostEntity)
+    MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
       : hostEntity_(hostEntity)
-      , mMesh_(mMesh)
+      , grid_(grid)
     {}
 
-    MMeshEntity(const GridImp* mMesh, HostGridEntity&& hostEntity)
+    MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
       : hostEntity_(std::move(hostEntity))
-      , mMesh_(mMesh)
+      , grid_(grid)
     {}
 
-    MMeshEntity(const MMeshEntity& original)
+    MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)
       : hostEntity_(original.hostEntity_)
-      , mMesh_(original.mMesh_)
+      , grid_(original.grid_)
     {}
 
-    MMeshEntity(MMeshEntity&& original)
+    MMeshInterfaceGridEntity(MMeshInterfaceGridEntity&& original)
       : hostEntity_(std::move(original.hostEntity_))
-      , mMesh_(original.mMesh_)
+      , grid_(original.grid_)
     {}
 
-    MMeshEntity& operator=(const MMeshEntity& original)
+    MMeshInterfaceGridEntity& operator=(const MMeshInterfaceGridEntity& original)
     {
       if (this != &original)
       {
-        mMesh_ = original.mMesh_;
+        grid_ = original.grid_;
         hostEntity_ = original.hostEntity_;
       }
       return *this;
     }
 
-    MMeshEntity& operator=(MMeshEntity&& original)
+    MMeshInterfaceGridEntity& operator=(MMeshInterfaceGridEntity&& original)
     {
       if (this != &original)
       {
-        mMesh_ = original.mMesh_;
+        grid_ = original.grid_;
         hostEntity_ = std::move(original.hostEntity_);
       }
       return *this;
     }
 
     //! returns true if host entities are equal
-    bool equals(const MMeshEntity& other) const
+    bool equals(const MMeshInterfaceGridEntity& other) const
     {
       return hostEntity_ == other.hostEntity_;
     }
 
     //! returns true if host entities are equal
-    bool operator==(const MMeshEntity& other) const
+    bool operator==(const MMeshInterfaceGridEntity& other) const
     {
       return this->equals(other);
     }
 
     //! returns true if host entities are equal
-    bool operator<(const MMeshEntity& other) const
+    bool operator<(const MMeshInterfaceGridEntity& other) const
     {
       return hostEntity_ < other.hostEntity_;
     }
 
     //! returns the father entity
-    MMeshEntity father () const
+    MMeshInterfaceGridEntity father () const
     {
-      DUNE_THROW( InvalidStateException, "MMesh entities do no have a father!" );
+      DUNE_THROW( NotImplemented, "MMesh entities do not have a father!" );
       return *this;
     }
 
@@ -363,22 +313,32 @@ namespace Dune
       return false;
     }
 
+    //! set if this entity is new after adaptation
+    void setIsNew ( bool isNew ) const
+    {}
+
     //! returns true if this entity will vanish after adaptation
     const bool mightVanish () const
     {
-      return false;
+      return hostEntity_->info().mightVanish;
     }
 
     //! set if this entity will vanish after adaptation
-    void setWillVanish ( bool mightVanish ) const {}
+    void setWillVanish ( bool mightVanish ) const
+    {
+      hostEntity_->info().mightVanish = mightVanish;
+    }
 
     //! mark entity for refine or coarse
-    void mark ( int refCount ) const {}
+    void mark ( int refCount ) const
+    {
+      hostEntity_->info().mark = refCount;
+    }
 
     //! get mark of entity
     int getMark () const
     {
-      return 0;
+      return hostEntity_->info().mark;
     }
 
     //! Create EntitySeed
@@ -408,88 +368,84 @@ namespace Dune
     //! Geometry of this entity in father
     Geometry geometryInFather () const
     {
-      DUNE_THROW(NotImplemented, "MMesh does not implement a geometry in father!");
+      DUNE_THROW(NotImplemented, "MMeshInterfaceGrid does not implement a geometry in father!");
       return geometry();
     }
 
     //! Return the number of subEntities of codimension cc
-    unsigned int subEntities (unsigned int cc) const
+    std::size_t subEntities (std::size_t cc) const
     {
-      // we have a simplex grid
-      int n = dim+1;
-      int k = dim-cc+1;
+      if( dim == 1 )
+        return (cc == 0) ? 0 : 2;
 
-      // binomial: n over k
-      int binomial=1;
-      for (int i=n-k+1; i<=n; i++)
-        binomial *= i;
-      for (long i=2; i<=k; i++)
-        binomial /= i;
-
-      return binomial;
+      if( dim == 2 )
+        return (cc == 0) ? 0 : 3;
     }
 
     /** \brief Provide access to sub entity i of given codimension. Entities
      *  are numbered 0 ... subEntities(cc)-1
      */
     template <int cc>
-    std::enable_if_t< cc == 0, typename GridImp::template Codim<cc>::Entity >
-    subEntity (unsigned int i) const {
-      assert( i < subEntities( cc ) );
-      return *this;
-    }
-
-    template <int cc>
     std::enable_if_t< cc == dim, typename GridImp::template Codim<cc>::Entity >
-    subEntity (unsigned int i) const {
+    subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
-      return MMeshEntity<cc, dim, GridImp>( mMesh_, hostEntity_->vertex( i ) );
+      return MMeshInterfaceGridEntity<cc, dim, GridImp>(
+        grid_, hostEntity_.first->vertex( (hostEntity_.second+i+1)%(dim+2) )
+      );
     }
 
+    /** \brief Provide access to sub entity i of given codimension. Entities
+     *  are numbered 0 ... subEntities(cc)-1
+     */
     template <int cc>
-    std::enable_if_t< cc == 1, typename GridImp::template Codim<cc>::Entity >
-    subEntity (unsigned int i) const {
+    std::enable_if_t< cc == 1 && dim == 2, typename GridImp::template Codim<cc>::Entity >
+    subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE
-      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<1> ( hostEntity_, dim-i ) );
+      return MMeshInterfaceGridEntity<cc, dim, GridImp>(
+        grid_, CGAL::Triple<decltype(hostEntity_.first), int, int>(
+          hostEntity_.first,
+          (hostEntity_.second+i+1)%4,
+          i == 2 ? (hostEntity_.second+1)%4 : (hostEntity_.second+i+2)%4
+        )
+      );
     }
 
     //! First leaf intersection
-    MMeshLeafIntersectionIterator<GridImp> ileafbegin () const {
-      return MMeshLeafIntersectionIterator<GridImp>(
-      mMesh_,
+    MMeshInterfaceGridLeafIntersectionIterator<GridImp> ileafbegin () const {
+      return MMeshInterfaceGridLeafIntersectionIterator<GridImp>(
+      grid_,
       hostEntity_);
     }
 
     //! Reference to one past the last leaf intersection
-    MMeshLeafIntersectionIterator<GridImp> ileafend () const {
-      return MMeshLeafIntersectionIterator<GridImp>(
-         mMesh_,
+    MMeshInterfaceGridLeafIntersectionIterator<GridImp> ileafend () const {
+      return MMeshInterfaceGridLeafIntersectionIterator<GridImp>(
+         grid_,
          hostEntity_,
          true);
     }
 
     //! We only have one level
-    MMeshLeafIntersectionIterator<GridImp> ilevelbegin () const {
+    MMeshInterfaceGridLeafIntersectionIterator<GridImp> ilevelbegin () const {
       return ileafbegin();
     }
 
-    MMeshLeafIntersectionIterator<GridImp> ilevelend () const {
+    MMeshInterfaceGridLeafIntersectionIterator<GridImp> ilevelend () const {
       return ileafend();
     }
 
     //! First hierarchic entity, i.e. this entity, because we only have one level
-    MMeshHierarchicIterator<GridImp> hbegin (int maxlevel) const {
-      return MMeshHierarchicIterator<GridImp>(
-      mMesh_,
+    MMeshInterfaceGridHierarchicIterator<GridImp> hbegin (int maxlevel) const {
+      return MMeshInterfaceGridHierarchicIterator<GridImp>(
+      grid_,
       *this,
       maxlevel);
     }
 
     //! Reference to one past the last hierarchic entity
-    MMeshHierarchicIterator<GridImp> hend (int maxlevel) const {
-      return MMeshHierarchicIterator<GridImp>(
-        mMesh_,
+    MMeshInterfaceGridHierarchicIterator<GridImp> hend (int maxlevel) const {
+      return MMeshInterfaceGridHierarchicIterator<GridImp>(
+        grid_,
          *this,
          maxlevel,
          true);
@@ -519,19 +475,25 @@ namespace Dune
     }
 
     //! returns the host entity
-    const HostGridEntity& hostEntity () const
+    const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
     }
 
+    //! returns the host entity
+    const GridImp& grid () const
+    {
+      return *grid_;
+    }
+
   private:
     //! the host entity of this entity
-    HostGridEntity hostEntity_;
+    MMeshInterfaceEntity hostEntity_;
 
     //! the grid implementation
-    const GridImp* mMesh_;
+    const GridImp* grid_;
 
-  }; // end of MMeshEntity codim = 0
+  }; // end of MMeshInterfaceGridEntity codim = 0
 
 } // namespace Dune
 

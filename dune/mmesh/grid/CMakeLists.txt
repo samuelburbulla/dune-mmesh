@@ -10,6 +10,7 @@ set(HEADERS
   hierarchiciterator.hh
   implicitgridfactory.hh
   incidentiterator.hh
+  interfaceiterator.hh
   indexsets.hh
   intersectioniterator.hh
   intersections.hh

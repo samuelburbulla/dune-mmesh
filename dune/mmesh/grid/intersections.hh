@@ -116,7 +116,7 @@ namespace Dune
       HostGridEntity cell  = hostIntersection_.first;
       const auto& facetIdx = hostIntersection_.second;
 
-      std::vector< unsigned int > vertices;
+      std::vector< std::size_t > vertices;
       for( std::size_t i = 0; i < dim; ++i )
         vertices.push_back( cell->vertex( (facetIdx+i+1)%(dim+1) )->info().id );
       std::sort(vertices.begin(), vertices.end());
@@ -136,7 +136,7 @@ namespace Dune
 
     //! Geometry type of an intersection
     GeometryType type () const {
-      return GeometryTypes::simplex(dim);
+      return GeometryTypes::simplex(dim-1);
     }
 
     //! intersection of codimension 1 of this neighbor with element where

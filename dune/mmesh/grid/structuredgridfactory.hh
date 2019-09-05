@@ -107,9 +107,9 @@ public:
       {
         // scale the multiindex to obtain a world position
         GlobalPosition pos(0);
-        for (int j=0; j<dim; j++)
+        for (std::size_t j=0; j<dim; j++)
           pos[j] = lowerLeft[j] + index[j] * (upperRight[j]-lowerLeft[j])/(vertices[j]-1);
-        for (int j=dim; j<dimworld; j++)
+        for (std::size_t j=dim; j<dimworld; j++)
           pos[j] = lowerLeft[j];
 
         factory.insertVertex(pos);

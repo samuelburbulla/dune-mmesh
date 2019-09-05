@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_GRID_MMESHLEAFITERATOR_HH
-#define DUNE_GRID_MMESHLEAFITERATOR_HH
+#ifndef DUNE_MMESH_GRID_MMESHLEAFITERATOR_HH
+#define DUNE_MMESH_GRID_MMESHLEAFITERATOR_HH
 
 
 /** \file
@@ -97,7 +97,7 @@ namespace Dune
      */
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_edges_begin())
+      hostLeafIterator_(mMesh->getHostGrid().finite_edges_end())
     {}
 
     //! prefix increment
@@ -174,6 +174,7 @@ namespace Dune
    *  \ingroup MMesh
    */
 
+  //! Cell iterator
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<0, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
   {
@@ -221,6 +222,105 @@ namespace Dune
     HostGridLeafIterator hostLeafIterator_;
   };
 
+  //! Facet iterator
+  template<PartitionIteratorType pitype, class GridImp>
+  class MMeshLeafIteratorImp<1, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
+  {
+  private:
+    //! The type of the underlying entities
+   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_facets_iterator;
+
+  public:
+    enum {codimension = 1};
+
+    typedef typename GridImp::template Codim<1>::Entity Entity;
+
+    explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
+      mMesh_(mMesh),
+      hostLeafIterator_(mMesh->getHostGrid().finite_facets_begin())
+    {}
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     *  \param mMesh  pointer to grid instance
+     */
+    explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
+      mMesh_(mMesh),
+      hostLeafIterator_(mMesh->getHostGrid().finite_facets_end())
+    {}
+
+    //! prefix increment
+    void increment() {
+      ++hostLeafIterator_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ mMesh_, *hostLeafIterator_ }};
+    }
+
+    //! equality
+    bool equals(const MMeshLeafIteratorImp& i) const {
+      return hostLeafIterator_ == i.hostLeafIterator_;
+    }
+
+  private:
+    const GridImp* mMesh_;
+
+    HostGridLeafIterator hostLeafIterator_;
+  };
+
+
+  //! Edge iterator
+  template<PartitionIteratorType pitype, class GridImp>
+  class MMeshLeafIteratorImp<2, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
+  {
+  private:
+    //! The type of the underlying entities
+   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_edges_iterator;
+
+  public:
+    enum {codimension = 2};
+
+    typedef typename GridImp::template Codim<2>::Entity Entity;
+
+    explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
+      mMesh_(mMesh),
+      hostLeafIterator_(mMesh->getHostGrid().finite_edges_begin())
+    {}
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     *  \param mMesh  pointer to grid instance
+     */
+    explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
+      mMesh_(mMesh),
+      hostLeafIterator_(mMesh->getHostGrid().finite_edges_end())
+    {}
+
+    //! prefix increment
+    void increment() {
+      ++hostLeafIterator_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ mMesh_, *hostLeafIterator_ }};
+    }
+
+    //! equality
+    bool equals(const MMeshLeafIteratorImp& i) const {
+      return hostLeafIterator_ == i.hostLeafIterator_;
+    }
+
+  private:
+    const GridImp* mMesh_;
+
+    HostGridLeafIterator hostLeafIterator_;
+  };
+
+
+  //! Vertex iterator
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<3, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
   {

@@ -22,27 +22,31 @@ int main( int argc, char *argv[] )
     static constexpr int dim = GRIDDIM;
 
     // print some status
-    std::cout << "Create MMesh from grids/cube" + std::to_string(dim) + "d.msh..." << std::endl;
+    std::cout << "Create MMesh explicitly from grids/interface" + std::to_string(dim) + "d.msh..." << std::endl;
 
     // type of MMesh grid implementation
     using Grid = Dune::MovingMesh< dim >;
 
     // create a grid pointer from .msh file
-    using GridFactory = Dune::GmshGridFactory< Grid, /*useImplicitGridFactory=*/true >;
-    GridFactory gridFactory( "grids/cube" + std::to_string(dim) + "d.msh" );
+    using GridFactory = Dune::GmshGridFactory< Grid >;
+    GridFactory gridFactory( "grids/interface" + std::to_string(dim) + "d.msh" );
 
     // get grid reference
     Grid& grid = *gridFactory.grid();
 
+    // obtain interface grid
+    using InterfaceGrid = typename Grid::InterfaceGrid;
+    const InterfaceGrid& igrid = grid.interfaceGrid();
+
     // print the number of cells
-    std::cout << "Number of cells: " << grid.leafGridView().size(0) << std::endl;
+    std::cout << "Number of cells: " << igrid.leafGridView().size(0) << std::endl;
 
     // print some status
-    std::cout << "Write grid into gmsh-grid-" + std::to_string(dim) + "d.vtu... " << std::endl;
+    std::cout << "Write grid into interfacegrid-" + std::to_string(dim) + "d" << std::endl;
 
     // write grid to vtk file
-    Dune::VTKWriter<typename Grid::LeafGridView> vtkwriter( grid.leafGridView() );
-    vtkwriter.write( "gmsh-grid-" + std::to_string(dim) + "d", Dune::VTK::ascii );
+    Dune::VTKWriter<typename InterfaceGrid::LeafGridView> vtkwriter( igrid.leafGridView() );
+    vtkwriter.write( "interfacegrid-" + std::to_string(dim) + "d", Dune::VTK::ascii );
 
     return EXIT_SUCCESS;
   }
