@@ -1,0 +1,11 @@
+from setuptools import setup, find_packages
+
+setup(name="dune.mmesh",
+    namespace_packages=['dune'],
+    description="Python lib for dune: dune-mmesh library",
+    version="${DUNE_PYTHON_VERSION}",
+    author="Samuel Burbulla",
+    packages = find_packages(),
+    zip_safe = 0,
+    package_data = {'': ['*.so']}
+  )

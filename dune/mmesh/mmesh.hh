@@ -27,6 +27,7 @@
 #include <CGAL/utility.h>
 
 // The components of the MMesh interface
+#include "grid/declaration.hh"
 #include "grid/common.hh"
 #include "grid/connectedcomponent.hh"
 #include "grid/incidentiterator.hh"
@@ -55,13 +56,7 @@
 
 namespace Dune
 {
-  // Forward declarations
-  template<int dim, class HostGrid>
-  struct MMeshFamily;
-
-  template<class HostGrid, int dim, class GridFamily = MMeshFamily<dim, HostGrid>>
-  class MMesh;
-
+  // Type of wrapper triangulation
   template< int dim >
   class TriangulationWrapper;
 

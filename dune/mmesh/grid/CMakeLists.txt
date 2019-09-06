@@ -3,6 +3,7 @@ set(HEADERS
   common.hh
   connectedcomponent.hh
   dgfparser.hh
+  declaration.hh
   entity.hh
   entityseed.hh
   explicitgridfactory.hh
