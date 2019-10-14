@@ -22,6 +22,9 @@ dune_project()
 
 dune_enable_all_packages()
 
+# make sure we have CGAL >= 4.12
+find_package(CGAL 4.12 REQUIRED)
+
 add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(lib)
 add_subdirectory(dune)
