@@ -360,6 +360,12 @@ namespace Dune
       delete grid;
     }
 
+    //! return the vertex handles
+    const std::vector< Vertex_handle >& vertexHandles () const
+    {
+      return vhs_;
+    }
+
   private:
     /** \brief Create the infinite vertex
      *

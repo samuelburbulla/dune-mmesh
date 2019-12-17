@@ -30,6 +30,7 @@ namespace Dune
     //! type of (scalar) coordinates
     typedef typename Grid::ctype ctype;
     typedef typename Grid::HostGridType HostGrid;
+    typedef typename HostGrid::Vertex_handle VertexHandle;
 
     //! type of corresponding mmesh
     typedef typename Grid::MMesh MMesh;
@@ -120,10 +121,23 @@ namespace Dune
      */
     void insertVertex ( const WorldVector &pos )
     {
-      // insert the vertex to the host mmesh
-      auto vh = mMesh_->getHostGrid().insert( makePoint( pos ) );
-      // TODO: assert that this point was already inserted, otherwise we have to update mMesh!
+      // get the vertex handle from the host mmesh
+      VertexHandle vh = mMesh_->getHostGrid().insert( makePoint( pos ) );
 
+      vertexIdMap_.insert( { countVertices, vh->info().id } );
+      vh->info().isInterface = true;
+
+      countVertices++;
+    }
+
+    /** \brief Add existing vertex handle from the macro grid to the interface grid
+     *
+     *  \param[in]  vh  vertex_handle of the vertex
+     *  \note This method assumes that the vertices are inserted consecutively
+     *        with respect to their index.
+     */
+    void addVertexHandle ( const VertexHandle &vh )
+    {
       vertexIdMap_.insert( { countVertices, vh->info().id } );
       vh->info().isInterface = true;
 
