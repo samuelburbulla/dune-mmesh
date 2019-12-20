@@ -43,7 +43,7 @@ public:
           if ( grid.isInterface( edge ) )
             maxH_ = std::max( maxH_, 2 * edge.geometry().volume() );
 
-      if ( minH < 0.0 )
+      if ( minH == 1e100 )
         for ( const auto& edge : edges( grid.leafGridView() ) )
           if ( grid.isInterface( edge ) )
             minH_ = std::min( minH_, 0.5 * edge.geometry().volume() );
@@ -86,8 +86,6 @@ public:
         if (ratio > maxRatio_)
           return -1;
       }
-
-      const auto& grid = element.impl().grid();
 
       // refine by edge length criterion
       for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )

@@ -934,9 +934,9 @@ namespace Dune
       for ( const auto& vh : remove )
       {
         ElementOutput elements;
-        // if ( vh->info().isInterface )
-        //   elements = removeFromInterface_( vh ); // TODO
-        // else
+        if ( vh->info().isInterface )
+          elements = removeFromInterface_( vh );
+        else
           hostgrid_.removeAndGiveNewElements( vh, std::back_inserter(elements) );
 
         // flag all elements inside conflict area as new and map connected component
@@ -1211,7 +1211,7 @@ namespace Dune
       {
         if ( isInterface( entity( other ) ) )
         {
-          std::vector<std::size_t> ids { id, other->info().id }; // TODO 3D: we have three ids here
+          std::vector<std::size_t> ids { id, other->info().id };
           std::sort(ids.begin(), ids.end());
 
           auto it = interfaceSegments_.find( ids );
@@ -1222,37 +1222,20 @@ namespace Dune
           }
         }
       }
-      assert( otherVhs.size() >= 1 );
+
+      if( otherVhs.size() != 2 )
+        return {}; // otherwise, we remove a tip or a junction
 
       std::list<EdgeHandle> hole;
       hostgrid_.make_hole(vh, hole);
 
-      // start hole at some interface vertex
-      auto hit = hole.begin();
-      while( std::find( otherVhs.begin(), otherVhs.end(), (*hit).first->vertex( hostgrid_.cw( (*hit).second ) ) ) == otherVhs.end()
-        || hostgrid_.is_infinite((*hit).first) )
-      {
-        hole.push_back( *hit );
-        hit = hole.erase( hit );
-      }
-
       ElementOutput elements;
-      hostgrid_.fillHole(vh, hole, std::back_inserter(elements));
-      hostgrid_.delete_vertex(vh);
+      hostgrid_.remeshHoleConstrained(vh, hole, std::back_inserter(elements), otherVhs);
 
-      int count = 0;
-      for ( int i = 0; i+1 < otherVhs.size(); ++i )
-        if ( hostgrid_.is_edge( otherVhs[i], otherVhs[i+1] ) ) // TODO 3D
-        {
-          std::vector<std::size_t> ids {{ otherVhs[i]->info().id, otherVhs[i+1]->info().id }};
-          std::sort(ids.begin(), ids.end());
-          interfaceSegments_.insert( ids );
-          count++;
-        }
-
-      if( count != otherVhs.size()-1 )
-        std::cout << "After removal of vertex the interface was not connected anymore!" << std::endl;
-        // DUNE_THROW(NotImplemented, "After removal of vertex the interface was not connected anymore!");
+      // add the new interface segment
+      std::vector<std::size_t> ids {{ otherVhs[0]->info().id, otherVhs[1]->info().id }};
+      std::sort(ids.begin(), ids.end());
+      interfaceSegments_.insert( ids );
 
       return elements;
     }
