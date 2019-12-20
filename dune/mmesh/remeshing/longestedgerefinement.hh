@@ -70,7 +70,7 @@ public:
       for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
       {
         const auto& v = element.template subEntity<vertexCodim>(i);
-        if( !v.impl().isInterface() )
+        if( !v.impl().isInterface() || Grid::dimension != Grid::dimensionworld )
           return v;
       }
 

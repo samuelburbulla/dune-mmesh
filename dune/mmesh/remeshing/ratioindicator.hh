@@ -35,13 +35,18 @@ public:
      *
      * \param grid     The grid implementation
      */
-    RatioIndicator(const Grid& grid, ctype ratio = 5.0, ctype maxH = -1.0)
+    RatioIndicator(const Grid& grid, ctype ratio = 5.0, ctype maxH = -1.0, ctype minH = 1e100)
      : maxRatio_( ratio ), maxH_( maxH )
     {
       if ( maxH < 0.0 )
         for ( const auto& edge : edges( grid.leafGridView() ) )
           if ( grid.isInterface( edge ) )
             maxH_ = std::max( maxH_, 2 * edge.geometry().volume() );
+
+      if ( minH < 0.0 )
+        for ( const auto& edge : edges( grid.leafGridView() ) )
+          if ( grid.isInterface( edge ) )
+            minH_ = std::min( minH_, 0.5 * edge.geometry().volume() );
     };
 
     /*!
@@ -82,11 +87,14 @@ public:
           return -1;
       }
 
+      const auto& grid = element.impl().grid();
+
       // refine by edge length criterion
       for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )
       {
-        const auto& geo = element.impl().template subEntity<edgeCodim>(i).geometry();
-        const ctype edgeLength = geo.volume();
+        const auto& edge = element.impl().template subEntity<edgeCodim>(i);
+
+        const ctype edgeLength = edge.geometry().volume();
         if ( edgeLength > maxH_ )
           return 1;
       }
@@ -104,9 +112,15 @@ public:
       return maxH_;
     }
 
+    ctype minH () const
+    {
+      return minH_;
+    }
+
   private:
     const ctype maxRatio_;
     ctype maxH_ = -1.0;
+    ctype minH_ = 1e100;
 };
 
 } // end namespace Dumux
