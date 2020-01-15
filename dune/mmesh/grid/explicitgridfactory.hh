@@ -348,7 +348,11 @@ namespace Dune
       checkDelaunay();
 
       // Return pointer to grid
+    #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
       return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+    #else
+      return new Grid ( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+    #endif
     }
 
     /** \brief destroy a grid previously obtained from this factory

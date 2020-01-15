@@ -258,7 +258,11 @@ namespace Dune
         std::cout << "Removed " << count << " " << ( (count == 1) ? "vertex" : "vertices") << " to make interface gabriel." << std::endl;
 
       // Return pointer to grid
-      return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+      #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
+        return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+      #else
+        return new Grid ( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+      #endif
     }
 
     /** \brief destroy a grid previously obtained from this factory
