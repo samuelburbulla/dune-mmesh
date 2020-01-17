@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
     // Use CGAL to create a triangulation
     // ==================================
 
-    typedef MMeshDefaults::Delaunay<2>::Triangulation Triangulation;
+    typedef MMeshDefaults::Triangulation<2>::type Triangulation;
+    // or: typedef MMeshDefaults::Delaunay<2>::type Triangulation;
     typedef Triangulation::Point Point;
 
     std::vector<Point> points;
@@ -44,12 +45,12 @@ int main(int argc, char *argv[])
 
     // Create Dune grid  wrapper
     // =========================
-    MMesh<Triangulation, 2> grid(tr);
+    MMesh<Triangulation, 2> mMesh(tr);
 
 
     // Test MMesh wrapper
-    auto gridView = grid.leafGridView();
-    auto indexSet = grid.leafIndexSet();
+    auto gridView = mMesh.leafGridView();
+    auto indexSet = mMesh.leafIndexSet();
 
     std::cout << "Number of Cells: " << indexSet.size(0) << std::endl;
 

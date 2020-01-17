@@ -1,5 +1,7 @@
 set(HEADERS
+  cachingentity.hh
   common.hh
+  connectedcomponent.hh
   dgfparser.hh
   entity.hh
   entityseed.hh
@@ -10,12 +12,13 @@ set(HEADERS
   hierarchiciterator.hh
   implicitgridfactory.hh
   incidentiterator.hh
-  interfaceiterator.hh
   indexsets.hh
+  interfaceiterator.hh
   intersectioniterator.hh
   intersections.hh
   leafiterator.hh
   mmeshdefaults.hh
+  multiid.hh
   pointfieldvector.hh
   rangegenerators.hh
   structeredgridfactory.hh

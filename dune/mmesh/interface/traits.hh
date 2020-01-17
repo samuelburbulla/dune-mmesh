@@ -30,6 +30,9 @@ namespace Dune
   template<class GridImp>
   class MMeshInterfaceGridHierarchicIterator;
 
+  template<int cd, int dim, class GridImp>
+  class MMeshInterfaceConnectedComponent;
+
 } // namespace Dune
 
 #endif // DUNE_MMESH_INTERFACE_TRAITS_HH

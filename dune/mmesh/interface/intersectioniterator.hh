@@ -57,12 +57,21 @@ namespace Dune
       for( int d = 0; d < dimension+1; ++d )
       {
         std::array< std::size_t, dimension > ids;
-        for( int i = 0; i < dimension; ++i )
-          ids[i] = indexSet.vertexIndexMap().at(
-            hostEntity_.first->vertex((hostEntity_.second+i+( (i == 1 && d == 2) ? d+2 : d+1 ))%(dimensionworld+1))->info().index
-          );
-        std::sort(ids.begin(), ids.end());
-        maxNbIdx_[d] = std::max( 0, (int)indexSet.indexMap().at( ids ).size() - 2 );
+        try {
+          for( int i = 0; i < dimension; ++i )
+            ids[i] = indexSet.vertexIndexMap().at(
+              hostEntity_.first->vertex((hostEntity_.second+i+( (i == 1 && d == 2) ? d+2 : d+1 ))%(dimensionworld+1))->info().index
+            );
+        } catch (std::exception &e) {
+          DUNE_THROW(InvalidStateException, e.what());
+        }
+
+        try {
+          std::sort(ids.begin(), ids.end());
+          maxNbIdx_[d] = std::max( 0, (int)indexSet.indexMap().at( ids ).size() - 2 );
+        } catch (std::exception &e) {
+          DUNE_THROW(InvalidStateException, e.what());
+        }
       }
     }
 

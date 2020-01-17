@@ -10,6 +10,7 @@
 namespace Dune
 {
 
+  //! Hash a UInt vector
   struct HashUIntVector {
     std::size_t operator() (const std::vector<std::size_t>& a) const
     {
@@ -20,6 +21,7 @@ namespace Dune
     }
   };
 
+  //! Hash a UInt array
   struct HashUIntArray {
     template< std::size_t dim >
     std::size_t operator() (const std::array<std::size_t, dim>& a) const

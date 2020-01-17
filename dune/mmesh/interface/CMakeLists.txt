@@ -1,4 +1,5 @@
 set(HEADERS
+  connectedcomponent.hh
   entity.hh
   entityseed.hh
   geometry.hh
@@ -6,6 +7,7 @@ set(HEADERS
   gridfactory.hh
   hierarchiciterator.hh
   indexsets.hh
+  incidentiterator.hh
   intersectioniterator.hh
   intersections.hh
   leafiterator.hh

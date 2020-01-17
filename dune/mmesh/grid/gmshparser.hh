@@ -150,12 +150,16 @@ namespace Dune
           if ( gt.dim() == dimension )
               factory_.insertElement( gt, cornersIndices );
 
-          // insert interface and boundary segments
+          // insert interface/boundary segments
           if ( gt.dim() == dimension-1 )
           {
               factory_.insertInterface( cornersIndices );
               factory_.insertBoundarySegment( cornersIndices );
           }
+
+          // insert interface's boundary segments
+          if ( gt.dim() == dimension-2 )
+              factory_.insertInterfaceBoundarySegment( cornersIndices );
 
           // get next line
           std::getline(gridFile, line);

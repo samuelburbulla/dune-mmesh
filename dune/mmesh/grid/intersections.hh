@@ -111,7 +111,7 @@ namespace Dune
     }
 
     //! return the boundary segment index
-    size_t boundarySegmentIndex() const
+    std::size_t boundarySegmentIndex() const
     {
       HostGridEntity cell  = hostIntersection_.first;
       const auto& facetIdx = hostIntersection_.second;
@@ -124,6 +124,16 @@ namespace Dune
       auto it = mMesh_->boundarySegments().find( vertices );
       if( it == mMesh_->boundarySegments().end() )
         return 0; // default to 0
+
+      return it->second;
+    }
+
+    //! return the boundary id
+    std::size_t boundaryId() const
+    {
+      auto it = mMesh_->boundaryIds().find( boundarySegmentIndex() );
+      if( it == mMesh_->boundaryIds().end() )
+        DUNE_THROW( InvalidStateException, "BoundaryId was not found!" );
 
       return it->second;
     }
@@ -145,7 +155,7 @@ namespace Dune
     //! where iteration started.
     LocalGeometry geometryInInside () const
     {
-      return LocalGeometry( hostIntersection_.first );
+      return LocalGeometry( hostIntersection_.second );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.
@@ -153,7 +163,9 @@ namespace Dune
     LocalGeometry geometryInOutside () const
     {
       assert( neighbor() );
-      return LocalGeometry( hostIntersection_.first->neighbor(hostIntersection_.second) );
+      return LocalGeometry(
+          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second) + (dim+1)
+      );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.

@@ -59,6 +59,7 @@ namespace Dune
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
     //! type of the boundary segment id map
     typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
+    typedef std::unordered_map< std::size_t, std::size_t > BoundaryIds;
 
     //! type of the interface segment set
     typedef std::unordered_set< std::vector< std::size_t >, HashUIntVector > InterfaceSegments;
@@ -74,6 +75,7 @@ namespace Dune
     typedef typename HostGrid::Vertex_handle Vertex_handle;
     typedef typename Grid::template HostGridEntity<0> Element_handle;
     typedef typename Grid::template HostGridEntity<1> Face_handle;
+    typedef typename Grid::Element_circulator Element_circulator;
 
   public:
     //! are boundary ids supported by this factory?
@@ -98,10 +100,7 @@ namespace Dune
     {
       Element_handle fh;
       if( isElement( v, fh ) )
-      {
-        fh->info().id = countElements;
-        fh->info().idWasSet = true;
-      }
+        fh->info().insertionIndex = countElements;
 
       // Increase element count in each case
       countElements++;
@@ -133,6 +132,46 @@ namespace Dune
         return tr_.is_cell( vhs_[v[0]], vhs_[v[1]], vhs_[v[2]], vhs_[v[3]], fh );
     }
 
+    /** \brief insert boundary segment
+     *
+     *  \param[in]  vertices  Vertices
+     */
+    void insertBoundarySegment(const std::vector<unsigned int>& vertices)
+    {
+      assert( vertices.size() == dimension );
+
+      std::vector< std::size_t > sorted_vertices;
+      for ( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );
+      std::sort(sorted_vertices.begin(), sorted_vertices.end());
+
+      if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
+        DUNE_THROW( GridError, "A boundary segment was inserted twice." );
+
+      boundarySegments_.insert( std::make_pair( sorted_vertices, countBoundarySegments++ ) );
+    }
+
+    void insertBoundarySegment(const std::vector<unsigned int>& vertices,
+                               const std::shared_ptr<Dune::BoundarySegment<dimension,dimension>>& boundarySegment)
+    {
+      DUNE_THROW( NotImplemented, "insertBoundarySegments with Dune::BoundarySegment" );
+    }
+
+    void insertInterfaceBoundarySegment ( const std::vector< unsigned int >& vertices )
+    {
+      assert( vertices.size() == dimension-1 );
+
+      std::vector< std::size_t > sorted_vertices;
+      for ( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );
+      std::sort(sorted_vertices.begin(), sorted_vertices.end());
+
+      if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
+          DUNE_THROW( GridError, "A boundary segment was inserted twice." );
+
+      interfaceBoundarySegments_.insert( std::make_pair( sorted_vertices, countInterfaceBoundarySegments++ ) );
+    }
+
     /** \brief Insert a vertex into the macro grid
      *
      *  \param[in]  pos  position of the vertex (in world coordinates)
@@ -157,17 +196,16 @@ namespace Dune
 
     /** \brief insert an interface into the macro grid
      *
-     *  \param[in]  v         indices of the interface vertices (starting with 0)
+     *  \param[in]  type      GeometryType of the new interface
+     *  \param[in]  vertices  indices of the interface vertices (starting with 0)
      */
-    void insertInterface ( const std::vector< unsigned int > &v )
+    void insertInterface ( const std::vector< unsigned int > &vertices )
     {
-      assert( v.size() == dimension );
+      assert( vertices.size() == dimension );
 
-      // mark all vertices as interface
-      for( std::size_t i = 0; i < v.size(); ++i )
-        vhs_[v[i]]->info().isInterface = true;
-
-      std::vector< std::size_t > sorted_vertices( v.begin(), v.end() );
+      std::vector< std::size_t > sorted_vertices;
+      for( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );
       std::sort(sorted_vertices.begin(), sorted_vertices.end());
       interfaceSegments_.insert( sorted_vertices );
     }
@@ -178,7 +216,7 @@ namespace Dune
      */
     unsigned int insertionIndex ( const typename Codim<0>::Entity &entity ) const
     {
-      return entity.impl().hostEntity()->info().id;
+      return entity.impl().hostEntity()->info().insertionIndex;
     }
 
     /** \brief return insertion index of entity
@@ -190,27 +228,22 @@ namespace Dune
       return entity.impl().hostEntity()->info().id;
     }
 
-    /** \brief insert boundary segment
-     *
-     *  \param[in]  vertices  Vertices
-     */
-    void insertBoundarySegment(const std::vector<unsigned int>& vertices)
+    //! returns the boundary segment to index map
+    const BoundarySegments& boundarySegments() const
     {
-      std::vector< std::size_t > sorted_vertices;
-      for ( const auto& v : vertices )
-        sorted_vertices.push_back( vhs_[v]->info().id );  // vertices give the number of the vertex
-      std::sort(sorted_vertices.begin(), sorted_vertices.end());
-
-      if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
-        DUNE_THROW( GridError, "A boundary segment was inserted twice." );
-
-      boundarySegments_.insert( std::make_pair( sorted_vertices, countBoundarySegments++ ) );
+      return boundarySegments_;
     }
 
-    void insertBoundarySegment(const std::vector<unsigned int>& vertices,
-                               const std::shared_ptr<Dune::BoundarySegment<dimension,dimension>>& boundarySegment)
+    //! returns the boundary segment index to boundary id map
+    const BoundaryIds& boundaryIds() const
     {
-      DUNE_THROW( NotImplemented, "insertBoundarySegments with Dune::BoundarySegment" );
+      return boundaryIds_;
+    }
+
+    //! add a boundary id
+    void addBoundaryId( std::size_t boundarySegmentIndex, std::size_t boundaryId )
+    {
+      boundaryIds_.insert( std::make_pair( boundarySegmentIndex, boundaryId ) );
     }
 
     /** \brief finalize grid creation and hand over the grid
@@ -227,42 +260,24 @@ namespace Dune
      */
     typename Grid::GridPtrType createGrid ()
     {
-      /* Make interface segments gabriel
-       *  \note This removes all conflicting vertices, i.e. all vertices that lie inside a circumscribing sphere of an interface segment.
-       *  This throws an exception if a vertex in conflict is also an interface point.
-       *  Remark: Do not delete Vertex_handles from vhs_ (but from tr_) to keep the vertex indices consistent.
-       */
-      int count = 0;
-      for ( const auto& v : interfaceSegments_ )
-      {
-        const auto sphere = makeSphere_( v );
-
-        // Walk over vertices
-        for ( auto vh = tr_.finite_vertices_begin(); vh != tr_.finite_vertices_end(); vh++ )
-          if ( sphere.has_on_bounded_side( vh->point() ) )
-          {
-            // exlude the vertices of v
-            if ( std::any_of( v.begin(), v.end(), [this, vh](int i){ return vhs_[i]->info().id == vh->info().id; } ) )
-              continue;
-
-            if ( vh->info().isInterface )
-              DUNE_THROW( GridError, "The interface is in conflict with the interface point " << vh->point() );
-
-            tr_.remove( vh );
-            count++;
-          }
-      }
-
-      // print some information about removal
-      if( count > 0 )
-        std::cout << "Removed " << count << " " << ( (count == 1) ? "vertex" : "vertices") << " to make interface gabriel." << std::endl;
-
       // Return pointer to grid
-      #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-        return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
-      #else
-        return new Grid ( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
-      #endif
+    #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
+      return makeToUnique<Grid> (
+        std::move(tr_),
+        std::move(boundarySegments_),
+        std::move(interfaceBoundarySegments_),
+        std::move(boundaryIds_),
+        std::move(interfaceSegments_)
+      );
+    #else
+      return new Grid (
+        std::move(tr_),
+        std::move(boundarySegments_),
+        std::move(interfaceBoundarySegments_),
+        std::move(boundaryIds_),
+        std::move(interfaceSegments_)
+      );
+    #endif
     }
 
     /** \brief destroy a grid previously obtained from this factory
@@ -275,73 +290,34 @@ namespace Dune
     }
 
   private:
-    template<int d = dimension>
-    inline std::enable_if_t< d == 2, std::vector< Face_handle > >
-    getFaces_( const std::vector< std::size_t >& v )
+    /** \brief Convert FieldVector to CGAL Point
+     *  \ingroup 2D
+     */
+    template< int dim = dimension >
+    std::enable_if_t< dim == 2, Point >
+    makePoint( const WorldVector& v ) const
     {
-      Element_handle f; int i;
-      tr_.is_edge( vhs_[v[0]], vhs_[v[1]], f, i );
-
-      std::vector< Face_handle > faces;
-
-      if ( !tr_.is_infinite( f ) )
-        faces.push_back( { f, i } );
-
-      if ( !tr_.is_infinite( f->neighbor( i ) ) )
-        faces.push_back( { f->neighbor( i ), tr_.mirror_index( f, i ) } );
-
-      return faces;
+      return Point ( v[ 0 ], v[ 1 ] );
     }
 
-    template<int d = dimension>
-    inline std::enable_if_t< d == 3, std::vector< Face_handle > >
-    getFaces_( const std::vector< std::size_t >& v )
+    /** \brief Convert FieldVector to CGAL Point
+     *  \ingroup 3D
+     */
+    template< int dim = dimension >
+    std::enable_if_t< dim == 3, Point >
+    makePoint( const WorldVector& v ) const
     {
-      Element_handle f;
-      int i,j,k,l;
-      tr_.is_facet( vhs_[v[0]], vhs_[v[1]], vhs_[v[2]], f, i, j, k );
-      for( l = 0; l == i || l == j || l == k ; ++l );
-
-      std::vector< Face_handle > faces;
-
-      if ( !tr_.is_infinite( f ) )
-        faces.push_back( { f, l } );
-
-      if ( !tr_.is_infinite( f->neighbor( l ) ) )
-        faces.push_back( { f->neighbor( l ), tr_.mirror_index( f, l ) } );
-
-      return faces;
-    }
-
-    //! Return the circumscribing circle of an interface line segment
-    template<int d = dimension>
-    inline std::enable_if_t< d == 2, CGAL::Circle_2<typename HostGrid::Point::R> >
-    makeSphere_( const std::vector< std::size_t >& v )
-    {
-      return CGAL::Circle_2<typename HostGrid::Point::R>(
-        vhs_[v[0]]->point(),
-        vhs_[v[1]]->point()
-      );
-    }
-
-    //! Return the circumscribing sphere of an interface triangle segment
-    template<int d = dimension>
-    inline std::enable_if_t< d == 3, CGAL::Sphere_3<typename HostGrid::Point::R> >
-    makeSphere_( const std::vector< std::size_t >& v )
-    {
-      return CGAL::Sphere_3<typename HostGrid::Point::R>(
-        vhs_[v[0]]->point(),
-        vhs_[v[1]]->point(),
-        vhs_[v[2]]->point()
-      );
+      return Point ( v[ 0 ], v[ 1 ], v[ 2 ] );
     }
 
     //! Private members
     HostGrid tr_;
-    std::size_t countVertices = 0, countElements = 0, countBoundarySegments = 0;
     std::vector< Vertex_handle > vhs_;
-    BoundarySegments boundarySegments_;
+    BoundarySegments boundarySegments_, interfaceBoundarySegments_;
+    BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
+    std::size_t countVertices = 0, countElements = 0;
+    std::size_t countBoundarySegments = 0, countInterfaceBoundarySegments = 0;
   };
 
 } // end namespace Dune

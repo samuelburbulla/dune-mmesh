@@ -10,6 +10,8 @@
 // Dune includes
 #include <dune/grid/common/indexidset.hh>
 
+#include <dune/mmesh/grid/multiid.hh>
+
 namespace Dune
 {
 
@@ -25,6 +27,8 @@ namespace Dune
   public:
     typedef std::size_t IndexType;
     typedef const std::vector< GeometryType > Types;
+
+    typedef std::unordered_map< Impl::MultiId, std::size_t > CodimIndexMap;
 
     /*
      * We use the remove_const to extract the Type from the mutable class,
@@ -57,8 +61,15 @@ namespace Dune
     std::enable_if_t< codim == 1, IndexType >
     index (const Entity< codim, dim, GridImp, MMeshEntity>& e) const
     {
-      DUNE_THROW( NotImplemented, "Index for codim 1 entities." );
-      return 0;
+      return codimIndexMap_[0].at( grid_->globalIdSet().id( e ) );
+    }
+
+    //! get index of an codim 2 entity
+    template<int codim>
+    std::enable_if_t< codim == 2 && dim == 3, IndexType >
+    index (const Entity< codim, dim, GridImp, MMeshEntity>& e) const
+    {
+      return codimIndexMap_[1].at( grid_->globalIdSet().id( e ) );
     }
 
     //! get subIndex of subEntity i with given codim of an entity
@@ -81,13 +92,19 @@ namespace Dune
     template<int cc>
     std::enable_if_t< cc == 0, IndexType > subIndex (const typename std::remove_const<GridImp>::type::Traits::template Codim<cc>::Entity& e, int i, int codim) const
     {
-      assert ( codim > 0 && codim <= dim );
+      assert ( codim >= 0 && codim <= dim );
       const HostGridEntity<0> hostEntity = e.impl().hostEntity();
 
+      if ( codim == 0 )
+          return index( e );
       if ( codim == dim )
           return hostEntity->vertex( i )->info().index;
+      else if ( codim == 1 )
+          return codimIndexMap_[0].at( grid_->globalIdSet().id( e.impl().template subEntity<1>( i ) ) );
+      else if ( codim == 2 )
+          return codimIndexMap_[1].at( grid_->globalIdSet().id( e.impl().template subEntity<2>( i ) ) );
       else
-          DUNE_THROW( NotImplemented, "SubIndices for codim != 0 || codim != dim." );
+          DUNE_THROW( InvalidStateException, "subIndex() was called for codim " << codim );
 
       return 0;
     }
@@ -187,10 +204,22 @@ namespace Dune
     contains (const EntityType& e) const
     {
       const auto hostEntity = e.impl().hostEntity();
-      return grid_->getHostGrid().is_facet(
-        hostEntity.first->vertex((hostEntity.second+1)%4),
-        hostEntity.first->vertex((hostEntity.second+2)%4),
-        hostEntity.first->vertex((hostEntity.second+3)%4)
+      return grid_->getHostGrid().tds().is_facet(
+        hostEntity.first,
+        hostEntity.second
+      );
+    }
+
+    /** \brief Return true if the given entity is contained in the index set in 3d */
+    template< class EntityType, int d = dim >
+    std::enable_if_t< d == 3 && EntityType::codimension == 2, bool >
+    contains (const EntityType& e) const
+    {
+      const auto hostEntity = e.impl().hostEntity();
+      return grid_->getHostGrid().tds().is_edge(
+        hostEntity.first,
+        hostEntity.second,
+        hostEntity.third
       );
     }
 
@@ -221,10 +250,11 @@ namespace Dune
       for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
         vh->info().index = vertexCount++;
 
-      // Count the finite edges
+      // Store the finite edge indices in a map
+      codimIndexMap_[0].clear();
       std::size_t edgeCount = 0;
       for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        edgeCount++;
+        codimIndexMap_[0][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = edgeCount++;
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = hostgrid.number_of_faces();
@@ -250,6 +280,18 @@ namespace Dune
       for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
           vh->info().index = vertexCount++;
 
+      // Store the finite facet indices in a map
+      codimIndexMap_[0].clear();
+      std::size_t facetCount = 0;
+      for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
+        codimIndexMap_[0][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = facetCount++;
+
+      // Store the finite edge indices in a map
+      codimIndexMap_[1].clear();
+      std::size_t edgeCount = 0;
+      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
+        codimIndexMap_[1][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = edgeCount++;
+
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = hostgrid.number_of_finite_cells();
       sizeOfCodim_[1] = hostgrid.number_of_finite_facets();
@@ -259,12 +301,13 @@ namespace Dune
 
     GridImp* grid_;
     std::array<std::size_t, dim+1> sizeOfCodim_;
+    std::array<CodimIndexMap, dim-1> codimIndexMap_;
   };
+
 
   template <class GridImp>
   class MMeshGlobalIdSet :
-    public IdSet<GridImp,MMeshGlobalIdSet<GridImp>,
-                 /*IdType=*/std::size_t>
+    public IdSet<GridImp, MMeshGlobalIdSet<GridImp>, Impl::MultiId>
   {
     typedef typename std::remove_const<GridImp>::type::HostGridType HostGrid;
 
@@ -278,50 +321,25 @@ namespace Dune
     using HostGridEntity = typename GridImp::template HostGridEntity<codim>;
 
   public:
+    //! define the type used for persistent indices
+    using IdType = Impl::MultiId;
+
     //! constructor stores reference to a grid
-    MMeshGlobalIdSet (const GridImp* g) : grid_(g), nextElementId_(0), nextVertexId_(0)
+    MMeshGlobalIdSet (const GridImp* g) : grid_(g), nextVertexId_(0)
     {
       init();
     }
 
     //! store element and vertex id count
-    template< int d = dim >
-    std::enable_if_t< d == 2, void >
-    init ()
+    void init ()
     {
       const auto& hostgrid = grid_->getHostGrid();
-
-      // Determine nextElementId_
-      for ( auto fc = hostgrid.finite_faces_begin(); fc != hostgrid.finite_faces_end(); ++fc)
-        if( fc->info().idWasSet && fc->info().id >= nextElementId_ )
-          nextElementId_ = fc->info().id+1;
 
       // Determine nextVertexId_
       for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
         if( vh->info().idWasSet && vh->info().id >= nextVertexId_ )
           nextVertexId_ = vh->info().id+1;
     }
-
-    //! store element and vertex id count
-    template< int d = dim >
-    std::enable_if_t< d == 3, void >
-    init ()
-    {
-      const auto& hostgrid = grid_->getHostGrid();
-
-      // Determine nextElementId_
-      for ( auto fc = hostgrid.finite_cells_begin(); fc != hostgrid.finite_cells_end(); ++fc)
-        if( fc->info().idWasSet && fc->info().id >= nextElementId_ )
-          nextElementId_ = fc->info().id+1;
-
-      // Determine nextVertexId_
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        if( vh->info().idWasSet && vh->info().id >= nextVertexId_ )
-          nextVertexId_ = vh->info().id+1;
-    }
-
-    //! define the type used for persistent indices
-    typedef std::size_t IdType;
 
     //! get id of an entity
     /*
@@ -329,32 +347,59 @@ namespace Dune
        because the const class is not instantiated yet.
      */
     template<int cd>
-    std::enable_if_t< cd == 0 || cd == dim, IdType >
+    std::enable_if_t< cd == dim, IdType >
     id (const typename std::remove_const<GridImp>::type::Traits::template Codim<cd>::Entity& e) const
     {
-      return e.impl().hostEntity()->info().id;
+      return IdType( e.impl().hostEntity()->info().id );
     }
 
     template<int cd>
-    std::enable_if_t< cd == 1, IdType >
+    std::enable_if_t< cd != dim, IdType >
     id (const typename std::remove_const<GridImp>::type::Traits::template Codim<cd>::Entity& e) const
     {
-      DUNE_THROW( NotImplemented, "Id for codim 1 entities." );
-      return 0;
+      typename IdType::VT idlist( dim+1-cd );
+      for( std::size_t i = 0; i < e.subEntities(dim); ++i )
+        idlist[i] = e.impl().template subEntity<dim>(i).impl().hostEntity()->info().id;
+      std::sort( idlist.begin(), idlist.end() );
+
+      return IdType( idlist );
+    }
+
+    //! get id of a caching entity
+    template<int cd>
+    IdType id (const MMeshCachingEntity<cd,dim,GridImp>& cachingEntity) const
+    {
+      return IdType( cachingEntity.id() );
     }
 
     //! get id of subEntity
-    /*
-        We use the remove_const to extract the Type from the mutable class,
-        because the const class is not instantiated yet.
-     */
-    IdType subId (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e, int i, int codim) const
+    template< int d = dim >
+    std::enable_if_t< d == 2, IdType >
+    subId (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e, int i, int codim) const
     {
-      assert( codim == 0 || codim == dim );
-      if( codim == dim )
-        return e.impl().hostEntity()->vertex( i )->info().id;
-      else
-        return e.impl().hostEntity()->info().id;
+      assert( 0 <= codim && codim <= dim );
+      switch( codim )
+      {
+        case 0: return id<0>( e.impl().template subEntity<0>( i ) );
+        case 1: return id<1>( e.impl().template subEntity<1>( i ) );
+        case 2: return id<2>( e.impl().template subEntity<2>( i ) );
+      };
+      return IdType();
+    }
+
+    template< int d = dim >
+    std::enable_if_t< d == 3, IdType >
+    subId (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e, int i, int codim) const
+    {
+      assert( 0 <= codim && codim <= dim );
+      switch( codim )
+      {
+        case 0: return id<0>( e.impl().template subEntity<0>( i ) );
+        case 1: return id<1>( e.impl().template subEntity<1>( i ) );
+        case 2: return id<2>( e.impl().template subEntity<2>( i ) );
+        case 3: return id<3>( e.impl().template subEntity<3>( i ) );
+      };
+      return IdType();
     }
 
     //! update id set in 2d
@@ -364,14 +409,6 @@ namespace Dune
     {
       grid_ = grid;
       const auto& hostgrid = grid_->getHostGrid();
-
-      // Store cell ids within cell infos
-      for ( auto fc = hostgrid.finite_faces_begin(); fc != hostgrid.finite_faces_end(); ++fc)
-        if( !fc->info().idWasSet )
-        {
-          fc->info().id = nextElementId_++;
-          fc->info().idWasSet = true;
-        }
 
       // Store vertex ids within vertex infos
       for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
@@ -390,14 +427,6 @@ namespace Dune
       grid_ = grid;
       const auto& hostgrid = grid_->getHostGrid();
 
-      // Store cell ids within cell infos
-      for ( auto fc = hostgrid.finite_cells_begin(); fc != hostgrid.finite_cells_end(); ++fc)
-        if( !fc->info().idWasSet )
-        {
-          fc->info().id = nextElementId_++;
-          fc->info().idWasSet = true;
-        }
-
       // Store vertex ids within vertex infos
       for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
         if( !vh->info().idWasSet )
@@ -405,162 +434,19 @@ namespace Dune
           vh->info().id = nextVertexId_++;
           vh->info().idWasSet = true;
         }
+    }
+
+    //! advanced method to set the id of a vertex manually
+    std::size_t setNextId( HostGridEntity<dim> vh ) const
+    {
+      assert( !vh->info().idWasSet );
+      vh->info().id = nextVertexId_++;
+      vh->info().idWasSet = true;
+      return vh->info().id;
     }
 
     GridImp* grid_;
-    std::size_t nextElementId_, nextVertexId_;
-  };
-
-
-  template<class GridImp>
-  class MMeshLocalIdSet :
-    public IdSet<GridImp,MMeshLocalIdSet<GridImp>,
-                 /*IdType=*/std::size_t>
-  {
-  private:
-    typedef typename std::remove_const<GridImp>::type::HostGridType HostGrid;
-
-    /*
-     * We use the remove_const to extract the Type from the mutable class,
-     * because the const class is not instantiated yet.
-     */
-    enum {dim = std::remove_const<GridImp>::type::dimension};
-
-    template<int codim>
-    using HostGridEntity = typename GridImp::template HostGridEntity<codim>;
-
-  public:
-    //! define the type used for persistent local ids
-    typedef std::size_t IdType;
-
-    //! constructor stores reference to a grid
-    MMeshLocalIdSet (const GridImp* g) : grid_(g), nextElementId_(0), nextVertexId_(0)
-    {
-      init();
-    }
-
-    //! store element and vertex id count
-    template< int d = dim >
-    std::enable_if_t< d == 2, void >
-    init ()
-    {
-      const auto& hostgrid = grid_->getHostGrid();
-
-      // Determine nextElementId_
-      for ( auto fc = hostgrid.finite_faces_begin(); fc != hostgrid.finite_faces_end(); ++fc)
-        if( fc->info().idWasSet && fc->info().id >= nextElementId_ )
-          nextElementId_ = fc->info().id+1;
-
-      // Determine nextVertexId_
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        if( vh->info().idWasSet && vh->info().id >= nextVertexId_ )
-          nextVertexId_ = vh->info().id+1;
-    }
-
-    //! store element and vertex id count
-    template< int d = dim >
-    std::enable_if_t< d == 3, void >
-    init ()
-    {
-      const auto& hostgrid = grid_->getHostGrid();
-
-      // Determine nextElementId_
-      for ( auto fc = hostgrid.finite_cells_begin(); fc != hostgrid.finite_cells_end(); ++fc)
-        if( fc->info().idWasSet && fc->info().id >= nextElementId_ )
-          nextElementId_ = fc->info().id+1;
-
-      // Determine nextVertexId_
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        if( vh->info().idWasSet && vh->info().id >= nextVertexId_ )
-          nextVertexId_ = vh->info().id+1;
-    }
-
-    //! get id of an entity
-    /*
-        We use the remove_const to extract the Type from the mutable class,
-        because the const class is not instantiated yet.
-     */
-    template<int cd>
-    std::enable_if_t< cd == 0 || cd == dim, IdType >
-    id (const typename std::remove_const<GridImp>::type::Traits::template Codim<cd>::Entity& e) const
-    {
-      return e.impl().hostEntity()->info().id;
-    }
-
-    template<int cd>
-    std::enable_if_t< cd == 1, IdType >
-    id (const typename std::remove_const<GridImp>::type::Traits::template Codim<cd>::Entity& e) const
-    {
-      DUNE_THROW( NotImplemented, "Id for codim 1 entities." );
-      return 0;
-    }
-
-    //! get id of subEntity
-    /*
-     * We use the remove_const to extract the Type from the mutable class,
-     * because the const class is not instantiated yet.
-     */
-    IdType subId (const typename std::remove_const<GridImp>::type::template Codim<0>::Entity& e, int i, int codim) const
-    {
-      assert( codim == 0 || codim == dim );
-      if( codim == dim )
-        return e.impl().hostEntity()->vertex( i )->info().id;
-      else
-        return e.impl().hostEntity()->info().id;
-    }
-
-    //! update id set in 2d
-    template< int d = dim >
-    std::enable_if_t< d == 2, void >
-    update(const GridImp* grid)
-    {
-      grid_ = grid;
-      const auto& hostgrid = grid_->getHostGrid();
-
-      // Store cell ids within cell infos
-      for ( auto fc = hostgrid.finite_faces_begin(); fc != hostgrid.finite_faces_end(); ++fc)
-        if( !fc->info().idWasSet )
-        {
-          fc->info().id = nextElementId_++;
-          fc->info().idWasSet = true;
-        }
-
-      // Store vertex ids within vertex infos
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        if( !vh->info().idWasSet )
-        {
-          vh->info().id = nextVertexId_++;
-          vh->info().idWasSet = true;
-        }
-    }
-
-    //! update id set in 3d
-    template< int d = dim >
-    std::enable_if_t< d == 3, void >
-    update(const GridImp* grid)
-    {
-      grid_ = grid;
-      const auto hostgrid = grid_->getHostGrid();
-
-      // Store cell ids within cell infos
-      for ( auto fc = hostgrid.finite_cells_begin(); fc != hostgrid.finite_cells_end(); ++fc)
-        if( !fc->info().idWasSet )
-        {
-          fc->info().id = nextElementId_++;
-          fc->info().idWasSet = true;
-        }
-
-      // Store vertex ids within vertex infos
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        if( !vh->info().idWasSet )
-        {
-          vh->info().id = nextVertexId_++;
-          vh->info().idWasSet = true;
-        }
-    }
-
-    GridImp* grid_;
-    std::size_t nextElementId_, nextVertexId_;
+    mutable std::size_t nextVertexId_;
   };
 
 }  // end namespace Dune

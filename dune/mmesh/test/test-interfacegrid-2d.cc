@@ -77,11 +77,11 @@ int main(int argc, char *argv[])
 
     // Create MMesh
     // ------------
-    static constexpr int dim = 2;
+    static constexpr int dim = GRIDDIM;
     using Grid = Dune::MovingMesh<dim>;
 
     using GridFactory = Dune::GmshGridFactory< Grid >;
-    GridFactory gridFactory( "grids/interface" + std::to_string(dim) + "d.msh" );
+    GridFactory gridFactory( "grids/mimesh" + std::to_string(dim) + "d.msh" );
 
     Grid& mMesh = *gridFactory.grid();
 
@@ -194,6 +194,10 @@ int main(int argc, char *argv[])
           { { vIdxGlobal1, 0u },
             { vIdxGlobal2, 1u } }
         );
+
+        // try to obtain mmesh intersection
+        const auto& bulkIs = mMesh.asIntersection( e );
+        checkProperty( "asIntersection", bulkIs.geometry().center(), e.geometry().center() );
       }
       elementCount++;
     }

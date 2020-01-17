@@ -15,11 +15,12 @@
 #include <memory>
 
 #include <dune/common/deprecated.hh>
-#include <dune/common/parallel/collectivecommunication.hh>
+#include <dune/common/parallel/communication.hh>
 #include <dune/common/version.hh>
 #include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
+#include <dune/mmesh/grid/multiid.hh>
 
 #include <CGAL/utility.h>
 
@@ -27,6 +28,7 @@
 #include <dune/mmesh/mmesh.hh>
 #include "entity.hh"
 #include "entityseed.hh"
+#include "connectedcomponent.hh"
 #include "geometry.hh"
 #include "gridfactory.hh"
 #include "hierarchiciterator.hh"
@@ -62,9 +64,9 @@ namespace Dune
         MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMeshImp, dim> >, // LevelIndexSet
         MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMeshImp, dim> >,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMeshImp, dim> >,
-        std::size_t, // GlobalIdSet::IdType,
+        Impl::MultiId, // GlobalIdSet::IdType,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMeshImp, dim> >, // LocalIdSet
-        std::size_t, // LocalIdSet::IdType,
+        Impl::MultiId, // LocalIdSet::IdType,
         CollectiveCommunication< MMeshInterfaceGrid<MMeshImp, dim> >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
@@ -84,11 +86,11 @@ namespace Dune
    *
    * \tparam MMeshImp The MMesh grid type for which this MMeshInterfaceGrid wraps the interface
    */
-  template <class MMeshImp, int dim, class GridFamily>
+  template <class MMeshImp, int dim, class GridFam>
   class MMeshInterfaceGrid
    : public GridDefaultImplementation< dim-1, dim,
                                        typename MMeshImp::FieldType,
-                                       GridFamily >
+                                       GridFam >
   {
   public:
     static constexpr int dimension = dim-1;
@@ -96,13 +98,14 @@ namespace Dune
 
     using FieldType = typename MMeshImp::FieldType;
 
-    using BoundarySegments = std::map< std::vector< std::size_t >, std::size_t >;
+    using BoundarySegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
 
     //**********************************************************
     // The Interface Methods
     //**********************************************************
 
     //! the Traits
+    typedef GridFam GridFamily;
     typedef typename GridFamily::Traits Traits;
 
     //! the grid implementation
@@ -145,13 +148,17 @@ namespace Dune
     //! The type of a vertex
     using Vertex = typename Traits::template Codim<dimension>::Entity;
 
+    //! The type of a connected component
+    using ConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension, const GridImp>;
+
     /** \brief Constructor
      *
      * \param hostgrid The host grid wrapped by the MMesh
      */
-    explicit MMeshInterfaceGrid(const MMeshImp* mMesh, BoundarySegments boundarySegments = {})
+    explicit MMeshInterfaceGrid(MMeshImp* mMesh, BoundarySegments boundarySegments = {})
      : mMesh_(mMesh),
-       boundarySegments_(boundarySegments)
+       boundarySegments_(boundarySegments),
+       numBoundarySegments_(boundarySegments.size())
     {
       leafIndexSet_ = std::make_unique<MMeshInterfaceGridLeafIndexSet<const GridImp>>( this );
       globalIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
@@ -181,12 +188,17 @@ namespace Dune
     /** \brief returns the number of boundary segments within the macro grid
      */
     size_t numBoundarySegments () const {
-      return boundarySegments().size();
+      return numBoundarySegments_;
     }
 
     const BoundarySegments& boundarySegments() const
     {
       return boundarySegments_;
+    }
+
+    void addBoundarySegment ( const std::vector< std::size_t >& ids, std::size_t bndSegIdx )
+    {
+      boundarySegments_[ ids ] = bndSegIdx;
     }
 
     void setBoundarySegments( const BoundarySegments boundarySegments )
@@ -256,6 +268,18 @@ namespace Dune
       return EntityImp(this, hostEntity);
     }
 
+    /** \brief Create Entity from a host entity */
+    typename Traits::template Codim<dimension>::Entity entity(const MMeshInterfaceEntity<dimension>& hostEntity) const
+    {
+      return entity( typename Traits::template Codim<dimension>::EntitySeed( hostEntity ) );
+    }
+
+    /** \brief Create codim 0 entity from a host entity */
+    typename Traits::template Codim<0>::Entity entity(const MMeshInterfaceEntity<0>& hostEntity) const
+    {
+      return entity( typename Traits::template Codim<0>::EntitySeed( hostEntity ) );
+    }
+
     //! Iterator to first entity of given codim on level
     template<int codim>
     typename Traits::template Codim<codim>::LevelIterator lbegin (int level) const {
@@ -317,7 +341,16 @@ namespace Dune
      */
     void globalRefine(int steps = 1)
     {
-      DUNE_THROW( NotImplemented, "globalRefine() for MMeshInterfaceGrid" );
+      for(int i = 0; i < steps; ++i)
+      {
+        // mark all elements
+        for (const auto& element : elements(this->leafGridView()))
+          mark( 1, element );
+
+        preAdapt();
+        adapt(false);
+        postAdapt();
+      }
     }
 
 
@@ -327,7 +360,8 @@ namespace Dune
      */
     bool mark(int refCount, const typename Traits::template Codim<0>::Entity & e) const
     {
-      DUNE_THROW( NotImplemented, "mark() for MMeshInterfaceGrid" );
+      mark_[ globalIdSet_->id( e ) ] = refCount;
+      return true;
     }
 
     /** \brief Return refinement mark for entity
@@ -336,19 +370,32 @@ namespace Dune
      */
     int getMark(const typename Traits::template Codim<0>::Entity & e) const
     {
-      DUNE_THROW( NotImplemented, "getMark() for MMeshInterfaceGrid" );
+      auto entry = mark_.find( globalIdSet_->id( e ) );
+      if ( entry != mark_.end() )
+        return entry->second;
+      else
+        return 0;
     }
 
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      DUNE_THROW( NotImplemented, "preAdapt() for MMeshInterfaceGrid" );
+      childrenConnectedComponentMap_.clear();
+      return mark_.size() > 0;
     }
 
     //! Triggers the grid refinement process
-    bool adapt()
+    bool adapt(bool buildComponents = true)
     {
-      DUNE_THROW( NotImplemented, "adapt() for MMeshInterfaceGrid" );
+      // refer to the adapt() function of the underlying mMesh
+      // because the mMesh_ will definitely change as well
+      return mMesh_->adapt(buildComponents);
+    }
+
+    //! Clean up refinement markers
+    void postAdapt()
+    {
+      mark_.clear();
     }
 
   public:
@@ -381,14 +428,16 @@ namespace Dune
      * \param minlevel The coarsest grid level that gets distributed
      * \param maxlevel does currently get ignored
      */
-    void loadBalance()
-    {};
-
-    void loadBalance(int strategy, int minlevel, int depth, int maxlevel, int minelement)
-    {}
+    void loadBalance() {
+      mMesh_->loadBalance();
+    };
 
     template<class T>
     bool loadBalance( const T& t ) { return false; };
+
+    void loadBalance(int strategy, int minlevel, int depth, int maxlevel, int minelement){
+      DUNE_THROW(NotImplemented, "MMeshInterfaceGrid::loadBalance()");
+    }
 
 
     /** \brief dummy collective communication */
@@ -416,15 +465,61 @@ namespace Dune
     }
 
     //! Return if vertex is part of the interface
-    bool isInterface (const Vertex& e) const
+    bool isInterface( const VertexHandle& vertex ) const
     {
-      return e.impl().hostEntity()->info().isInterface;
+      return vertex->info().isInterface;
     }
 
-    //! Return if entity is part of the interface
-    bool isInterface (const Entity& e) const
+    //! Return if intersection is part of the interface
+    bool isInterface( const typename Traits::LeafIntersection& intersection ) const
     {
-      return isInterface( e.impl().hostEntity() );
+      return isInterface( intersection.impl().getHostIntersection() );
+    }
+
+    //! Return if dune entity is part of the interface
+    template< class Entity >
+    bool isInterface( const Entity& entity ) const
+    {
+      return isInterface( entity.impl().hostEntity() );
+    }
+
+    //! Mark a set of children elements as refinement of a connected component
+    void markAsRefined( const std::vector< std::vector< std::size_t > >& children, const ConnectedComponent connectedComponent )
+    {
+      for( const auto& child : children )
+        childrenConnectedComponentMap_.insert( { child, connectedComponent } );
+    }
+
+    //! Return if an entity has a connected component
+    bool hasConnectedComponent( const Entity& entity ) const
+    {
+      int count = childrenConnectedComponentMap_.count( getVertexIds_( entity.impl().hostEntity() ) );
+      assert( count <= 1 );
+      return (count == 1 );
+    }
+
+    //! Return if the connected component for a given entity
+    const ConnectedComponent& getConnectedComponent( const Entity& entity ) const
+    {
+      auto it = childrenConnectedComponentMap_.find( getVertexIds_( entity.impl().hostEntity() ) );
+      assert( it != childrenConnectedComponentMap_.end() );
+      return it->second;
+    }
+
+    //! Mirror a host entity (2d)
+    template <int d = dimensionworld>
+    std::enable_if_t< d == 2, const MMeshInterfaceEntity<0> >
+    mirrorHostEntity(const MMeshInterfaceEntity<0>& other) const
+    {
+      return mMesh_->getHostGrid().mirror_edge( other );
+    }
+
+    //! Mirror a host entity (3d)
+    template <int d = dimensionworld>
+    std::enable_if_t< d == 3, const MMeshInterfaceEntity<0> >
+    mirrorHostEntity(const MMeshInterfaceEntity<0>& other) const
+    {
+      return mMesh_->getHostGrid().mirror_facet( other );
     }
 
     // **********************************************************
@@ -436,9 +531,9 @@ namespace Dune
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {
-      std::vector<std::size_t> ids;
+      static std::vector<std::size_t> ids( dimensionworld );
       for( int i = 0; i < dimensionworld; ++i )
-        ids.push_back( entity.first->vertex((entity.second+i+1)%(dimensionworld+1))->info().id );
+        ids[ i ] = entity.first->vertex((entity.second+i+1)%(dimensionworld+1))->info().id;
       std::sort(ids.begin(), ids.end());
       return ids;
     }
@@ -467,14 +562,40 @@ namespace Dune
 
     std::unique_ptr<MMeshInterfaceGridGlobalIdSet<const GridImp>> localIdSet_;
 
+    std::unordered_map< std::vector< std::size_t >, ConnectedComponent, HashUIntVector > childrenConnectedComponentMap_;
+
   protected:
     //! The host grid which contains the actual grid hierarchy structure
-    const MMeshImp* mMesh_;
+    MMeshImp* mMesh_;
 
     BoundarySegments boundarySegments_;
 
+    std::size_t numBoundarySegments_;
+
+    mutable std::unordered_map< Impl::MultiId, std::size_t > mark_;
+
   }; // end Class MMeshInterfaceGrid
 
+
+  // DGFGridInfo for MMeshInterfaceGrid
+  // ----------------------------------
+
+  template<class MMeshImp, int dim>
+  struct DGFGridInfo< MMeshInterfaceGrid<MMeshImp, dim> >
+  {
+    static int refineStepsForHalf ()
+    {
+      return dim-1;
+    }
+
+    static double refineWeight ()
+    {
+      return 0;
+    }
+  };
+
+  // Capabilites of MMeshInterfaceGrid
+  // ---------------------------------
 
   /// @cond
   namespace Capabilities

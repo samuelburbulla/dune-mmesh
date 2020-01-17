@@ -75,11 +75,11 @@ int main(int argc, char *argv[])
 
     // Create MMesh
     // ------------
-    static constexpr int dim = 3;
+    static constexpr int dim = GRIDDIM;
     using Grid = Dune::MovingMesh<dim>;
 
     using GridFactory = Dune::GmshGridFactory< Grid >;
-    GridFactory gridFactory( "grids/interface" + std::to_string(dim) + "d.msh" );
+    GridFactory gridFactory( "grids/mimesh" + std::to_string(dim) + "d.msh" );
 
     Grid& mMesh = *gridFactory.grid();
 

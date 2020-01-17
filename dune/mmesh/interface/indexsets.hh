@@ -9,6 +9,7 @@
 
 // Dune includes
 #include <dune/grid/common/indexidset.hh>
+#include <dune/mmesh/grid/multiid.hh>
 
 namespace Dune
 {
@@ -58,16 +59,24 @@ namespace Dune
 
       std::array<std::size_t, dimensionworld> ids;
       for( int i = 0; i < dimensionworld; ++i )
-        ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().index );
+        try {
+          ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().index );
+        } catch (std::exception &e) {
+          DUNE_THROW(InvalidStateException, e.what());
+        }
       std::sort(ids.begin(), ids.end());
 
       std::array<std::size_t, dimension> edgeIds;
       for( int i = 0; i < dimension; ++i )
         edgeIds[i] = ids[i];
 
-      IndexType index = indexMap_.at( edgeIds ).at( ids[dimension] );
-      assert( index <= size(codim) );
-      return index;
+      try {
+        IndexType index = indexMap_.at( edgeIds ).at( ids[dimension] );
+        assert( index <= size(codim) );
+        return index;
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
     }
 
     //! get index of an codim 0 entity
@@ -76,7 +85,12 @@ namespace Dune
     index (const Entity< codim, dimension, GridImp, MMeshInterfaceGridEntity>& e) const
     {
       auto hostEntity = e.impl().hostEntity();
-      IndexType index = vertexIndices_.at( hostEntity->info().index );
+      IndexType index;
+      try {
+        index = vertexIndices_.at( hostEntity->info().index );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
       assert( index <= size(codim) );
       return index;
     }
@@ -93,19 +107,30 @@ namespace Dune
     std::enable_if_t< cc == dimension, IndexType >
     subIndex (const typename std::remove_const<GridImp>::type::Traits::template Codim<cc>::Entity& e, int i, int codim) const
     {
+      assert( i == 0 && codim == dimension );
       const HostGridEntity<dimension> hostEntity = e.impl().hostEntity();
-      return vertexIndices_.at( hostEntity->info().index );
+      try {
+        return vertexIndices_.at( hostEntity->info().index );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
     };
 
     //! get subIndex of a codim 0 entity
     template<int cc>
     std::enable_if_t< cc == 0, IndexType > subIndex (const typename std::remove_const<GridImp>::type::Traits::template Codim<cc>::Entity& e, int i, int codim) const
     {
-      assert ( codim > 0 && codim <= dimension );
-      const HostGridEntity<0> hostEntity = e.impl().hostEntity();
+      assert ( codim >= 0 && codim <= dimension );
 
-      if ( codim == dimension )
+      if ( codim == 0 )
+        return index( e );
+      else if ( codim == dimension )
+        try {
+          const HostGridEntity<0> hostEntity = e.impl().hostEntity();
           return vertexIndices_.at( hostEntity.first->vertex( (hostEntity.second+i+1)%(dimensionworld+1) )->info().index );
+        } catch (std::exception &e) {
+          DUNE_THROW(InvalidStateException, e.what());
+        }
       else
           DUNE_THROW( NotImplemented, "SubIndices for codim != dimension." );
 
@@ -193,12 +218,16 @@ namespace Dune
           addVertexIndex( idx0, vertexCount );
           addVertexIndex( idx1, vertexCount );
 
-          std::size_t id0 = vertexIndices_.at( idx0 );
-          std::size_t id1 = vertexIndices_.at( idx1 );
+          try {
+            std::size_t id0 = vertexIndices_.at( idx0 );
+            std::size_t id1 = vertexIndices_.at( idx1 );
 
-          // we store the indices for each vertex
-          indexMap_[{id0}].insert( { id1, elementCount } );
-          indexMap_[{id1}].insert( { id0, elementCount++ } );
+            // we store the indices for each vertex
+            indexMap_[{id0}].insert( { id1, elementCount } );
+            indexMap_[{id1}].insert( { id0, elementCount++ } );
+          } catch (std::exception &e) {
+            DUNE_THROW(InvalidStateException, e.what());
+          }
         }
 
       // Cache sizes since it is expensive to compute them
@@ -237,7 +266,11 @@ namespace Dune
           {
             std::size_t idx = eh->first->vertex((eh->second+i+1)%4)->info().index;
             addVertexIndex( idx, vertexCount );
-            ids[i] = vertexIndices_.at( idx );
+            try {
+              ids[i] = vertexIndices_.at( idx );
+            } catch (std::exception &e) {
+              DUNE_THROW(InvalidStateException, e.what());
+            }
           }
           std::sort(ids.begin(), ids.end());
 
@@ -272,8 +305,7 @@ namespace Dune
 
   template <class GridImp>
   class MMeshInterfaceGridGlobalIdSet :
-    public IdSet<GridImp,MMeshInterfaceGridGlobalIdSet<GridImp>,
-                 /*IdType=*/std::size_t>
+    public IdSet<GridImp, MMeshInterfaceGridGlobalIdSet<GridImp>, Impl::MultiId>
   {
     typedef typename std::remove_const<GridImp>::type::HostGridType HostGrid;
 
@@ -293,7 +325,7 @@ namespace Dune
     {}
 
     //! define the type used for persistent indices
-    typedef std::size_t IdType;
+    using IdType = Impl::MultiId;
 
     //! get id of an entity
     /*
@@ -321,6 +353,12 @@ namespace Dune
       return id( host );
     }
 
+    template<int cd>
+    IdType id (const MMeshInterfaceConnectedComponent<cd,dimension,GridImp>& connectedComponent) const
+    {
+      return connectedComponent.id();
+    }
+
     template< int d = dimensionworld >
     std::enable_if_t< d == 2, IdType >
     id (const typename std::remove_const<GridImp>::type::template MMeshInterfaceEntity<0>& host) const
@@ -329,24 +367,24 @@ namespace Dune
       std::size_t vId1 = host.first->vertex((host.second+2)%(dimensionworld+1))->info().id;
       if( vId0 > vId1 )
         std::swap( vId0, vId1 );
-      return cantorPairing_( vId0, vId1 );
+      return IdType( { vId0, vId1 } );
     }
 
     template< int d = dimensionworld >
     std::enable_if_t< d == 3, IdType >
     id (const typename std::remove_const<GridImp>::type::template MMeshInterfaceEntity<0>& host) const
     {
-      std::array< std::size_t, 3 > ids;
+      std::vector< std::size_t > ids ( 3 );
       ids[0] = host.first->vertex((host.second+1)%(dimensionworld+1))->info().id;
       ids[1] = host.first->vertex((host.second+2)%(dimensionworld+1))->info().id;
       ids[2] = host.first->vertex((host.second+3)%(dimensionworld+1))->info().id;
       std::sort( ids.begin(), ids.end() );
-      return cantorPairing_( ids[0], cantorPairing_( ids[1], ids[2] ) );
+      return IdType( ids );
     }
 
     IdType id (const typename std::remove_const<GridImp>::type::Traits::template Codim<dimension>::Entity& e) const
     {
-      return e.impl().hostEntity()->info().id;
+      return { e.impl().hostEntity()->info().id };
     }
 
     //! get id of subEntity
@@ -358,17 +396,11 @@ namespace Dune
     {
       assert( codim == dimension );
       const auto& host = e.impl().hostEntity();
-      return host.first->vertex( (host.second+i+1)%(dimensionworld+1) )->info().id;
+      return { host.first->vertex( (host.second+i+1)%(dimensionworld+1) )->info().id };
     }
 
     //! update id set
     void update(const GridImp* grid) {}
-
-  private:
-    static inline IdType cantorPairing_( IdType a, IdType b )
-    {
-      return (a + b)*(a + b + 1) / 2 + b;
-    }
   };
 
 }  // end namespace Dune

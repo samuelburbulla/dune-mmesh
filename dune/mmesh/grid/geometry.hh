@@ -96,6 +96,11 @@ namespace Dune
         circumcenter_ *= 0.5;
     }
 
+    //! Constructor of local intersection geometry for a given facet index
+    MMeshGeometry( std::size_t i )
+     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( i ) )
+    {}
+
     //! Constructor from host geometry with codim 2
     MMeshGeometry(const typename GridImp::template HostGridEntity<2>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { makeFieldVector( hostEntity->point() ) } ) ),
@@ -109,6 +114,24 @@ namespace Dune
     }
 
   private:
+    static inline std::array<FVector, 2> getLocalVertices_ ( std::size_t i )
+    {
+      assert( 0 <= i && i <= 5 );
+
+      static const std::array<FVector, 3> local = {
+        FVector( { 0.0, 0.0 } ),
+        FVector( { 1.0, 0.0 } ),
+        FVector( { 0.0, 1.0 } )
+      };
+
+      if ( i < 3 )
+        return { local[ (i+1)%3 ], local[ (i+2)%3 ] };
+
+      // return flipped edge
+      else
+        return { local[ (i+2)%3 ], local[ (i+1)%3 ] };
+    }
+
     FVector circumcenter_;
   };
 
@@ -189,6 +212,11 @@ namespace Dune
       );
     }
 
+    //! Constructor of local intersection geometry for a given facet index
+    MMeshGeometry( std::size_t i )
+     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( i ) )
+    {}
+
     //! Constructor from host geometry with codim 1
     MMeshGeometry(const typename GridImp::template HostGridEntity<2>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices<2>( hostEntity ) )
@@ -241,6 +269,25 @@ namespace Dune
        vertices[1] = makeFieldVector( cell->vertex( vertexIdx2 )->point() );
 
        return vertices;
+     }
+
+     static inline std::array<FVector, 3> getLocalVertices_ ( std::size_t i )
+     {
+       assert( 0 <= i && i <= 7 );
+
+       static const std::array<FVector, 4> local = {
+         FVector( { 0.0, 0.0, 0.0 } ),
+         FVector( { 1.0, 0.0, 0.0 } ),
+         FVector( { 0.0, 1.0, 0.0 } ),
+         FVector( { 0.0, 0.0, 1.0 } )
+       };
+
+       if ( i < 4 )
+         return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
+
+       // TODO
+       else
+         DUNE_THROW( NotImplemented, "LocalGeometry() for outside." );
      }
 
     FVector circumcenter_;

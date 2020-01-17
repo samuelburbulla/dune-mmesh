@@ -222,6 +222,7 @@ namespace Dune
     HostGridLeafIterator hostLeafIterator_;
   };
 
+
   //! Facet iterator
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<1, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
@@ -345,7 +346,9 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_end())
-    {}
+    {
+      hostLeafIterator_--; // a bit surprisingly, we have to do this to match the number of vertices
+    }
 
     //! prefix increment
     void increment() {

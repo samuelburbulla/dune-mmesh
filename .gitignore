@@ -1,6 +1,8 @@
 # build system clutter
 build-*
 Testing
+cmake
+*.cmake
 
 # auto-saved files
 *~

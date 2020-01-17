@@ -72,12 +72,20 @@ namespace Dune
       const auto& indexSet = grid_->leafIndexSet();
 
       std::array< std::size_t, dimension > ids;
-      for( int i = 0; i < dimension; ++i )
-        ids[i] = indexSet.vertexIndexMap().at(
-          interfaceEntity_.first->vertex((interfaceEntity_.second+i+( (i == 1 && index_ == 2) ? index_+2 : index_+1 ))%(dimensionworld+1))->info().index
-        );
+      try {
+        for( int i = 0; i < dimension; ++i )
+          ids[i] = indexSet.vertexIndexMap().at(
+            interfaceEntity_.first->vertex((interfaceEntity_.second+i+( (i == 1 && index_ == 2) ? index_+2 : index_+1 ))%(dimensionworld+1))->info().index
+          );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
       std::sort(ids.begin(), ids.end());
-      localIndexMap_ = indexSet.indexMap().at( ids );
+      try {
+        localIndexMap_ = indexSet.indexMap().at( ids );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
       assert( 0 <= nbIdx_ && ( nbIdx_ < numOutside() || boundary() ) );
     }
 
@@ -109,9 +117,14 @@ namespace Dune
 
       const auto& vertexIndexMap = grid_->leafIndexSet().vertexIndexMap();
 
-      std::size_t myLastVertexIndex = vertexIndexMap.at(
-        interfaceEntity_.first->vertex((interfaceEntity_.second+((index_ == 0) ? index_+dimensionworld : index_))%(dimensionworld+1))->info().index
-      );
+      std::size_t myLastVertexIndex;
+      try {
+        myLastVertexIndex = vertexIndexMap.at(
+          interfaceEntity_.first->vertex((interfaceEntity_.second+((index_ == 0) ? index_+dimensionworld : index_))%(dimensionworld+1))->info().index
+        );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
 
       // get the i-th index map entry
       auto it = localIndexMap_.begin();
@@ -132,11 +145,19 @@ namespace Dune
       const auto& vertex0 = interfaceEntity_.first->vertex((interfaceEntity_.second+index_+1)%(dimensionworld+1));
 
       std::array< std::size_t, dimensionworld > vIdx;
-      vIdx[0] = vertexIndexMap.at( vertex0->info().index );
+      try {
+        vIdx[0] = vertexIndexMap.at( vertex0->info().index );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
       vIdx[1] = it->first;
 
       if ( dimensionworld == 3 )
-        vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex((interfaceEntity_.second+((index_ < 2) ? index_+2 : 1))%(dimensionworld+1))->info().index );
+        try {
+          vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex((interfaceEntity_.second+((index_ < 2) ? index_+2 : 1))%(dimensionworld+1))->info().index );
+        } catch (std::exception &e) {
+          DUNE_THROW(InvalidStateException, e.what());
+        }
       std::sort(vIdx.begin(), vIdx.end());
 
       // search in incident facets for the right entity
@@ -199,7 +220,10 @@ namespace Dune
 
       auto it = grid_->boundarySegments().find( vertices );
       if( it == grid_->boundarySegments().end() )
-        return 0; // default to 0
+      {
+        std::cerr << "BoundarySegmentIndex was not found, default to 0." << std::endl;
+        return 0;
+      }
 
       return it->second;
     }
@@ -221,7 +245,7 @@ namespace Dune
     //! where iteration started.
     LocalGeometry geometryInInside () const
     {
-      return LocalGeometry( interfaceEntity_.first );
+      return LocalGeometry( index_ );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.
@@ -229,7 +253,7 @@ namespace Dune
     LocalGeometry geometryInOutside () const
     {
       assert( neighbor() );
-      return LocalGeometry( outside() );
+      return LocalGeometry( indexInOutside() );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.
@@ -251,14 +275,24 @@ namespace Dune
     }
 
     //! local number of codim 1 entity in self where intersection is contained in
-    int indexInInside () const {
+    int indexInInside () const
+    {
       return index_;
     }
 
     //! local number of codim 1 entity in neighbor where intersection is contained
-    int indexInOutside () const {
-      DUNE_THROW( NotImplemented, "indexInOutside for interface grid" );
-      return 0; // TODO e.g. search for vertexIdx in neighbor vertices?
+    int indexInOutside () const
+    {
+      assert( dimensionworld == 2 );
+      const auto neighbor = outside();
+      const auto& vertex0 = interfaceEntity_.first->vertex((interfaceEntity_.second+index_+1)%(dimensionworld+1));
+
+      if ( neighbor.template subEntity<dimension>( 0 ).impl().hostEntity() == vertex0 )
+        return 0;
+      if ( neighbor.template subEntity<dimension>( 1 ).impl().hostEntity() == vertex0 )
+        return 1;
+
+      DUNE_THROW( InvalidStateException, "indexInOutside() could not be determined!" );
     }
 
     //! return outer normal
@@ -277,7 +311,9 @@ namespace Dune
       const auto& p1 = face->vertex( (edgeIdx+index_+1)%(dimensionworld+1) )->point();
       const auto& p2 = face->vertex( (edgeIdx-index_+2)%(dimensionworld+1) )->point();
 
-      return NormalVector ( { p1.x() - p2.x(), p1.y() - p2.y() } );
+      NormalVector n ( { p1.x() - p2.x(), p1.y() - p2.y() } );
+      n /= n.two_norm();
+      return n;
     }
 
     template< int d = dimension >
@@ -315,6 +351,11 @@ namespace Dune
       NormalVector n = integrationOuterNormal( local );
       n /= n.two_norm();
       return n;
+    }
+
+    const auto getHostVertex() const
+    {
+      return interfaceEntity_.first->vertex((interfaceEntity_.second+index_+1)%(dimensionworld+1));
     }
 
     const MMeshInterfaceEntity& getHostIntersection() const

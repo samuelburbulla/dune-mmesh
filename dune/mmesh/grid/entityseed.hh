@@ -41,18 +41,29 @@ namespace Dune
     /**
      * \brief Construct a seed from another seed.
      */
-    MMeshEntitySeed operator= (const MMeshEntitySeed<codim, GridImp>& seed)
+    MMeshEntitySeed& operator= (const MMeshEntitySeed<codim, GridImp>& seed)
     {
-      hostEntity_ = seed.hostEntity_;
-      return seed;
+      if( this != &seed )
+        hostEntity_ = seed.hostEntity_;
+      return *this;
     }
 
     /**
      * \brief Check whether it is safe to create an Entity from this Seed
      */
-    bool isValid() const
+    template< int cd = codim >
+    std::enable_if_t< cd != 2 || GridImp::dimension != 3, bool >
+    isValid() const
     {
-      return hostEntity_;
+      return hostEntity_ != HostGridEntity();
+    }
+
+    //! Special handling for codim 2 entities in 3d
+    template< int cd = codim >
+    std::enable_if_t< cd == 2 && GridImp::dimension == 3, bool >
+    isValid() const
+    {
+      return hostEntity_.first != HostGridEntity().first;
     }
 
     /**

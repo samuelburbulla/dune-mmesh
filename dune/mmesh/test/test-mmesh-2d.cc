@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     // ------------
     using Grid = Dune::MovingMesh<2>;
 
-    using GridFactory = Dune::GmshGridFactory< Grid, /*useImplictFactory=*/true >;
+    using GridFactory = Dune::GmshGridFactory< Grid >;
     GridFactory gridFactory( "grids/simple2d.msh" );
 
     Grid& mMesh = *gridFactory.grid();
@@ -149,22 +149,22 @@ int main(int argc, char *argv[])
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 2 ), 4ul },
-            { indexSet.subIndex( e, 1, 2 ), 0ul },
-            { indexSet.subIndex( e, 2, 2 ), 1ul } }
+          { { indexSet.subIndex( e, 0, 2 ), 0ul },
+            { indexSet.subIndex( e, 1, 2 ), 1ul },
+            { indexSet.subIndex( e, 2, 2 ), 4ul } }
         );
 
         checkProperties( "vertex positions",
-          { { e.subEntity<2>( 0 ).geometry().center(), { 1, 0.25 } },
-            { e.subEntity<2>( 1 ).geometry().center(), { 0, 0 } },
-            { e.subEntity<2>( 2 ).geometry().center(), { 1, 0 } } }
+          { { e.subEntity<2>( 0 ).geometry().center(), { 0, 0 } },
+            { e.subEntity<2>( 1 ).geometry().center(), { 1, 0 } },
+            { e.subEntity<2>( 2 ).geometry().center(), { 1, 0.25 } } }
         );
 
         // check edges
         checkProperties( "edge centers",
-          { { e.subEntity<1>( 0 ).geometry().center(), { 0.5, 0.125 } },
-            { e.subEntity<1>( 1 ).geometry().center(), { 1, 0.125 } },
-            { e.subEntity<1>( 2 ).geometry().center(), { 0.5, 0 } } }
+          { { e.subEntity<1>( 0 ).geometry().center(), { 0.5, 0 } },
+            { e.subEntity<1>( 1 ).geometry().center(), { 0.5, 0.125 } },
+            { e.subEntity<1>( 2 ).geometry().center(), { 1, 0.125 } } }
         );
 
         // check intersections
@@ -176,15 +176,15 @@ int main(int argc, char *argv[])
         auto is2 = it.dereference();
 
         checkProperties( "boundary",
-          { { is0.boundary(), false },
-            { is1.boundary(), true },
+          { { is0.boundary(), true },
+            { is1.boundary(), false },
             { is2.boundary(), true } }
         );
 
         checkProperties( "intersection normals",
-          { { is0.centerUnitOuterNormal(), { -0.24253562503633297, 0.97014250014533188} },
-            { is1.centerUnitOuterNormal(), { 1, 0 } },
-            { is2.centerUnitOuterNormal(), { 0, -1 } } }
+          { { is0.centerUnitOuterNormal(), { 0, -1 } },
+            { is1.centerUnitOuterNormal(), { -0.24253562503633297, 0.97014250014533188} },
+            { is2.centerUnitOuterNormal(), { 1, 0 } } }
         );
 
         checkProperties( "index in inside and outside",
@@ -201,37 +201,37 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal2 = vertexMapper.subIndex(e, vIdxLocal2, 2);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 4u },
-            { vIdxGlobal2, 0u } }
+          { { vIdxGlobal1, 0u },
+            { vIdxGlobal2, 1u } }
         );
       }
 
-      if (elementCount == 2)
+      if (elementCount == 3)
       {
-        std::cout << "- Check third element -" << std::endl;
+        std::cout << "- Check fourth element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.5, 0.41666666666666663 } );
         checkProperty( "geometry volume", geo.volume(), 0.4375 );
-        checkProperty( "element index", indexSet.index( e ), 2ul );
+        checkProperty( "element index", indexSet.index( e ), 3ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 2 ), 5ul },
-            { indexSet.subIndex( e, 1, 2 ), 0ul },
-            { indexSet.subIndex( e, 2, 2 ), 4ul } }
+          { { indexSet.subIndex( e, 0, 2 ), 0ul },
+            { indexSet.subIndex( e, 1, 2 ), 4ul },
+            { indexSet.subIndex( e, 2, 2 ), 5ul } }
         );
         checkProperties( "vertex positions",
-          { { e.subEntity<2>( 0 ).geometry().center(), { 0.5, 1 } },
-            { e.subEntity<2>( 1 ).geometry().center(), { 0, 0 } },
-            { e.subEntity<2>( 2 ).geometry().center(), { 1, 0.25 } } }
+          { { e.subEntity<2>( 0 ).geometry().center(), { 0, 0 } },
+            { e.subEntity<2>( 1 ).geometry().center(), { 1, 0.25 } },
+            { e.subEntity<2>( 2 ).geometry().center(), { 0.5, 1 } } }
         );
 
         // check edges
         checkProperties( "edge centers",
-          { { e.subEntity<1>( 0 ).geometry().center(), { 0.25, 0.5 } },
-            { e.subEntity<1>( 1 ).geometry().center(), { 0.75, 0.625 } },
-            { e.subEntity<1>( 2 ).geometry().center(), { 0.5, 0.125  } } }
+          { { e.subEntity<1>( 0 ).geometry().center(), { 0.5, 0.125  } },
+            { e.subEntity<1>( 1 ).geometry().center(), { 0.25, 0.5 } },
+            { e.subEntity<1>( 2 ).geometry().center(), { 0.75, 0.625 } } }
         );
 
         // check intersections
@@ -248,15 +248,21 @@ int main(int argc, char *argv[])
             { is2.boundary(), false } }
         );
 
+        checkProperties( "isIntersection",
+          { { mMesh.isInterface( is0 ), false },
+            { mMesh.isInterface( is1 ), false },
+            { mMesh.isInterface( is2 ), false } }
+        );
+
         checkProperties( "intersection normals",
-          { { is0.centerUnitOuterNormal(), { -0.89442719099991586, 0.44721359549995793 } },
-            { is1.centerUnitOuterNormal(), { 0.83205029433784372, 0.55470019622522915 } },
-            { is2.centerUnitOuterNormal(), { 0.24253562503633297, -0.97014250014533188 } } }
+          { { is0.centerUnitOuterNormal(), { 0.24253562503633297, -0.97014250014533188 } },
+            { is1.centerUnitOuterNormal(), { -0.89442719099991586, 0.44721359549995793 } },
+            { is2.centerUnitOuterNormal(), { 0.83205029433784372, 0.55470019622522915 } } }
         );
 
         checkProperties( "index in inside and outside",
           { { is2.indexInInside(), 2 },
-            { is2.indexInOutside(), 0 } }
+            { is2.indexInOutside(), 2 } }
         );
       }
 

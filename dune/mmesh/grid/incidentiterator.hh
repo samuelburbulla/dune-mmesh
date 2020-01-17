@@ -15,7 +15,7 @@
 
 namespace Dune
 {
-  //! Forward declarations
+  //! Forward declaration
   template<class GridImp, int dim>
   class MMeshIncidentIteratorImp;
 
@@ -23,13 +23,21 @@ namespace Dune
   template<class Grid>
   using MMeshIncidentIterator = EntityIterator<0, Grid, MMeshIncidentIteratorImp<Grid, Grid::dimension>>;
 
-  //! Forward declarations
+  //! Forward declaration
   template<class GridImp, int dim>
   class MMeshIncidentFacetsIteratorImp;
 
   //!  The Incident Facets Iterator alias
   template<class Grid>
   using MMeshIncidentFacetsIterator = EntityIterator<1, Grid, MMeshIncidentFacetsIteratorImp<Grid, Grid::dimension>>;
+
+  //! Forward declaration
+  template<class GridImp, int dim>
+  class MMeshIncidentVerticesIteratorImp;
+
+  //!  The Incident Facets Iterator alias
+  template<class Grid>
+  using MMeshIncidentVerticesIterator = EntityIterator<Grid::dimension, Grid, MMeshIncidentVerticesIteratorImp<Grid, Grid::dimension>>;
 
   /** \brief Iterator over all incident entities
    *  \ingroup MMesh
@@ -168,6 +176,7 @@ namespace Dune
     std::size_t i_;
   };
 
+
   /** \brief Iterator over all incident facets
    *  \ingroup MMesh
    */
@@ -246,7 +255,7 @@ namespace Dune
     typedef typename GridImp::template HostGridEntity<1> HostGridEntity;
 
     //! The type of the element output
-    using ElementOutput = std::list<HostGridEntity>;
+    using ElementOutput = typename GridImp::BoundaryEdgesOutput;
 
     //! The type of the element container
     using ElementContainer = std::vector<HostGridEntity>;
@@ -265,7 +274,7 @@ namespace Dune
 
       typename ElementOutput::iterator fit;
       for(fit = elements.begin(); fit != elements.end(); fit++)
-      elementContainer_.push_back( *fit );
+        elementContainer_.push_back( *fit );
     }
 
     /** \brief Constructor which creates the end iterator
@@ -296,6 +305,143 @@ namespace Dune
 
     //! equality
     bool equals(const MMeshIncidentFacetsIteratorImp& iter) const {
+      return i_ == iter.i_;
+    }
+
+  private:
+    const GridImp* mMesh_;
+    ElementContainer elementContainer_;
+    std::size_t i_;
+  };
+
+  /** \brief Iterator over all incident vertices
+   *  \ingroup MMesh
+   */
+
+  //! 2D
+  template<class GridImp>
+  class MMeshIncidentVerticesIteratorImp<GridImp, 2>
+  {
+  private:
+    //! The type of the requested vertex entity
+    typedef typename GridImp::template HostGridEntity<GridImp::dimension> HostGridVertex;
+
+    //! The type of the element circulator
+   using Circulator = typename GridImp::HostGridType::Vertex_circulator;
+   using ElementContainer = std::vector<HostGridVertex>;
+
+  public:
+    enum {codimension = 2};
+
+    typedef typename GridImp::template Codim<2>::Entity Entity;
+
+    explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite)
+    : mMesh_(mMesh),
+      i_(0)
+    {
+      Circulator circulator = mMesh->getHostGrid().incident_vertices(hostEntity);
+      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+        if (includeInfinite || !mMesh->getHostGrid().is_infinite(circulator))
+          elementContainer_.push_back( circulator );
+    }
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     *  \param mMesh  pointer to grid instance
+     */
+    explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite, bool endDummy) :
+      mMesh_(mMesh),
+      i_(0)
+    {
+      Circulator circulator = mMesh->getHostGrid().incident_vertices(hostEntity);
+      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+        if (includeInfinite || !mMesh->getHostGrid().is_infinite(circulator))
+          ++i_;
+    }
+
+    //! prefix increment
+    void increment() {
+      ++i_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ mMesh_, elementContainer_[i_] }};
+    }
+
+    //! equality
+    bool equals(const MMeshIncidentVerticesIteratorImp& iter) const {
+      return i_ == iter.i_;
+    }
+
+  private:
+    const GridImp* mMesh_;
+    ElementContainer elementContainer_;
+    std::size_t i_;
+  };
+
+
+  //! 3D
+  template<class GridImp>
+  class MMeshIncidentVerticesIteratorImp<GridImp, 3>
+  {
+  private:
+    //! The type of the requested vertex entity
+    typedef typename GridImp::template HostGridEntity<3> HostGridVertex;
+
+    //! The type of the element output
+    using ElementOutput = std::list<HostGridVertex>;
+
+    //! The type of the element container
+    using ElementContainer = std::vector<HostGridVertex>;
+
+  public:
+    enum {codimension = 3};
+
+    typedef typename GridImp::template Codim<3>::Entity Entity;
+
+    explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite)
+    : mMesh_(mMesh),
+      i_(0)
+    {
+      ElementOutput elements;
+      mMesh_->getHostGrid().incident_vertices( hostEntity, std::back_inserter(elements) );
+
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+        if (includeInfinite || !mMesh->getHostGrid().is_infinite( *fit ))
+          elementContainer_.push_back( *fit );
+    }
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     *  \param mMesh  pointer to grid instance
+     */
+    explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite, bool endDummy) :
+      mMesh_(mMesh),
+      i_(0)
+    {
+      ElementOutput elements;
+      mMesh_->getHostGrid().incident_vertices( hostEntity, std::back_inserter(elements) );
+
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+        if (includeInfinite || !mMesh->getHostGrid().is_infinite( *fit ))
+          ++i_;
+    }
+
+    //! prefix increment
+    void increment() {
+      ++i_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ mMesh_, elementContainer_[i_] }};
+    }
+
+    //! equality
+    bool equals(const MMeshIncidentVerticesIteratorImp& iter) const {
       return i_ == iter.i_;
     }
 

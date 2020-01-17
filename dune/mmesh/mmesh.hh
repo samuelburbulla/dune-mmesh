@@ -16,19 +16,19 @@
 
 // dune-common includes
 #include <dune/common/deprecated.hh>
-#include <dune/common/parallel/collectivecommunication.hh>
+#include <dune/common/parallel/communication.hh>
 #include <dune/common/version.hh>
 #include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
 
 // CGAL includes
 #include <CGAL/utility.h>
-#include <CGAL/Circle_2.h>
-#include <CGAL/Sphere_3.h>
 
 // The components of the MMesh interface
 #include "grid/common.hh"
+#include "grid/connectedcomponent.hh"
 #include "grid/incidentiterator.hh"
 #include "grid/geometry.hh"
 #include "grid/entity.hh"
@@ -41,6 +41,14 @@
 #include "grid/mmeshdefaults.hh"
 #include "grid/pointfieldvector.hh"
 #include "grid/rangegenerators.hh"
+#include "remeshing/edgelengthratioindicator.hh"
+#include "remeshing/interfaceindicator.hh"
+#include "remeshing/interfacerefinement.hh"
+#include "remeshing/cellcenterrefinement.hh"
+#include "remeshing/longestedgerefinement.hh"
+#include "remeshing/newestvertexbisection.hh"
+#include "remeshing/ratioindicator.hh"
+#include "remeshing/volumeindicator.hh"
 #include "interface/traits.hh"
 // Further includes below!
 
@@ -54,9 +62,19 @@ namespace Dune
   template<class HostGrid, int dim, class GridFamily = MMeshFamily<dim, HostGrid>>
   class MMesh;
 
+  template< int dim >
+  class TriangulationWrapper;
+
   // Type shortcut with default triangulation
   template<int dim>
-  using MovingMesh = MMesh< typename MMeshDefaults::Delaunay<dim>::Triangulation, dim >;
+  using MovingMesh = MMesh< TriangulationWrapper<dim>, dim >;
+
+  template< int dim >
+  class DelaunayTriangulationWrapper;
+
+  // Type shortcut with delaunay triangulation
+  template<int dim>
+  using DelaunayTriangulation = MMesh< DelaunayTriangulationWrapper<dim>, dim >;
 
   // MMesh family
   template<int dim, class HostGrid>
@@ -81,9 +99,9 @@ namespace Dune
         MMeshLeafIndexSet< const MMesh<HostGrid, dim> >, // LevelIndexSet
         MMeshLeafIndexSet< const MMesh<HostGrid, dim> >,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >,
-        std::size_t, // GlobalIdSet::IdType,
-        MMeshLocalIdSet< const MMesh<HostGrid, dim> >,
-        std::size_t, // LocalIdSet::IdType,
+        Impl::MultiId,
+        MMeshGlobalIdSet< const MMesh<HostGrid, dim> >, // LocalIdSet
+        Impl::MultiId,
         CollectiveCommunication< MMesh<HostGrid, dim> >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
@@ -92,6 +110,10 @@ namespace Dune
   };
 
   /// @cond
+  /*!
+   * \brief Determine the correct entity type in the CGAL host grid
+   * \ingroup MMesh
+   */
   template<class HostGrid, int dim, int codim> class HostGridEntityChooser_ { struct type {}; };
 
   template<class HG> class HostGridEntityChooser_<HG,2,0> { public: using type = typename HG::Face_handle; };
@@ -102,6 +124,19 @@ namespace Dune
   template<class HG> class HostGridEntityChooser_<HG,3,1> { public: using type = std::pair<typename HG::Cell_handle, int>; };
   template<class HG> class HostGridEntityChooser_<HG,3,2> { public: using type = CGAL::Triple<typename HG::Cell_handle, int, int>; };
   template<class HG> class HostGridEntityChooser_<HG,3,3> { public: using type = typename HG::Vertex_handle; };
+
+  //! The refinement insertion point struct
+  template<class Point, class Edge, class IdType, class VertexHandle, class InterfaceGridConnectedComponent>
+  struct RefinementInsertionPointStruct
+  {
+    Point point;
+    std::size_t insertionLevel;
+    Edge edge;
+    IdType edgeId;
+    VertexHandle v0, v1;
+    bool isInterface = false;
+    InterfaceGridConnectedComponent connectedcomponent;
+  };
   /// @endcond
 
   //**********************************************************************
@@ -116,21 +151,21 @@ namespace Dune
    *
    * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
-  template <class HostGrid, int dim, class GridFamily>
-  class MMesh
+  template <class HostGrid, int dim, class GridFam>
+  class MMeshBase
    : public GridDefaultImplementation< dim, dim,
                                        /*FieldType=*/typename HostGrid::Point::R::RT,
-                                       GridFamily >
+                                       GridFam >
   {
   public:
     //! The world dimension
     static constexpr int dimension = dim;
 
-    //! The this type
-    using ThisType = MMesh<HostGrid, dim, GridFamily>;
-
     //! The hostgrid type
     using HostGridType = HostGrid;
+
+    //! The grid family type
+    using GridFamily = GridFam;
 
     //! The point type
     using Point = typename HostGrid::Point;
@@ -140,6 +175,9 @@ namespace Dune
 
     //! The boundary segment map
     using BoundarySegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
+
+    //! The boundary id map
+    using BoundaryIds = std::unordered_map< std::size_t, std::size_t >;
 
     //! The interface segment set
     using InterfaceSegments = std::unordered_set< std::vector< std::size_t >, HashUIntVector >;
@@ -155,9 +193,9 @@ namespace Dune
     using GridImp = typename GridFamily::Traits::Grid;
 
     #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      typedef ToUniquePtr< GridImp > GridPtrType;
+      using GridPtrType = ToUniquePtr< GridImp >;
     #else
-      typedef GridImp* GridPtrType;
+      using GridPtrType = GridImp*;
     #endif
 
     //! The leaf iterator
@@ -174,19 +212,40 @@ namespace Dune
     using ElementHandle = HostGridEntity<0>;
 
     //! The type of the underlying vertex handle
+    using EdgeHandle = HostGridEntity<dimension-1>;
+
+    //! The type of the underlying vertex handle
     using VertexHandle = HostGridEntity<dimension>;
 
     //! The type of the element output
     using ElementOutput = std::list<HostGridEntity<0>>;
 
-    //! The type of an codim 0 entity
+    //! The type of the boundary edges output
+    using BoundaryEdgesOutput = std::list<HostGridEntity<1>>;
+
+    //! The type of a codim 0 entity
     using Entity = typename Traits::template Codim<0>::Entity;
 
-    //! The type of a vertex
+    //! The type of a codim 1 entity ('facet')
+    using Facet = typename Traits::template Codim<1>::Entity;
+
+    //! The type of a codim dim-1 entity ('edge')
+    using Edge = typename Traits::template Codim<dimension-1>::Entity;
+
+    //! The type of a codim dim entity ('vertex')
     using Vertex = typename Traits::template Codim<dimension>::Entity;
+
+    //! The type of a caching entity
+    using CachingEntity = MMeshCachingEntity< 0, dimension, const GridImp >;
+
+    //! The type used to store connected components of entities
+    using ConnectedComponent = MMeshConnectedComponent< const GridImp >;
 
     //! The type of an interface element
     using InterfaceElement = typename Traits::template Codim<1>::Entity;
+
+    //! The type of an intersection
+    using Intersection = typename Traits::LeafIntersection;
 
     //! The type of the interface grid
     using InterfaceGrid = MMeshInterfaceGrid<GridImp, dimension>;
@@ -194,44 +253,47 @@ namespace Dune
     //! The type of an interface grid entity
     using InterfaceEntity = Dune::Entity<0, dimension-1, const InterfaceGrid, MMeshInterfaceGridEntity>;
 
+    //! The type of a connected component of interface grid entities
+    using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension-1, const InterfaceGrid>;
+
+    //! The type of an id
+    using IdType = Impl::MultiId;
+
+    //! The type of a refinement insertion point
+    using RefinementInsertionPoint = RefinementInsertionPointStruct<Point, Edge, IdType, VertexHandle, InterfaceGridConnectedComponent>;
+
+    //! The type of the employed remeshing indicator
+    using RemeshingIndicator = RatioIndicator<GridImp>;
+
     /** \brief Constructor
      *
-     * \param hostgrid          The host grid wrapped by the MMesh
-     * \param boundarySegments  The boundary segment index mapper
-     * \param interfaceSegments The set of interface segments
+     * \param hostgrid           The host grid wrapped by the MMesh
+     * \param boundarySegments   The boundary segment index mapper
+     * \param interfaceSegments  The set of interface segments
      */
-    explicit MMesh(HostGrid hostgrid,
-                   BoundarySegments boundarySegments,
-                   InterfaceSegments interfaceSegments_)
+    explicit MMeshBase(HostGrid hostgrid,
+                       BoundarySegments boundarySegments,
+                       BoundarySegments interfaceBoundarySegments,
+                       BoundaryIds boundaryIds,
+                       InterfaceSegments interfaceSegments)
      : hostgrid_(hostgrid),
        boundarySegments_(boundarySegments),
-       interfaceSegments_(interfaceSegments_)
+       boundaryIds_(boundaryIds),
+       interfaceSegments_(interfaceSegments)
     {
       leafIndexSet_ = std::make_unique<MMeshLeafIndexSet<const GridImp>>( This() );
       globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
-      localIdSet_ = std::make_unique<MMeshLocalIdSet<const GridImp>>( This() );
-
       setIndices();
 
-      interfaceGrid_ = std::make_shared<InterfaceGrid>( This() );
+      interfaceGrid_ = std::make_shared<InterfaceGrid>( This(), interfaceBoundarySegments );
     }
 
-    explicit MMesh(HostGrid hostgrid)
-     : hostgrid_(hostgrid)
-    {
-      leafIndexSet_ = std::make_unique<MMeshLeafIndexSet<const GridImp>>( This() );
-      globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
-      localIdSet_ = std::make_unique<MMeshLocalIdSet<const GridImp>>( This() );
-
-      setIndices();
-
-      interfaceGrid_ = std::make_shared<InterfaceGrid>( This() );
-    }
-
-    virtual ~MMesh() {};
+    //! The destructor
+    virtual ~MMeshBase() {}
 
     //! This pointer to derived class
     const GridImp* This() const { return static_cast<const GridImp*>(this); }
+    GridImp* This() { return static_cast<GridImp*>(this); }
 
     /** \brief Return maximum level defined in this grid.
      *
@@ -249,34 +311,49 @@ namespace Dune
       return size(codim);
     }
 
-    //! Returns the number of boundary segments within the macro grid
+    //! returns the number of boundary segments within the macro grid
     size_t numBoundarySegments () const {
-      return boundarySegments().size();
+      return boundarySegments_.size();
     }
 
-    //! Returns the boundary segment to index map
+    //! returns the boundary segment to index map
     const BoundarySegments& boundarySegments() const
     {
       return boundarySegments_;
     }
 
-    //! Returns the interface segment set
+    //! returns the boundary segment index to boundary id map
+    const BoundaryIds& boundaryIds() const
+    {
+      return boundaryIds_;
+    }
+
+    //! returns the interface segment set
     const InterfaceSegments& interfaceSegments() const
     {
       return interfaceSegments_;
     }
 
-    //! Returns the interface segment set
-    InterfaceSegments interfaceSegments()
+    //! returns the interface segment set
+    InterfaceSegments& interfaceSegments()
     {
       return interfaceSegments_;
     }
 
-    void addInterfaceSegment( const std::vector< std::size_t >& v )
+    //! add an interface
+    void addInterface( const Intersection& intersection )
     {
-      std::vector<std::size_t> sorted_vertices( v );
-      std::sort(sorted_vertices.begin(), sorted_vertices.end());
-      interfaceSegments_.insert( sorted_vertices );
+      const auto& facet = entity( intersection.impl().getHostIntersection() );
+      std::vector<std::size_t> ids;
+      for( int i = 0; i < facet.subEntities(dim); ++i )
+      {
+        const auto& vertex = facet.impl().template subEntity<dim>(i);
+        vertex.impl().hostEntity()->info().isInterface = true;
+        ids.push_back( globalIdSet().id( vertex ).vt()[0] );
+      }
+      std::sort(ids.begin(), ids.end());
+      interfaceSegments_.insert( ids );
+      interfaceGrid_->setIndices();
     }
 
     //! number of leaf entities per codim in this process
@@ -304,7 +381,7 @@ namespace Dune
 
     /** \brief Access to the LocalIdSet */
     const typename Traits::LocalIdSet& localIdSet() const {
-      return *localIdSet_;
+      return *globalIdSet_;
     }
 
     /** \brief Access to the LevelIndexSets */
@@ -349,6 +426,18 @@ namespace Dune
       return entity( typename Traits::template Codim<0>::EntitySeed( elementHandle ) );
     }
 
+    InterfaceElement entity(const HostGridEntity<1>& facetHandle) const
+    {
+      return entity( typename Traits::template Codim<1>::EntitySeed( facetHandle ) );
+    }
+
+    template< int d = dim >
+    std::enable_if_t< d == 3, Edge >
+    entity(const HostGridEntity<2>& edgeHandle) const
+    {
+      return entity( typename Traits::template Codim<2>::EntitySeed( edgeHandle ) );
+    }
+
     //! Iterator to first entity of given codim on level
     template<int codim>
     typename Traits::template Codim<codim>::LevelIterator lbegin (int level) const {
@@ -356,7 +445,7 @@ namespace Dune
     }
 
 
-    //! One past the end on This() level
+    //! one past the end on this level
     template<int codim>
     typename Traits::template Codim<codim>::LevelIterator lend (int level) const {
       return MMeshLeafIterator<codim,All_Partition, const GridImp>(This(), true);
@@ -370,7 +459,7 @@ namespace Dune
     }
 
 
-    //! One past the end on This() level
+    //! one past the end on this level
     template<int codim, PartitionIteratorType PiType>
     typename Traits::template Codim<codim>::template Partition<PiType>::LevelIterator lend (int level) const {
       return MMeshLeafIterator<codim,PiType, const GridImp>(This(), true);
@@ -384,7 +473,7 @@ namespace Dune
     }
 
 
-    //! One past the end of the sequence of leaf entities
+    //! one past the end of the sequence of leaf entities
     template<int codim>
     typename Traits::template Codim<codim>::LeafIterator leafend() const {
       return MMeshLeafIterator<codim,All_Partition, const GridImp>(This(), true);
@@ -398,40 +487,110 @@ namespace Dune
     }
 
 
-    //! One past the end of the sequence of leaf entities
+    //! one past the end of the sequence of leaf entities
     template<int codim, PartitionIteratorType PiType>
     typename Traits::template Codim<codim>::template Partition<PiType>::LeafIterator leafend() const {
       return MMeshLeafIterator<codim,PiType, const GridImp>(This(), true);
     }
 
-    //! Iterator to first interface entity
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceBegin( bool includeBoundary = false ) const
+    //! Return if vertex is part of the interface
+    bool isInterface( const Vertex& vertex ) const
     {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, includeBoundary) );
+      return vertex.impl().hostEntity()->info().isInterface;
     }
 
-    //! One past the end of the sequence of interface entities
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceEnd( bool includeBoundary = false ) const
+    //! Return if intersection is part of the interface
+    bool isInterface( const Intersection& intersection ) const
     {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, true, includeBoundary) );
+      return isInterface( entity( intersection.impl().getHostIntersection() ) );
     }
 
-    //! Iterator to first interface entity
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesBegin( bool includeBoundary = false ) const
+    //! Return if element is part of the interface
+    bool isInterface( const InterfaceElement& segment ) const
     {
-      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, includeBoundary) );
+      static std::vector<std::size_t> ids( segment.subEntities(dimension) );
+      for( std::size_t i = 0; i < segment.subEntities(dimension); ++i )
+      {
+        const auto& vertex = segment.impl().template subEntity<dimension>(i);
+        if ( !vertex.impl().isInterface() )
+          return false;
+
+        ids[i] = this->globalIdSet().id( vertex ).vt()[0];
+      }
+
+      std::sort(ids.begin(), ids.end());
+
+      int count = interfaceSegments_.count( ids );
+      assert( count <= 1 );
+
+      // TODO is this check still necessary?
+      bool isOnBoundary = getHostGrid().is_infinite( (segment.impl().hostEntity().first)->neighbor(segment.impl().hostEntity().second) );
+      return ( count == 1 && !isOnBoundary );
     }
 
-    //! One past the end of the sequence of interface entities
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesEnd( bool includeBoundary = false ) const
+    //! Return if edge in 3d is part of an interface segment
+    template< int d = dim >
+    std::enable_if_t< d == 3, bool >
+    isInterface( const Edge& edge ) const
     {
-      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, true, includeBoundary) );
+      std::vector<std::size_t> ids;
+      for( std::size_t i = 0; i < edge.subEntities(dimension); ++i )
+      {
+        const auto& vertex = edge.impl().template subEntity<dimension>(i);
+
+        if( !isInterface( vertex ) )
+          return false;
+
+        ids.push_back( this->globalIdSet().id( vertex ).vt()[0] );
+      }
+
+      std::sort(ids.begin(), ids.end());
+
+      for ( const auto& segment : interfaceSegments_ )
+      {
+        if ( (segment[0] == ids[0] && segment[1] == ids[1])
+          || (segment[1] == ids[0] && segment[2] == ids[1]) )
+        {
+          return true; // TODO what about boundary interface segments?
+        }
+      }
+
+      return false;
+    }
+
+    //! Return if entity shares a facet with the interface
+    bool isOnInterface( const Entity& entity ) const
+    {
+      for( std::size_t i = 0; i < entity.subEntities(1); ++i )
+        if( isInterface( entity.template subEntity<1>(i) ) )
+          return true;
+
+      return false;
+    }
+
+    //! Return a codim 1 entity as a interface grid codim 0 entity
+    InterfaceEntity asInterfaceEntity( const InterfaceElement& segment ) const
+    {
+      return InterfaceEntity {{ interfaceGrid_.get(), segment.impl().hostEntity() }};
+    }
+
+    //! Return an intersection as a interface grid codim 0 entity
+    InterfaceEntity asInterfaceEntity( const Intersection& intersection ) const
+    {
+      return InterfaceEntity {{ interfaceGrid_.get(), intersection.impl().getHostIntersection() }};
+    }
+
+    //! Return an interface entity as intersection of a MMesh entity
+    MMeshLeafIntersection< const GridImp > asIntersection( const InterfaceEntity& interfaceEntity ) const
+    {
+      const auto& host = interfaceEntity.impl().hostEntity();
+      return MMeshLeafIntersection< const GridImp > ( This(), host.first, host.second );
+    }
+
+    //! Locate an entity by coordinate
+    const Entity locate ( const GlobalCoordinate& p, const typename Traits::template Codim<0>::Entity& element = {} ) const
+    {
+      return entity( hostgrid_.inexact_locate( makePoint( p ), element.impl().hostEntity() ) );
     }
 
     /** \brief Global refine
@@ -440,7 +599,16 @@ namespace Dune
      */
     void globalRefine(int steps = 1)
     {
-      DUNE_THROW( NotImplemented, "globalRefine for MMesh" );
+      for(int i = 0; i < steps; ++i)
+      {
+        // mark all elements
+        for (const auto& element : elements(this->leafGridView()))
+          mark( 1, element );
+
+        preAdapt();
+        adapt(false);
+        postAdapt();
+      }
     }
 
     /** \brief Mark entity for refinement
@@ -449,8 +617,10 @@ namespace Dune
      */
     bool mark(int refCount, const typename Traits::template Codim<0>::Entity & e) const
     {
-      DUNE_THROW( NotImplemented, "mark for MMesh" );
-      return false;
+      e.impl().mark( refCount );
+      if(refCount > 0) ++refineMarked_;
+      if(refCount < 0) ++coarsenMarked_;
+      return true;
     }
 
     /** \brief Return refinement mark for entity
@@ -459,29 +629,586 @@ namespace Dune
      */
     int getMark(const typename Traits::template Codim<0>::Entity & e) const
     {
-      DUNE_THROW( NotImplemented, "getMark for MMesh" );
-      return 0;
+      return e.impl().getMark();
     }
 
-    //! Returns false, if at least one entity is marked for adaption
+    /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      DUNE_THROW( NotImplemented, "preAdapt for MMesh" );
-      return false;
+      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0);
     }
 
-    //! Triggers the grid refinement process
-    bool adapt()
+    //! Triggers the grid adaptation process
+    bool adapt(bool buildComponents = true)
     {
-      DUNE_THROW( NotImplemented, "adapt for MMesh" );
-      return false;
+      using RefinementStrategy = LongestEdgeRefinement<GridImp>;
+
+      std::vector<RefinementInsertionPoint> insert_;
+      std::unordered_set< IdType > inserted_;
+
+      // Obtain the adaption points
+      for ( const auto& element : elements( this->leafGridView() ) )
+      {
+        int mark = element.impl().getMark();
+
+        // refine
+        if (mark == 1)
+        {
+          std::pair<Edge, GlobalCoordinate> pair = RefinementStrategy::refinement(element);
+
+          RefinementInsertionPoint ip;
+          ip.edge = pair.first;
+          ip.edgeId = globalIdSet().id( ip.edge );
+          ip.point = makePoint( pair.second );
+          ip.v0 = ip.edge.impl().template subEntity<dim>(0).impl().hostEntity();
+          ip.v1 = ip.edge.impl().template subEntity<dim>(1).impl().hostEntity();
+          ip.insertionLevel = ip.edge.impl().insertionLevel() + 1;
+
+          if ( !isInterface( ip.edge ) )
+            if ( inserted_.insert( ip.edgeId ).second )
+              insert_.push_back( ip );
+        }
+
+        // coarsen
+        else if (mark == -1)
+        {
+          auto vertex = RefinementStrategy::coarsening(element);
+
+          if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+            remove_.push_back( vertex.impl().hostEntity() );
+        }
+      }
+
+      // Obtain the adaption points for the interface
+      using InterfaceRefinementStrategy = LongestEdgeRefinement<InterfaceGrid>;
+
+      for ( const auto& element : elements( this->interfaceGrid().leafGridView() ) )
+      {
+        int mark = this->interfaceGrid().getMark( element );
+
+        // refine
+        if (mark == 1)
+        {
+          auto pair = InterfaceRefinementStrategy::refinement(element);
+
+          RefinementInsertionPoint ip;
+          ip.edge = entity( pair.first.impl().hostEntity() );
+          ip.edgeId = globalIdSet().id( ip.edge );
+          ip.point = makePoint( pair.second );
+          ip.v0 = ip.edge.impl().template subEntity<dim>(0).impl().hostEntity();
+          ip.v1 = ip.edge.impl().template subEntity<dim>(1).impl().hostEntity();
+          ip.insertionLevel = ip.edge.impl().insertionLevel() + 1;
+          ip.isInterface = true;
+          ip.connectedcomponent = InterfaceGridConnectedComponent( element );
+
+          if ( inserted_.insert( ip.edgeId ).second )
+            insert_.push_back( ip );
+        }
+
+        // coarsen
+        else if (mark == -1)
+        {
+          auto ivertex = InterfaceRefinementStrategy::coarsening(element);
+          const Vertex& vertex = entity( ivertex.impl().hostEntity() );
+
+          if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+            remove_.push_back( vertex.impl().hostEntity() );
+        }
+      }
+
+      if (buildComponents && ((insert_.size() > 0) || (remove_.size() > 0)))
+        std::cout << "- insert " << insert_.size() << "\t remove " << remove_.size() << std::endl;
+
+      return adapt_(insert_, remove_, buildComponents);
     }
 
-    /** \brief Clean up refinement markers */
+    //! Assure the movement of interface vertices
+    void ensureInterfaceMovement( std::vector<GlobalCoordinate> shifts )
+    {
+      assert( shifts.size() == this->interfaceGrid().leafIndexSet().size(dimension-1) );
+
+      // temporarily move vertices
+      moveInterface( shifts );
+
+      // remove vertices of crossing edges
+      for ( const auto& ivertex : vertices( this->interfaceGrid().leafGridView() ) )
+      {
+        const auto& vertex = entity( ivertex.impl().hostEntity() );
+        for ( const auto& element : incidentElements( vertex ) )
+        {
+          if ( signedVolume_( element ) <= 0.0 )
+          {
+            // find opposite facet
+            for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+              if( element.template subEntity<dimension>(j) == vertex )
+              {
+                const auto& oppositeFacet = element.impl().template subEntity<1>(dimension-j);
+
+                // coarsen (remove all vertices of oppositeFacet)
+                for( std::size_t k = 0; k < oppositeFacet.subEntities(dimension); ++k )
+                {
+                  const auto& v = oppositeFacet.impl().template subEntity<dimension>(k);
+
+                  // TODO: if vertex is part of interface, we could have a problem
+                  if ( !v.impl().isInterface() )
+                    if ( removed_.insert( globalIdSet().id( v ) ).second )
+                      remove_.push_back( v.impl().hostEntity() );
+                }
+              }
+          }
+        }
+      }
+
+      // move vertices back
+      for ( GlobalCoordinate& s : shifts )
+        s *= -1.0;
+      moveInterface( shifts );
+    }
+
+  private:
+    template<int d = dim>
+    std::enable_if_t< d == 2, FieldType >
+    signedVolume_( const Entity& element ) const
+    {
+      return hostgrid_.triangle( element.impl().hostEntity() ).area();
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 3, FieldType >
+    signedVolume_( const Entity& element ) const
+    {
+      return hostgrid_.tetrahedron( element.impl().hostEntity() ).volume();
+    }
+
+    bool adapt_( std::vector<RefinementInsertionPoint> insert,
+                 std::vector<VertexHandle> remove,
+                 bool buildComponents = true )
+    {
+      std::vector<std::size_t> insertComponentIds;
+      std::vector<std::size_t> removeComponentIds;
+      static constexpr bool writeComponents = false; // for debugging
+
+      if ( buildComponents )
+      {
+        // build the connected components
+        std::size_t componentCount = connectedComponents_.size()+1; // 0 is the default component
+
+        // we have to mark the cells repeatedly for the case that conflict zones overlap
+        bool markAgain = true;
+        std::size_t componentNumber;
+        while( markAgain )
+        {
+          markAgain = false;
+          insertComponentIds.clear();
+          removeComponentIds.clear();
+
+          // mark elements as mightVanish
+          for ( const auto& ip : insert )
+          {
+            if ( ip.edgeId != IdType() )
+              markAgain |= markElementsForInsertion_( ip.edge, componentCount, componentNumber );
+            else
+              markAgain |= markElementForInsertion_( ip.point, componentCount, componentNumber );
+
+            insertComponentIds.push_back( componentNumber-1 );
+          }
+
+          // mark elements as mightVanish
+          for ( const auto& vh : remove )
+          {
+            markAgain |= markElementsForRemoval_( vh, componentCount, componentNumber );
+            removeComponentIds.push_back( componentNumber-1 );
+          }
+        }
+
+        buildConnectedComponents_();
+
+        // plot connected components
+        if( writeComponents )
+          writeComponents_();
+      }
+
+      // actually insert the points
+      std::vector<VertexHandle> newVertices;
+      for ( auto ip : insert )
+      {
+        if ( ip.edgeId != IdType() )
+        {
+          auto eh = ip.edge.impl().hostEntity();
+
+          // if edge id has changed, we have to update the edge handle
+          if ( this->globalIdSet().id( ip.edge ) != ip.edgeId )
+          {
+            // add empty entry to newVertices to match indices with insertComponentIds
+            newVertices.emplace_back();
+
+            continue;
+            // getEdge_( ip, eh ); // TODO this does not work correct yet
+          }
+
+          VertexHandle vh;
+          if ( ip.isInterface == true )
+            vh = insertInInterface_( ip );
+          else
+            vh = insertInEdge_( ip.point, eh );
+
+          vh->info().insertionLevel = ip.insertionLevel;
+
+          // store vertex handles for later use
+          newVertices.push_back( vh );
+        }
+        else
+        {
+          VertexHandle vh = insertInCell_( ip.point );
+          std::size_t id = globalIdSet_->setNextId( vh );
+          vh->info().insertionLevel = ip.insertionLevel;
+
+          if ( ip.isInterface )
+          {
+            vh->info().isInterface = true;
+            // connect vertex and ip.v0 with interface
+            std::vector<std::size_t> ids;
+            ids.push_back( id );
+            ids.push_back( globalIdSet().id( entity( ip.v0 ) ).vt()[0] );
+            std::sort(ids.begin(), ids.end());
+            interfaceSegments_.insert( ids );
+
+            // pass this refinement information to the interface grid
+            interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
+          }
+
+          // store vertex handles for later use
+          newVertices.push_back( vh );
+        }
+      }
+
+      // actually remove the points
+      int ci = 0;
+      for ( const auto& vh : remove )
+      {
+        ElementOutput elements;
+        // if ( vh->info().isInterface )
+        //   elements = removeFromInterface_( vh ); // TODO
+        // else
+          hostgrid_.removeAndGiveNewElements( vh, std::back_inserter(elements) );
+
+        // flag all elements inside conflict area as new and map connected component
+        if ( buildComponents )
+          markElementsAfterRemoval_( elements, removeComponentIds[ci] );
+        ci++;
+      }
+
+      // update ids and index set
+      setIndices();
+
+      if ( buildComponents )
+      {
+        // flag incident elements as new and map connected component
+        for ( std::size_t i = 0; i < newVertices.size(); ++i )
+          markElementsAfterInsertion_( newVertices[i], insertComponentIds[i] );
+      }
+
+      // update interface grid
+      interfaceGrid_->setIndices();
+
+      if ( buildComponents )
+      {
+        if( writeComponents )
+          writeComponents_();
+      }
+
+      return (insert.size() > 0) || (remove.size() > 0);
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 2, void >
+    getEdge_ ( const RefinementInsertionPoint &ip, EdgeHandle& eh ) const
+    {
+      assert( hostgrid_.is_edge( ip.v0, ip.v1 ) );
+      hostgrid_.is_edge( ip.v0, ip.v1, eh.first, eh.second );
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 3, void >
+    getEdge_ ( const RefinementInsertionPoint &ip, EdgeHandle& eh ) const
+    {
+      assert( hostgrid_.is_edge( ip.v0, ip.v1, eh.first, eh.second, eh.third ) );
+      hostgrid_.is_edge( ip.v0, ip.v1, eh.first, eh.second, eh.third );
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 2, VertexHandle >
+    insertInEdge_ ( const Point &point, const EdgeHandle& eh )
+    {
+      return hostgrid_.insert_in_edge( point, eh.first, eh.second );
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 3, VertexHandle >
+    insertInEdge_ ( const Point &point, const EdgeHandle& eh )
+    {
+      return hostgrid_.insert_in_edge( point, eh.first, eh.second, eh.third );
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 2, VertexHandle >
+    insertInCell_ ( const Point &point )
+    {
+      auto face = hostgrid_.locate( point );
+      return hostgrid_.insert_in_face( point, face );
+    }
+
+    template<int d = dim>
+    std::enable_if_t< d == 3, VertexHandle >
+    insertInCell_ ( const Point &point )
+    {
+      auto cell = hostgrid_.locate( point );
+      return hostgrid_.insert_in_cell( point, cell );
+    }
+
+  public:
+    //! Move vertices
+    void moveInterface( const std::vector<GlobalCoordinate>& shifts )
+    {
+      const auto& iindexSet = this->interfaceGrid().leafIndexSet();
+      assert( shifts.size() == iindexSet.size(dimension-1) );
+
+      for( const auto& vertex : vertices( this->interfaceGrid().leafGridView() ) )
+      {
+        const VertexHandle& vh = vertex.impl().hostEntity();
+        vh->point() = makePoint( vertex.geometry().center() + shifts[iindexSet.index(vertex)] );
+      }
+    }
+
+    //! Add a new interface segment and connect it with vertex
+    template< typename Vertex >
+    Vertex addToInterface( const Vertex& vertex, const GlobalCoordinate& p )
+    {
+      RefinementInsertionPoint ip;
+      ip.edgeId = IdType();
+      ip.point = makePoint( p );
+      ip.v0 = vertex.impl().hostEntity();
+      ip.insertionLevel = vertex.impl().insertionLevel() + 1;
+      ip.isInterface = true;
+
+      // take some incident element as father
+      auto circulator = getHostGrid().incident_edges( vertex.impl().hostEntity() ); // TODO 3D
+      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+      {
+        const auto elem = interfaceGrid().entity( *circulator );
+        if (interfaceGrid().isInterface( elem ) && !elem.isNew())
+        {
+          ip.connectedcomponent = InterfaceGridConnectedComponent( elem );
+          break;
+        }
+      }
+
+      adapt_({ ip }, {});
+
+      const auto& newVertex = getHostGrid().insert( ip.point );
+      if ( !getHostGrid().is_edge( ip.v0, newVertex ) )
+        DUNE_THROW( GridError, "Edge added to interface is not part of the new traingulation!" );
+
+      return interfaceGrid().entity( newVertex );
+    }
+
+    //! Clean up refinement markers
     void postAdapt()
     {
-      DUNE_THROW( NotImplemented, "postAdapt for MMesh" );
+      for( const Entity& entity : elements( this->leafGridView() ) )
+      {
+        mark( 0, entity );
+        entity.impl().setIsNew( false );
+        entity.impl().setWillVanish( false );
+        entity.impl().hostEntity()->info().componentNumber = 0;
+      }
+
+      refineMarked_ = 0;
+      coarsenMarked_ = 0;
+      createdEntityConnectedComponentMap_.clear();
+      vanishingEntityConnectedComponentMap_.clear();
+      connectedComponents_.clear();
+
+      remove_.clear();
+      removed_.clear();
+
+      interfaceGrid_->postAdapt();
     }
+
+  private:
+    void writeComponents_() const
+    {
+      static int performCount = 0;
+      const auto& gridView = this->leafGridView();
+      const auto& indexSet = this->leafIndexSet();
+
+      std::vector<std::size_t> component( indexSet.size(0), 0 );
+      std::vector<std::size_t> findcomponent( indexSet.size(0), 0 );
+      std::vector<bool> isnew( indexSet.size(0), 0 );
+      std::vector<bool> mightvanish( indexSet.size(0), 0 );
+
+      for( const auto& e : elements( gridView ) )
+      {
+        component[indexSet.index(e)] = e.impl().hostEntity()->info().componentNumber;
+        isnew[indexSet.index(e)] = e.isNew();
+        mightvanish[indexSet.index(e)] = e.mightVanish();
+      }
+
+      VTKWriter<typename Traits::LeafGridView> vtkWriter( gridView );
+      vtkWriter.addCellData( component, "component" );
+      vtkWriter.addCellData( isnew, "isnew" );
+      vtkWriter.addCellData( mightvanish, "mightvanish" );
+      vtkWriter.write("mmesh-components-" + std::to_string( performCount ));
+
+      VTKWriter<typename InterfaceGrid::LeafGridView> ivtkWriter( interfaceGrid_->leafGridView() );
+      ivtkWriter.write("mmesh-components-interface-" + std::to_string( performCount++ ));
+    }
+
+    void buildConnectedComponents_()
+    {
+      for( const Entity& entity : elements( this->leafGridView() ) )
+      {
+        if( entity.mightVanish() )
+        {
+          const auto& hostEntity = entity.impl().hostEntity();
+          const IdType id = this->globalIdSet().id( entity );
+
+          // search for entity in existing components
+          bool found = false;
+          for( std::size_t componentId = 0; componentId < connectedComponents_.size(); ++componentId )
+          {
+            ConnectedComponent& component = connectedComponents_[ componentId ];
+            if ( component.componentNumber() == hostEntity->info().componentNumber )
+            {
+              found = true;
+
+              // sth. changed, we have to update the component to include this entity
+              if( !entity.isNew() )
+              {
+                if ( !component.hasEntity( entity ) )
+                  component.update( entity );
+              }
+
+              vanishingEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+              break;
+            }
+          }
+
+          // if not found, create a new component
+          if (!found)
+          {
+            const std::size_t componentId = hostEntity->info().componentNumber - 1;
+            if (connectedComponents_.size() < componentId + 1)
+              connectedComponents_.resize( componentId + 1 );
+            connectedComponents_[ componentId ] = ConnectedComponent( This(), entity );
+            vanishingEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+          }
+        }
+      }
+    }
+
+    //! Insert a point to the triangulation and connect it to the vertices of the given interface element
+    VertexHandle insertInInterface_( const RefinementInsertionPoint& ip )
+    {
+      assert( isInterface(ip.edge) );
+
+      // get the vertex ids of the interface segment
+      std::vector<std::size_t> ids;
+      for( std::size_t i = 0; i < ip.edge.subEntities(dim); ++i )
+        ids.push_back( globalIdSet().id( ip.edge.impl().template subEntity<dim>(i) ).vt()[0] );
+      std::sort(ids.begin(), ids.end());
+
+      // erase old interface segment
+      interfaceSegments_.erase( ids );
+
+      // insert the point
+      auto eh = ip.edge.impl().hostEntity();
+      const auto& vh = insertInEdge_( ip.point, eh );
+      vh->info().isInterface = true;
+
+      // get the (next) id for vh
+      std::size_t id = globalIdSet_->setNextId( vh );
+
+      // insert the new interface segments
+      std::vector< std::vector<std::size_t> > allNewIds;
+      for( int i = 0; i < dimension; ++i )
+      {
+        std::vector<std::size_t> newIds;
+        newIds.push_back( id );
+        for( int j = 0; j < dimension-1; ++j )
+          newIds.push_back( ids[(i+j)%dimension] );
+
+        std::sort(newIds.begin(), newIds.end());
+        interfaceSegments_.insert( newIds );
+        allNewIds.push_back( newIds );
+      }
+
+      // pass this refinement information to the interface grid
+      interfaceGrid_->markAsRefined( /*children*/ allNewIds, ip.connectedcomponent );
+
+      return vh;
+    }
+
+    //! Remove a vertex from the triangulation and connect the corresponding interface elements
+    ElementOutput removeFromInterface_( const VertexHandle& vh )
+    {
+      std::size_t id = vh->info().id;
+
+      // find and remove interface segments
+      std::vector<VertexHandle> otherVhs;
+      auto other = hostgrid_.incident_vertices(vh);
+      for ( std::size_t i = 0; i < CGAL::circulator_size(other); ++i, ++other )
+      {
+        if ( isInterface( entity( other ) ) )
+        {
+          std::vector<std::size_t> ids { id, other->info().id }; // TODO 3D: we have three ids here
+          std::sort(ids.begin(), ids.end());
+
+          auto it = interfaceSegments_.find( ids );
+          if ( it != interfaceSegments_.end() )
+          {
+            interfaceSegments_.erase( it );
+            otherVhs.push_back( other );
+          }
+        }
+      }
+      assert( otherVhs.size() >= 1 );
+
+      std::list<EdgeHandle> hole;
+      hostgrid_.make_hole(vh, hole);
+
+      // start hole at some interface vertex
+      auto hit = hole.begin();
+      while( std::find( otherVhs.begin(), otherVhs.end(), (*hit).first->vertex( hostgrid_.cw( (*hit).second ) ) ) == otherVhs.end()
+        || hostgrid_.is_infinite((*hit).first) )
+      {
+        hole.push_back( *hit );
+        hit = hole.erase( hit );
+      }
+
+      ElementOutput elements;
+      hostgrid_.fillHole(vh, hole, std::back_inserter(elements));
+      hostgrid_.delete_vertex(vh);
+
+      int count = 0;
+      for ( int i = 0; i+1 < otherVhs.size(); ++i )
+        if ( hostgrid_.is_edge( otherVhs[i], otherVhs[i+1] ) ) // TODO 3D
+        {
+          std::vector<std::size_t> ids {{ otherVhs[i]->info().id, otherVhs[i+1]->info().id }};
+          std::sort(ids.begin(), ids.end());
+          interfaceSegments_.insert( ids );
+          count++;
+        }
+
+      if( count != otherVhs.size()-1 )
+        std::cout << "After removal of vertex the interface was not connected anymore!" << std::endl;
+        // DUNE_THROW(NotImplemented, "After removal of vertex the interface was not connected anymore!");
+
+      return elements;
+    }
+
+  public:
+    /*@}*/
 
     /** \brief Size of the overlap on the leaf level */
     unsigned int overlapSize(int codim) const {
@@ -512,14 +1239,14 @@ namespace Dune
      * \param minlevel The coarsest grid level that gets distributed
      * \param maxlevel does currently get ignored
      */
-    void loadBalance()
-    {};
-
-    void loadBalance(int strategy, int minlevel, int depth, int maxlevel, int minelement)
-    {}
+    void loadBalance() {};
 
     template<class T>
     bool loadBalance( const T& t ) { return false; };
+
+    void loadBalance(int strategy, int minlevel, int depth, int maxlevel, int minelement){
+      DUNE_THROW(NotImplemented, "MMesh::loadBalance()");
+    }
 
 
     /** \brief dummy collective communication */
@@ -541,20 +1268,26 @@ namespace Dune
     // End of Interface Methods
     // **********************************************************
 
-    //! get the host grid
+    //! get a reference to the host grid (the underlying CGAL triangulation)
     const HostGrid& getHostGrid() const
     {
       return hostgrid_;
     }
 
-    //! get the host grid
+    //! get a non-const reference to the host grid (the underlying CGAL triangulation)
     HostGrid& getHostGrid()
     {
       return hostgrid_;
     }
 
-    //! get the interface grid
+    //! get a reference to the interface grid
     const InterfaceGrid& interfaceGrid() const
+    {
+      return *interfaceGrid_;
+    }
+
+    //! get a non-const reference to the interface grid
+    InterfaceGrid& interfaceGrid()
     {
       return *interfaceGrid_;
     }
@@ -565,75 +1298,616 @@ namespace Dune
       return interfaceGrid_;
     }
 
-    //! Return if element is part of the interface
-    bool isInterface( const InterfaceElement& segment ) const
+    const ConnectedComponent& getConnectedComponent( const Entity& entity ) const
     {
-      std::vector<std::size_t> indices;
-      for( std::size_t i = 0; i < segment.subEntities(dimension); ++i )
-        indices.push_back( segment.impl().template subEntity<dimension>(i).impl().hostEntity()->info().id );
-
-      std::sort(indices.begin(), indices.end());
-
-      int count = interfaceSegments_.count( indices );
-      assert( count <= 1 );
-
-      bool isOnBoundary = getHostGrid().is_infinite( (segment.impl().hostEntity().first)->neighbor(segment.impl().hostEntity().second) );
-      return ( count == 1 && !isOnBoundary );
-    }
-
-    //! Return if entity shares a facet with the interface
-    bool isOnInterface( const Entity& entity ) const
-    {
-      for( std::size_t i = 0; i < entity.subEntities(1); ++i )
-        if( isInterface( entity.template subEntity<1>(i) ) )
-          return true;
-
-      return false;
-    }
-
-    //! Return a codim 1 entity as a interface grid codim 0 entity
-    InterfaceEntity asInterfaceEntity( const InterfaceElement& segment ) const
-    {
-      return InterfaceEntity {{ interfaceGrid_.get(), segment.impl().hostEntity() }};
-    }
-
-    //! compute the grid indices and ids
-    void setIndices()
-    {
-      setIds();
-      leafIndexSet_->update(This());
+      const auto& it = createdEntityConnectedComponentMap_.find( this->globalIdSet().id( entity ) );
+      assert( it->second < connectedComponents_.size() );
+      assert( it != createdEntityConnectedComponentMap_.end() );
+      assert( connectedComponents_[ it->second ].size() > 0 );
+      return connectedComponents_[ it->second ];
     }
 
   private:
-    //! compute the grid indices and ids
-    void setIds()
-    {
-      localIdSet_->update(This());
-      globalIdSet_->update(This());
-    }
+    virtual bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
+    virtual bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
+    virtual void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId ) = 0;
+    virtual bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
+    virtual void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId ) = 0;
 
+    // count how much elements where marked
+    mutable int coarsenMarked_;
+    mutable int refineMarked_;
+
+    //! The storage of the connected components of entities
+    std::vector< ConnectedComponent > connectedComponents_;
+
+    //! Maps the entities to its connected components
+    std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
+  protected:
+    std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
+
+  private:
     CollectiveCommunication< GridImp > ccobj;
 
+  public:
+    //! update the grid indices and ids
+    void update()
+    {
+      setIndices();
+      interfaceGrid_->setIndices();
+    }
+
+  private:
+    void setIndices()
+    {
+      globalIdSet_->update(This());
+      leafIndexSet_->update(This());
+    }
+
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
-
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
-
-    std::unique_ptr<MMeshLocalIdSet<const GridImp>> localIdSet_;
-
     std::shared_ptr<InterfaceGrid> interfaceGrid_;
 
+    std::vector<VertexHandle> remove_;
+    std::unordered_set< IdType > removed_;
+
+  protected:
     //! The host grid which contains the actual grid hierarchy structure
     HostGrid hostgrid_;
-
     BoundarySegments boundarySegments_;
-
+    BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
-
   }; // end Class MMesh
+
+
+  //**********************************************************************
+  //
+  // --MMesh (2D)
+  //
+  //************************************************************************
+  /*!
+   * \brief Provides a grid wrapper to a CGAL triangulation
+   * \ingroup GridImplementations
+   * \ingroup MMesh
+   *
+   * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
+   */
+  template <class HostGrid, class GridFamily>
+  class MMesh<HostGrid, 2, GridFamily>
+   : public MMeshBase<HostGrid, 2, GridFamily>
+  {
+  public:
+    using ThisType = MMesh<HostGrid, 2, GridFamily>;
+    using BaseType = MMeshBase<HostGrid, 2, GridFamily>;
+
+    //! Export types from the base class
+    static constexpr int dimension = 2;
+    using HostGridType = HostGrid;
+    using Point = typename BaseType::Point;
+    using FieldType = typename BaseType::FieldType;
+    using Traits = typename BaseType::Traits;
+    using Edge = typename BaseType::Edge;
+    using IdType = typename BaseType::IdType;
+    using BoundarySegments = typename BaseType::BoundarySegments;
+    using BoundaryIds = typename BaseType::BoundaryIds;
+    using InterfaceSegments = typename BaseType::InterfaceSegments;
+    using ConnectedComponent = typename BaseType::ConnectedComponent;
+    using CachingEntity = typename BaseType::CachingEntity;
+    using ElementOutput = typename BaseType::ElementOutput;
+    using BoundaryEdgesOutput = typename BaseType::BoundaryEdgesOutput;
+
+    //! The type of the underlying entities
+    template<int cd>
+    using HostGridEntity = typename HostGridEntityChooser_<HostGridType, dimension, cd>::type;
+
+    //! The types specific for 2d
+    using HostGridEntityObject = typename HostGrid::Face;
+    using Element_circulator = typename HostGrid::Face_circulator;
+
+    /** \brief Constructor
+     *
+     * \param hostgrid The host grid wrapped by the MMesh
+     */
+    explicit MMesh(HostGrid hostgrid)
+     : BaseType(hostgrid, {}, {}, {}, {})
+    {}
+
+    /** \brief Constructor
+     *
+     * \param hostgrid The host grid wrapped by the MMesh
+     * \param boundarySegments The boundary segment index mapper
+     * \param interfaceBoundarySegments The interface boundary segment index mapper
+     * \param boundaryIds The boundary ids mapper
+     * \param interfaceSegments The set of interface segments
+     */
+    explicit MMesh(HostGrid hostgrid,
+                   BoundarySegments boundarySegments,
+                   BoundarySegments interfaceBoundarySegments,
+                   BoundaryIds boundaryIds,
+                   InterfaceSegments interfaceSegments)
+     : BaseType(hostgrid, boundarySegments, interfaceBoundarySegments, boundaryIds, interfaceSegments)
+    {}
+
+    //! Iterator to first interface entity
+    template<int codim>
+    MMeshInterfaceIterator<codim, const ThisType> interfaceBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
+      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, includeBoundary) );
+    }
+
+    //! one past the end of the sequence of interface entities
+    template<int codim>
+    MMeshInterfaceIterator<codim, const ThisType> interfaceEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
+      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, true, includeBoundary) );
+    }
+
+    //! Iterator to first interface entity
+    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator< const ThisType>::Implementation;
+      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, includeBoundary) );
+    }
+
+    //! one past the end of the sequence of interface entities
+    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
+      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, true, includeBoundary) );
+    }
+
+  private:
+    //! Flag all elements in conflict as mightVanish
+    bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      const auto& eh = edge.impl().hostEntity();
+
+      ElementOutput elements;
+      elements.push_back( eh.first );
+      elements.push_back( eh.first->neighbor( eh.second ) );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+      }
+
+      // if no id was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().componentNumber = componentNumber;
+        element->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag element in conflict with point
+    bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      ElementOutput elements;
+      elements.push_back( this->getHostGrid().locate( point ) );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+      }
+
+      // if no id was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().componentNumber = componentNumber;
+        element->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag all incident elements as new
+    void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId )
+    {
+      auto element_circulator = this->getHostGrid().incident_faces( vh );
+      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
+      {
+        element_circulator->info().isNew = true;
+        element_circulator->info().componentNumber = componentId + 1;
+        const IdType id = this->globalIdSet().id( this->entity( element_circulator ) );
+        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+      }
+    }
+
+    //! Flag all incident elements as mightVanish
+    bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      auto element_circulator = this->getHostGrid().incident_faces( vh );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
+        if( element_circulator->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element_circulator->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element_circulator->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element_circulator->info().componentNumber;
+        }
+
+      // if no componentNumber was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
+      {
+        element_circulator->info().componentNumber = componentNumber;
+        element_circulator->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag all elements in conflict as new
+    void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId )
+    {
+      // flag all elements in conflict as mightVanish
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().isNew = true;
+        element->info().componentNumber = componentId + 1;
+
+        const auto id = this->globalIdSet().id( this->entity( element ) );
+        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+      }
+    }
+  }; // end Class MMesh (2D)
+
+
+
+  //**********************************************************************
+  //
+  // --MMesh (3D)
+  //
+  //************************************************************************
+  /*!
+   * \brief Provides a grid wrapper to a CGAL triangulation
+   * \ingroup GridImplementations
+   * \ingroup MMesh
+   *
+   * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
+   */
+
+  template <class HostGrid, class GridFamily>
+  class MMesh<HostGrid, 3, GridFamily>
+   : public MMeshBase<HostGrid, 3, GridFamily>
+  {
+  public:
+    using ThisType = MMesh<HostGrid, 3, GridFamily>;
+    using BaseType = MMeshBase<HostGrid, 3, GridFamily>;
+
+    //! Export types from the base class
+    static constexpr int dimension = 3;
+    using HostGridType = HostGrid;
+    using Point = typename BaseType::Point;
+    using FieldType = typename BaseType::FieldType;
+    using Traits = typename BaseType::Traits;
+    using Edge = typename BaseType::Edge;
+    using IdType = typename BaseType::IdType;
+    using BoundarySegments = typename BaseType::BoundarySegments;
+    using BoundaryIds = typename BaseType::BoundaryIds;
+    using InterfaceSegments = typename BaseType::InterfaceSegments;
+    using ConnectedComponent = typename BaseType::ConnectedComponent;
+    using CachingEntity = typename BaseType::CachingEntity;
+    using ElementOutput = typename BaseType::ElementOutput;
+
+    //! The type of the underlying entities
+    template<int cd>
+    using HostGridEntity = typename HostGridEntityChooser_<HostGridType, dimension, cd>::type;
+
+    //! The types specific for 3d
+    using HostGridEntityObject = typename HostGrid::Cell;
+    using Element_circulator = typename HostGrid::Cell_circulator;
+    using FacetsOutput = std::list<HostGridEntity<1>>;
+    using VertexOutput = std::list<HostGridEntity<3>>;
+
+    /** \brief Constructor
+     *
+     * \param hostgrid The host grid wrapped by the MMesh
+     */
+    explicit MMesh(HostGrid hostgrid)
+     : BaseType(hostgrid, {}, {}, {}, {})
+    {}
+
+    /** \brief Constructor
+     *
+     * \param hostgrid The host grid wrapped by the MMesh
+     * \param boundarySegments The boundary segment index mapper
+     * \param interfaceBoundarySegments The interface boundary segment index mapper
+     * \param boundaryIds The boundary ids mapper
+     * \param interfaceSegments The set of interface segments
+     */
+    explicit MMesh(HostGrid hostgrid,
+                   BoundarySegments boundarySegments,
+                   BoundarySegments interfaceBoundarySegments,
+                   BoundaryIds boundaryIds,
+                   InterfaceSegments interfaceSegments)
+     : BaseType(hostgrid, boundarySegments, interfaceBoundarySegments, boundaryIds, interfaceSegments)
+    {}
+
+    //! Iterator to first interface entity
+    template<int codim>
+    MMeshInterfaceIterator<codim, const ThisType> interfaceBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
+      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, includeBoundary) );
+    }
+
+    //! one past the end of the sequence of interface entities
+    template<int codim>
+    MMeshInterfaceIterator<codim, const ThisType> interfaceEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
+      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, true, includeBoundary) );
+    }
+
+    //! Iterator to first interface entity
+    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
+      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, includeBoundary) );
+    }
+
+    //! one past the end of the sequence of interface entities
+    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
+      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, true, includeBoundary) );
+    }
+
+  private:
+    //! Flag all elements in conflict as mightVanish
+    bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      const auto& eh = edge.impl().hostEntity();
+
+      ElementOutput elements;
+      auto cit = this->getHostGrid().incident_cells( eh );
+      for ( std::size_t i = 0; i < CGAL::circulator_size(cit); ++i, ++cit )
+        elements.push_back( cit );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+      }
+
+      // if no componentNumber was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().componentNumber = componentNumber;
+        element->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag element in conflict with point
+    bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      ElementOutput elements;
+      elements.push_back( this->getHostGrid().locate( point ) );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+      }
+
+      // if no componentNumber was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().componentNumber = componentNumber;
+        element->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag all incident elements as new
+    void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId )
+    {
+      ElementOutput elements;
+      this->getHostGrid().finite_incident_cells( vh, std::back_inserter(elements) );
+
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().isNew = true;
+        element->info().componentNumber = componentId + 1;
+
+        const auto id = this->globalIdSet().id( this->entity( element ) );
+        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+      }
+    }
+
+    //! Flag all incident elements as mightVanish
+    bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber )
+    {
+      ElementOutput elements;
+      this->getHostGrid().finite_incident_cells( vh, std::back_inserter(elements) );
+
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+      }
+
+      // if no componentNumber was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount++;
+
+      // set componentNumber and mightVanish
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().componentNumber = componentNumber;
+        element->info().mightVanish = true;
+      }
+
+      return markAgain;
+    }
+
+    //! Flag all elements in conflict as new
+    void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId )
+    {
+      // flag all elements in conflict as mightVanish
+      typename ElementOutput::iterator fit;
+      for(fit = elements.begin(); fit != elements.end(); fit++)
+      {
+        HostGridEntity<0> element = *fit;
+        element->info().isNew = true;
+        element->info().componentNumber = componentId + 1;
+
+        const auto id = this->globalIdSet().id( this->entity( element ) );
+        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+      }
+    }
+  }; // end Class MMesh (3D)
+
+  // Capabilites of MMesh
+  // --------------------
 
   /// @cond
   namespace Capabilities
   {
+    /** \brief MMesh has only one geometry type for all entities
+    \ingroup MMesh
+    */
+    template<class HostGrid, int dim>
+    struct hasSingleGeometryType<MMesh<HostGrid, dim>>
+    {
+      static const bool v = true;
+      static const unsigned int topologyId = Dune::GeometryType::simplex;
+    };
+
+    /** \brief MMesh can not communicate
+    \ingroup MMesh
+    */
+    template<class HostGrid, int dim, int codim>
+    struct canCommunicate<MMesh<HostGrid, dim>, codim>
+    {
+      static const bool v = false;
+    };
+
+    /** \brief MMesh has entities for some codimensions
+     * \ingroup MMesh
+     */
     template<class HostGrid, int dim, int codim>
     struct hasEntity<MMesh<HostGrid, dim>, codim>
     {
@@ -646,17 +1920,33 @@ namespace Dune
       static const bool v = (codim >= 0 && codim <= dim);
     };
 
+    /** \brief MMesh has conforming level grids
+     * \ingroup MMesh
+     */
     template<class HostGrid, int dim>
     struct isLevelwiseConforming<MMesh<HostGrid, dim>>
     {
       static const bool v = true;
     };
 
+    /** \brief MMesh has conforming leaf grids when host grid has
+     * \ingroup MMesh
+     */
     template<class HostGrid, int dim>
     struct isLeafwiseConforming<MMesh<HostGrid, dim>>
     {
       static const bool v = true;
     };
+
+    /** \brief MMesh has backup and restore facilities
+     * \ingroup MMesh
+     */
+    template<class HostGrid, int dim>
+    struct hasBackupRestoreFacilities<MMesh<HostGrid, dim>>
+    {
+      static const bool v = false;
+    };
+
   } // end namespace Capabilities
   /// @endcond
 
@@ -674,5 +1964,6 @@ std::ostream& operator<< ( std::ostream& stream, const Dune::Entity<codim, dim, 
 #include "grid/dgfparser.hh"
 #include "grid/gmshparser.hh"
 #include "interface/grid.hh"
+#include "cgal/triangulationwrapper.hh"
 
 #endif // DUNE_MMESH_MMESH_HH

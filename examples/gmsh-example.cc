@@ -22,7 +22,7 @@ int main( int argc, char *argv[] )
     static constexpr int dim = GRIDDIM;
 
     // print some status
-    std::cout << "Create MMesh explicitly from grids/cube" + std::to_string(dim) + "d.msh..." << std::endl;
+    std::cout << "Create MMesh from grids/cube" + std::to_string(dim) + "d.msh..." << std::endl;
 
     // type of MMesh grid implementation
     using Grid = Dune::MovingMesh< dim >;
@@ -38,11 +38,11 @@ int main( int argc, char *argv[] )
     std::cout << "Number of cells: " << grid.leafGridView().size(0) << std::endl;
 
     // print some status
-    std::cout << "Write grid into gmsh-explicit-grid-" + std::to_string(dim) + "d.vtu... " << std::endl;
+    std::cout << "Write grid into gmsh-grid-" + std::to_string(dim) + "d.vtu... " << std::endl;
 
     // write grid to vtk file
     Dune::VTKWriter<typename Grid::LeafGridView> vtkwriter( grid.leafGridView() );
-    vtkwriter.write( "gmsh-explicit-grid-" + std::to_string(dim) + "d", Dune::VTK::ascii );
+    vtkwriter.write( "gmsh-grid-" + std::to_string(dim) + "d", Dune::VTK::ascii );
 
     return EXIT_SUCCESS;
   }

@@ -76,8 +76,8 @@ int main(int argc, char *argv[])
     // ------------
     using Grid = Dune::MovingMesh<3>;
 
-    using GridFactory = Dune::GmshGridFactory< Grid, /*useImplictFactory=*/true >;
-    GridFactory gridFactory( "grids/simple3d.msh" );
+    using GridFactory = Dune::GmshGridFactory< Grid >;
+    GridFactory gridFactory( "grids/twocell3d.msh" );
 
     Grid& mMesh = *gridFactory.grid();
 
@@ -121,10 +121,11 @@ int main(int argc, char *argv[])
     std::size_t countVertices = 0;
     for( const auto& vertex : vertices(gridView) )
     {
-        vertex.geometry();
+        vertex.geometry().center();
         countVertices++;
     }
     checkProperty( "number of iterated vertices", countVertices, indexSet.size(3) );
+
 
     // Test MMesh mcmgmapper
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
@@ -146,24 +147,24 @@ int main(int argc, char *argv[])
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 3 ), 3ul },
-            { indexSet.subIndex( e, 1, 3 ), 0ul },
-            { indexSet.subIndex( e, 2, 3 ), 1ul },
+          { { indexSet.subIndex( e, 0, 3 ), 0ul },
+            { indexSet.subIndex( e, 1, 3 ), 1ul },
+            { indexSet.subIndex( e, 2, 3 ), 3ul },
             { indexSet.subIndex( e, 3, 3 ), 4ul } }
         );
         checkProperties( "vertex positions",
-          { { e.subEntity<3>( 0 ).geometry().center(), { 0, 1, 0 } },
-            { e.subEntity<3>( 1 ).geometry().center(), { 0, 0, 0 } },
-            { e.subEntity<3>( 2 ).geometry().center(), { 1, 0, 0 } },
+          { { e.subEntity<3>( 0 ).geometry().center(), { 0, 0, 0 } },
+            { e.subEntity<3>( 1 ).geometry().center(), { 1, 0, 0 } },
+            { e.subEntity<3>( 2 ).geometry().center(), { 0, 1, 0 } },
             { e.subEntity<3>( 3 ).geometry().center(), { 0.5, 0.5, 1 } } }
         );
 
         // check faces
         checkProperties( "face centers",
           { { e.subEntity<1>( 0 ).geometry().center(), { 0.33333333333333331, 0.33333333333333331, 0 } },
-            { e.subEntity<1>( 1 ).geometry().center(), { 0.16666666666666666, 0.5, 0.33333333333333331 } },
-            { e.subEntity<1>( 2 ).geometry().center(), { 0.50000000000000011, 0.5, 0.33333333333333331 } },
-            { e.subEntity<1>( 3 ).geometry().center(), { 0.5, 0.16666666666666671, 0.33333333333333343 } } }
+            { e.subEntity<1>( 1 ).geometry().center(), { 0.5, 0.16666666666666671, 0.33333333333333343 } },
+            { e.subEntity<1>( 2 ).geometry().center(), { 0.16666666666666666, 0.5, 0.33333333333333331 } },
+            { e.subEntity<1>( 3 ).geometry().center(), { 0.50000000000000011, 0.5, 0.33333333333333331 } } }
         );
 
         // check intersections
@@ -178,14 +179,14 @@ int main(int argc, char *argv[])
 
         checkProperties( "intersection normals",
           { { is0.centerUnitOuterNormal(), { 0, 0, -1 } },
-            { is1.centerUnitOuterNormal(), { -0.89442719099991586, 0, 0.44721359549995793 } },
-            { is2.centerUnitOuterNormal(), { 0.70710678118654746, 0.70710678118654746, 0 } },
-            { is3.centerUnitOuterNormal(), { 0, -0.89442719099991586, 0.44721359549995793 } } }
+            { is1.centerUnitOuterNormal(), { 0, -0.89442719099991586, 0.44721359549995793 } },
+            { is2.centerUnitOuterNormal(), { -0.89442719099991586, 0, 0.44721359549995793 } },
+            { is3.centerUnitOuterNormal(), { 0.70710678118654746, 0.70710678118654746, 0 } } }
         );
 
         checkProperties( "index in inside and outside",
           { { is1.indexInInside(), 1 },
-            { is1.indexInOutside(), 2 } }
+            { is1.indexInOutside(), 0 } }
         );
       }
 
@@ -206,7 +207,7 @@ int main(int argc, char *argv[])
 
         checkProperties( "index in inside and outside",
           { { is2.indexInInside(), 2 },
-            { is2.indexInOutside(), 1 } }
+            { is2.indexInOutside(), 3 } }
         );
       }
 

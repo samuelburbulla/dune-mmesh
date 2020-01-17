@@ -46,7 +46,7 @@ namespace Dune
     typedef FieldMatrix< ctype, dimensionworld, dimensionworld > WorldMatrix;
 
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
-    typedef std::map< std::vector< std::size_t >, std::size_t > BoundarySegments;
+    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
     typedef std::map< std::vector< std::size_t >, unsigned int > InsertionIndexMap;
 
     typedef std::map< std::size_t, std::size_t > VertexIdMap;
@@ -83,7 +83,7 @@ namespace Dune
 
       std::sort(ids.begin(), ids.end());
 
-      mMesh_->addInterfaceSegment( ids );
+      (mMesh_->interfaceSegments()).insert( ids );
 
       insertionIndexMap_.insert( { ids, countElements++ } );
     };

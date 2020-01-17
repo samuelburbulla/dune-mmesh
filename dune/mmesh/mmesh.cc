@@ -18,6 +18,7 @@ namespace Dune
   // MMesh (3D)
   template <class HostGrid>
   class MMesh<HostGrid, 3>;
+
 } // namespace Dune
 
 #endif // DUNE_MMESH_MMESH_CC

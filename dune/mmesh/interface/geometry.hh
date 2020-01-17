@@ -200,6 +200,28 @@ namespace Dune
     FVector circumcenter_;
   };
 
+  //! The local geometry
+  template<int mydim, class GridImp>
+  class MMeshInterfaceGridGeometry<mydim, 1, GridImp> :
+    public AffineGeometry <typename GridImp::ctype, mydim, 1>
+  {
+    static constexpr int coorddim = 1;
+    typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
+    typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
+
+  public:
+    enum { dimension = GridImp::dimension };
+    enum { dimensionworld = GridImp::dimensionworld };
+    enum { coorddimension = coorddim };
+    enum { mydimension = mydim };
+
+    //! Constructor for local geometry of intersection from intersection index
+    MMeshInterfaceGridGeometry(int i)
+     : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { i } ) )
+    {}
+
+  };
+
 }  // namespace Dune
 
 #endif

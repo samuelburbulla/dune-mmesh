@@ -20,7 +20,10 @@ You can either use a `.msh` file, a `.dgf` file or the `CGAL` triangulation inte
 
 Short example using the GmshReader:
 ````
+    #include <dune/mmesh/mmesh.hh>
+
     using Grid = Dune::MovingMesh< dim >;
+    // this is a shortcut for Dune::MMesh< typename MMeshDefaults::Triangulation<dim>::type, dim >
 
     using GridFactory = Dune::GmshGridFactory< Grid >;
     GridFactory gridFactory( "grid.msh" );
@@ -31,3 +34,5 @@ Short example using the GmshReader:
     using InterfaceGrid = typename Grid::InterfaceGrid;
     const InterfaceGrid& igrid = grid.interfaceGrid();
 ````
+
+Remark that the .msh files must be built using ``gmsh -<dim> -format msh2 grid.geo``.

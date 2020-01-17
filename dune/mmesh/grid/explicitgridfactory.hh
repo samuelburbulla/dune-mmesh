@@ -56,6 +56,7 @@ namespace Dune
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
     //! type of the boundary segment id map
     typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
+    typedef std::unordered_map< std::size_t, std::size_t > BoundaryIds;
 
     //! type of the interface segment set
     typedef std::unordered_set< std::vector< std::size_t >, HashUIntVector > InterfaceSegments;
@@ -131,9 +132,8 @@ namespace Dune
       // Create face with vertices v0, v1, v2
       Element_handle face = tr_.tds().create_face(v0, v1, v2);
 
-      // Increase the element counter
-      face->info().id = insertionIndex;
-      face->info().idWasSet = true;
+      // Set insertion index
+      face->info().insertionIndex = insertionIndex;
 
       // Set this face in vertices v0, v1, v2
       v0->set_face(face);
@@ -163,9 +163,8 @@ namespace Dune
       // Create cell with vertices v0, v1, v2, v3
       Element_handle cell = tr_.tds().create_cell(v0, v1, v2, v3);
 
-      // Increase the element counter
-      cell->info().id = insertionIndex;
-      cell->info().idWasSet = true;
+      // Set insertion index
+      cell->info().insertionIndex = insertionIndex;
 
       // Set this cell in vertices v0, v1, v2, v3
       v0->set_cell(cell);
@@ -245,9 +244,11 @@ namespace Dune
 
     virtual void insertBoundarySegment ( const std::vector< unsigned int >& vertices )
     {
+      assert( vertices.size() == dimension );
+
       std::vector< std::size_t > sorted_vertices;
       for ( const auto& v : vertices )
-        sorted_vertices.push_back( vhs_[v]->info().id );  // vertices give the number of the vertex
+        sorted_vertices.push_back( vhs_[v]->info().id );
       std::sort(sorted_vertices.begin(), sorted_vertices.end());
 
       if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
@@ -260,6 +261,21 @@ namespace Dune
                                  const std::shared_ptr< BoundarySegment >& boundarySegment )
     {
       DUNE_THROW( NotImplemented, "insertBoundarySegments with Dune::BoundarySegment" );
+    }
+
+    void insertInterfaceBoundarySegment ( const std::vector< unsigned int >& vertices )
+    {
+      assert( vertices.size() == dimension-1 );
+
+      std::vector< std::size_t > sorted_vertices;
+      for ( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );
+      std::sort(sorted_vertices.begin(), sorted_vertices.end());
+
+      if( boundarySegments_.find( sorted_vertices ) != boundarySegments_.end() )
+          DUNE_THROW( GridError, "A boundary segment was inserted twice." );
+
+      interfaceBoundarySegments_.insert( std::make_pair( sorted_vertices, countInterfaceBoundarySegments++ ) );
     }
 
     /** \brief Insert a vertex into the macro grid
@@ -287,17 +303,16 @@ namespace Dune
 
     /** \brief insert an interface into the macro grid
      *
-     *  \param[in]  v         indices of the interface vertices (starting with 0)
+     *  \param[in]  type      GeometryType of the new interface
+     *  \param[in]  vertices  indices of the interface vertices (starting with 0)
      */
-    void insertInterface ( const std::vector< unsigned int > &v )
+    void insertInterface ( const std::vector< unsigned int > &vertices )
     {
-      assert( v.size() == dimension );
+      assert( vertices.size() == dimension );
 
-      // mark all vertices as interface
-      for( std::size_t i = 0; i < v.size(); ++i )
-        vhs_[v[i]]->info().isInterface = true;
-
-      std::vector< std::size_t > sorted_vertices( v.begin(), v.end() );
+      std::vector< std::size_t > sorted_vertices;
+      for( const auto& v : vertices )
+        sorted_vertices.push_back( vhs_[v]->info().id );
       std::sort(sorted_vertices.begin(), sorted_vertices.end());
       interfaceSegments_.insert( sorted_vertices );
     }
@@ -308,7 +323,7 @@ namespace Dune
      */
     unsigned int insertionIndex ( const typename Codim<0>::Entity &entity ) const
     {
-      return entity.impl().hostEntity()->info().id;
+      return entity.impl().hostEntity()->info().insertionIndex;
     }
 
     /** \brief return insertion index of vertex entity
@@ -318,6 +333,24 @@ namespace Dune
     unsigned int insertionIndex ( const typename Codim< dimension >::Entity &entity ) const
     {
       return entity.impl().hostEntity()->info().id;
+    }
+
+    //! returns the boundary segment to index map
+    const BoundarySegments& boundarySegments() const
+    {
+      return boundarySegments_;
+    }
+
+    //! returns the boundary segment index to boundary id map
+    const BoundaryIds& boundaryIds() const
+    {
+      return boundaryIds_;
+    }
+
+    //! add a boundary id
+    void addBoundaryId( std::size_t boundarySegmentIndex, std::size_t boundaryId )
+    {
+      boundaryIds_.insert( std::make_pair( boundarySegmentIndex, boundaryId ) );
     }
 
     /** \brief finalize grid creation and hand over the grid
@@ -341,17 +374,35 @@ namespace Dune
       // Create the infinite cells (neighbors of boundary cells)
       createInfiniteCells();
 
+      // Remove interfaceSegments_ from boundarySegments_
+      for( const auto& interfaceSeg : interfaceSegments_ )
+        boundarySegments_.erase( interfaceSeg );
+
+      // Mark interface vertices as isInterface
+      for( const auto& interfaceSeg : interfaceSegments_ )
+        for( const auto& v : interfaceSeg )
+          vhs_[v]->info().isInterface = true;
+
       // Check if all inserted elements really exist in the triangulation
       checkOccurenceOfAllElements();
 
-      // Check if the Delaunay property is satisfied
-      checkDelaunay();
-
       // Return pointer to grid
     #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      return makeToUnique<Grid>( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+      return makeToUnique<Grid> (
+        std::move(tr_),
+        std::move(boundarySegments_),
+        std::move(interfaceBoundarySegments_),
+        std::move(boundaryIds_),
+        std::move(interfaceSegments_)
+      );
     #else
-      return new Grid ( std::move(tr_), std::move(boundarySegments_), std::move(interfaceSegments_) );
+      return new Grid (
+        std::move(tr_),
+        std::move(boundarySegments_),
+        std::move(interfaceBoundarySegments_),
+        std::move(boundaryIds_),
+        std::move(interfaceSegments_)
+      );
     #endif
     }
 
@@ -382,7 +433,6 @@ namespace Dune
         tr_.tds().set_dimension(0);
 
       Vertex_handle infinite = tr_.tds().create_vertex();
-      infinite->info().idWasSet = true;
       tr_.set_infinite_vertex(infinite);
     }
 
@@ -401,13 +451,23 @@ namespace Dune
         Element_handle face = facet.first;
         int fi = facet.second;
 
+        // Remove real boundary segments from interfaceSegments_
+        std::vector< std::size_t > vertices;
+        vertices.push_back( face->vertex( (fi+2)%3 )->info().id );
+        vertices.push_back( face->vertex( (fi+1)%3 )->info().id );
+        std::sort(vertices.begin(), vertices.end());
+
+        auto it = boundarySegments_.find( vertices );
+        if( it != boundarySegments_.end() )
+          interfaceSegments_.erase( vertices );
+
+
         // Create infinite face with correct orientation
         Element_handle iface = tr_.tds().create_face(
           face->vertex( (fi+2)%3 ),
           face->vertex( (fi+1)%3 ),
           tr_.infinite_vertex()
         );
-        iface->info().idWasSet = true;
 
         tr_.infinite_vertex()->set_face( iface );
 
@@ -455,6 +515,18 @@ namespace Dune
         Element_handle cell = facet.first;
         int fi = facet.second;
 
+        // Remove real boundary segments from interfaceSegments_
+        std::vector< std::size_t > vertices;
+        vertices.push_back( cell->vertex( (fi%2==1) ? (fi+2)&3 : (fi+1)&3 )->info().id );
+        vertices.push_back( cell->vertex( (fi%2==1) ? (fi+1)&3 : (fi+2)&3 )->info().id );
+        vertices.push_back( cell->vertex( (fi+3)&3 )->info().id );
+        std::sort(vertices.begin(), vertices.end());
+
+        auto it = boundarySegments_.find( vertices );
+        if( it != boundarySegments_.end() )
+          interfaceSegments_.erase( vertices );
+
+
         // Create infinite cell with correct orientation
         Element_handle icell = tr_.tds().create_cell(
           cell->vertex( (fi%2==1) ? (fi+2)&3 : (fi+1)&3 ),
@@ -462,7 +534,6 @@ namespace Dune
           cell->vertex((fi+3)&3),
           tr_.infinite_vertex()
         );
-        icell->info().idWasSet = true;
 
         tr_.infinite_vertex()->set_cell( icell );
 
@@ -504,63 +575,17 @@ namespace Dune
           DUNE_THROW( InvalidStateException, "Inserted element was not found in CGAL triangulation." );
     }
 
-    /** \brief Check if the Delaunay property is satisfied
-     * \ingroup 2D
-     */
-    template< int d = dimension >
-    std::enable_if_t< d == 2, void >
-    checkDelaunay() const
-    {
-      int numNotDel = 0;
-      for(auto it = tr_.finite_faces_begin(), end = tr_.finite_faces_end(); it != end; ++it)
-      {
-        for(int i=0; i<3; i++)
-        {
-          auto ni = it->neighbor(i)->index(it);
-          auto vi = it->neighbor(i)->vertex(ni);
-          if ( !tr_.is_infinite(vi) )
-            if ( tr_.side_of_oriented_circle(it, vi->point()) == CGAL::ON_POSITIVE_SIDE )
-              numNotDel++;
-        }
-      }
-
-      if ( numNotDel > 0)
-        std::cerr << "Warning: There are " << numNotDel << " cells in the triangulation that do not satisfy the empty circle property!" << std::endl;
-    }
-
-    /** \brief Check if the Delaunay property is satisfied
-     * \ingroup 3D
-     */
-    template< int d = dimension >
-    std::enable_if_t< d == 3, void >
-    checkDelaunay() const
-    {
-      int numNotDel = 0;
-      for(auto it = tr_.finite_cells_begin(), end = tr_.finite_cells_end(); it != end; ++it)
-      {
-        for(int i=0; i<4; i++)
-        {
-          auto ni = it->neighbor(i)->index(it);
-          auto vi = it->neighbor(i)->vertex(ni);
-          if ( !tr_.is_infinite(vi) )
-            if ( tr_.side_of_sphere(it, vi->point()) == CGAL::ON_BOUNDED_SIDE )
-              numNotDel++;
-        }
-      }
-
-      if ( numNotDel > 0)
-        std::cerr << "Warning: There are " << numNotDel << " cells in the triangulation that do not satisfy the empty circle property!" << std::endl;
-    }
-
     //! Private members
     HostGrid tr_;
     std::vector< Vertex_handle > vhs_;
-    BoundarySegments boundarySegments_;
+    BoundarySegments boundarySegments_, interfaceBoundarySegments_;
+    BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
     std::vector< std::vector< unsigned int > > elementVerticesList;
     std::map< std::set< unsigned int >, std::pair<Element_handle, int> > neighborMap;
     std::map< std::set< std::size_t >, std::pair<Element_handle, int> > infiniteNeighborMap;
-    std::size_t countElements = 0, countVertices = 0, countBoundarySegments = 0;
+    std::size_t countElements = 0, countVertices = 0;
+    std::size_t countBoundarySegments = 0, countInterfaceBoundarySegments = 0;
   };
 
 } // end namespace Dune

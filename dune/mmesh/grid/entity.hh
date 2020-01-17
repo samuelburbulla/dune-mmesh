@@ -18,6 +18,10 @@ namespace Dune
 }
 
 
+// MMesh includes
+#include <dune/mmesh/grid/cachingentity.hh>
+#include <dune/mmesh/grid/connectedcomponent.hh>
+
 namespace Dune
 {
   template<class GridImp>
@@ -137,7 +141,19 @@ namespace Dune
     equals(const MMeshEntity& other) const
     {
       return (hostEntity_ == other.hostEntity_)
-       || ( mMesh_->getHostGrid().mirror_facet( hostEntity_ ) == other.hostEntity_ );
+       || ( hostEntity_ == mMesh_->getHostGrid().mirror_facet( other.hostEntity_ ) );
+    }
+
+    // Comparator for edges in 3d
+    template <int cc = codim>
+    std::enable_if_t< cc == 2 && dim == 3, bool >
+    equals(const MMeshEntity& other) const
+    {
+      const auto& v0 = hostEntity_.first->vertex( hostEntity_.second );
+      const auto& v1 = hostEntity_.first->vertex( hostEntity_.third );
+      const auto& w0 = other.hostEntity_.first->vertex( other.hostEntity_.second );
+      const auto& w1 = other.hostEntity_.first->vertex( other.hostEntity_.third );
+      return (v0 == w0 && v1 == w1) || (v0 == w1 && v1 == w0);
     }
 
     //! returns true if father entity exists
@@ -179,7 +195,7 @@ namespace Dune
       return binomial;
     }
 
-    //! Obtain a cc 2 subEntity of a codim 1 entity
+    //! Obtain a cc dim subEntity of a codim 1 entity
     template <int cc>
     std::enable_if_t< codim == 1 && cc == dim, typename GridImp::template Codim<dim>::Entity >
     subEntity (unsigned int i) const
@@ -193,6 +209,35 @@ namespace Dune
         typename GridImp::template HostGridEntity<dim> (
           hostEntity_.first->vertex( (edgeIdx+1+i)%(dim+1) )
         )
+      );
+    }
+
+    //! Obtain a cc 3 subEntity of a codim 2 entity (only for 3d)
+    template <int cc>
+    std::enable_if_t< codim == 2 && cc == 3, typename GridImp::template Codim<3>::Entity >
+    subEntity (unsigned int i) const
+    {
+      assert( i < subEntities( cc ) );
+      auto& v0Idx = hostEntity_.second;
+      auto& v1Idx = hostEntity_.third;
+      // return the two vertices but do not care about any ordering here
+      return MMeshEntity<cc, dim, GridImp> (
+        mMesh_,
+        typename GridImp::template HostGridEntity<dim> (
+          hostEntity_.first->vertex( (i==0) ? v0Idx : v1Idx )
+        )
+      );
+    }
+
+    //! Obtain a cc dim subEntity of a codim dim entity
+    template <int cc>
+    std::enable_if_t< codim == dim && cc == dim, typename GridImp::template Codim<dim>::Entity >
+    subEntity (unsigned int i) const
+    {
+      assert( i < subEntities( cc ) );
+      return MMeshEntity<cc, dim, GridImp> (
+        mMesh_,
+        hostEntity_
       );
     }
 
@@ -220,6 +265,45 @@ namespace Dune
       return MMeshIncidentFacetsIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
+    //! First incident vertex
+    MMeshIncidentVerticesIterator<GridImp> incidentVerticesBegin ( bool includeInfinite ) const {
+      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentVerticesIterator<GridImp>( Impl( mMesh_, hostEntity_, includeInfinite) );
+    }
+
+    //! Last incident vertex
+    MMeshIncidentVerticesIterator<GridImp> incidentVerticesEnd ( bool includeInfinite ) const {
+      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentVerticesIterator<GridImp>( Impl( mMesh_, hostEntity_, includeInfinite, true ) );
+    }
+
+    //! Return insertion level of vertex
+    template <int cd = codim>
+    std::enable_if_t< cd == dim, std::size_t >
+    insertionLevel() const
+    {
+      if ( codim == dim )
+        return hostEntity_->info().insertionLevel;
+    }
+
+    //! Return insertion level (maximal insertionLevel of the corresponding vertices)
+    template <int cd = codim>
+    std::enable_if_t< cd != dim, std::size_t >
+    insertionLevel() const
+    {
+      std::size_t insertionLevel = 0;
+      for( std::size_t i = 0; i < subEntities(dim); ++i )
+        insertionLevel = std::max( insertionLevel, this->template subEntity<dim>(i).impl().insertionLevel() );
+      return insertionLevel;
+    }
+
+    //! Return if vertex is part of the interface
+    bool isInterface() const
+    {
+      static_assert( codim == dim );
+      return hostEntity_->info().isInterface;
+    }
+
     //! geometry of this entity
     Geometry geometry () const
     {
@@ -236,6 +320,18 @@ namespace Dune
     const HostGridEntity& hostEntity () const
     {
       return hostEntity_;
+    }
+
+    //! returns the host entity
+    HostGridEntity& hostEntity ()
+    {
+      return hostEntity_;
+    }
+
+    //! returns the grid
+    const GridImp& grid () const
+    {
+      return *mMesh_;
     }
 
   private:
@@ -281,6 +377,9 @@ namespace Dune
 
     //! The type of the EntitySeed interface class
     typedef typename GridImp::template Codim<0>::EntitySeed EntitySeed;
+
+    //! The type of a ConnectedComponent
+    using ConnectedComponent = MMeshConnectedComponent< GridImp >;
 
     MMeshEntity()
       : mMesh_(nullptr)
@@ -347,7 +446,7 @@ namespace Dune
     //! returns the father entity
     MMeshEntity father () const
     {
-      DUNE_THROW( InvalidStateException, "MMesh entities do no have a father!" );
+      DUNE_THROW( InvalidStateException, "MMesh entities do no have a father, but a connectedComponent instead!" );
       return *this;
     }
 
@@ -357,28 +456,47 @@ namespace Dune
       return false;
     }
 
+    //! returns the connected component as father entity
+    const ConnectedComponent& connectedComponent () const
+    {
+      assert( isNew() == true );
+      return mMesh_->getConnectedComponent(*this);
+    }
+
     //! returns true if this entity is new after adaptation
     const bool isNew () const
     {
-      return false;
+      return hostEntity_->info().isNew;
+    }
+
+    //! set if this entity is new after adaptation
+    void setIsNew ( bool isNew ) const
+    {
+      hostEntity_->info().isNew = isNew;
     }
 
     //! returns true if this entity will vanish after adaptation
     const bool mightVanish () const
     {
-      return false;
+      return hostEntity_->info().mightVanish;
     }
 
     //! set if this entity will vanish after adaptation
-    void setWillVanish ( bool mightVanish ) const {}
+    void setWillVanish ( bool mightVanish ) const
+    {
+      hostEntity_->info().mightVanish = mightVanish;
+    }
 
     //! mark entity for refine or coarse
-    void mark ( int refCount ) const {}
+    void mark ( int refCount ) const
+    {
+      hostEntity_->info().mark = refCount;
+    }
 
     //! get mark of entity
     int getMark () const
     {
-      return 0;
+      return hostEntity_->info().mark;
     }
 
     //! Create EntitySeed
@@ -454,11 +572,21 @@ namespace Dune
       return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<1> ( hostEntity_, dim-i ) );
     }
 
+    template <int cc>
+    std::enable_if_t< cc == 2 && dim == 3, typename GridImp::template Codim<cc>::Entity >
+    subEntity (unsigned int i) const {
+      assert( i < subEntities( cc ) );
+      // permutate i to match the DUNE edge numbering
+      static constexpr std::array<unsigned int, 6> perm = {{ 0, 4, 1, 3, 5, 2 }};
+      i = perm[i];
+      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<2> ( hostEntity_, i%4, (i+1)%4+(i>3)) );
+    }
+
     //! First leaf intersection
     MMeshLeafIntersectionIterator<GridImp> ileafbegin () const {
       return MMeshLeafIntersectionIterator<GridImp>(
-      mMesh_,
-      hostEntity_);
+        mMesh_,
+        hostEntity_);
     }
 
     //! Reference to one past the last leaf intersection
@@ -522,6 +650,18 @@ namespace Dune
     const HostGridEntity& hostEntity () const
     {
       return hostEntity_;
+    }
+
+    //! returns the host entity
+    HostGridEntity& hostEntity ()
+    {
+      return hostEntity_;
+    }
+
+    //! returns the host grid
+    const GridImp& grid () const
+    {
+      return *mMesh_;
     }
 
   private:

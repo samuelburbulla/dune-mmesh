@@ -9,6 +9,7 @@
 
 // Dune includes
 #include <dune/grid/common/grid.hh>
+#include <dune/mmesh/interface/incidentiterator.hh>
 
 // CGAL includes
 #include <CGAL/utility.h>
@@ -120,9 +121,8 @@ namespace Dune
        || ( hostEntity_ == grid_->getHostGrid().mirror_edge( other.hostEntity_ ) );
     }
 
-    //! returns true if father entity exists
-    bool hasFather () const
-    {
+    //! returns true if connected component entity exists
+    bool hasConnectedComponent () const {
       return false;
     }
 
@@ -182,10 +182,55 @@ namespace Dune
       return GeometryTypes::simplex(dim-codim);
     }
 
+    //! returns that entity is part of the interface
+    bool isInterface() const
+    {
+      return true;
+    }
+
+    //! Return the insertion level of the vertex
+    std::size_t insertionLevel() const
+    {
+      static_assert( codim == dim );
+      return hostEntity_->info().insertionLevel;
+    }
+
+    //! First incident vertex
+    auto incidentVerticesBegin ( bool includeInfinite ) const
+    {
+      return grid_->getMMesh().entity( hostEntity_ ).impl().incidentVerticesBegin( includeInfinite );
+    }
+
+    //! Last incident vertex
+    auto incidentVerticesEnd ( bool includeInfinite ) const
+    {
+      return grid_->getMMesh().entity( hostEntity_ ).impl().incidentVerticesEnd( includeInfinite );
+    }
+
+    //! First incident vertex
+    auto incidentInterfaceVerticesBegin () const
+    {
+      using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_) );
+    }
+
+    //! Last incident vertex
+    auto incidentInterfaceVerticesEnd () const
+    {
+      using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+    }
+
     //! returns the host entity
     const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
+    }
+
+    //! returns the grid
+    const GridImp& grid () const
+    {
+      return *grid_;
     }
 
   private:
@@ -232,6 +277,9 @@ namespace Dune
     //! The type of the EntitySeed interface class
     typedef typename GridImp::template Codim<0>::EntitySeed EntitySeed;
 
+    //! The type of the connected component
+    typedef typename GridImp::ConnectedComponent ConnectedComponent;
+
     MMeshInterfaceGridEntity()
       : grid_(nullptr)
     {}
@@ -239,12 +287,20 @@ namespace Dune
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
       : hostEntity_(hostEntity)
       , grid_(grid)
-    {}
+    {
+      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+      if ( hostEntity_.first->info().index > mirrored.first->info().index )
+        hostEntity_ = mirrored;
+    }
 
     MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
       : hostEntity_(std::move(hostEntity))
       , grid_(grid)
-    {}
+    {
+      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+      if ( hostEntity_.first->info().index > mirrored.first->info().index )
+        hostEntity_ = mirrored;
+    }
 
     MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)
       : hostEntity_(original.hostEntity_)
@@ -276,8 +332,18 @@ namespace Dune
       return *this;
     }
 
-    //! returns true if host entities are equal
-    bool equals(const MMeshInterfaceGridEntity& other) const
+    // Comparator for edges
+    template <int d = dim>
+    std::enable_if_t< d == 1, bool >
+    equals(const MMeshInterfaceGridEntity& other) const
+    {
+      return hostEntity_ == other.hostEntity_;
+    }
+
+    // Comparator for facets
+    template <int d = dim>
+    std::enable_if_t< d == 2, bool >
+    equals(const MMeshInterfaceGridEntity& other) const
     {
       return hostEntity_ == other.hostEntity_;
     }
@@ -294,23 +360,39 @@ namespace Dune
       return hostEntity_ < other.hostEntity_;
     }
 
-    //! returns the father entity
-    MMeshInterfaceGridEntity father () const
+    //! returns the connected component
+    const ConnectedComponent& connectedComponent () const
     {
-      DUNE_THROW( NotImplemented, "MMesh entities do not have a father!" );
+      return grid_->getConnectedComponent( *this );
+    }
+
+    //! returns true if a connected component exists
+    bool hasConnectedComponent () const
+    {
+      return grid_->hasConnectedComponent( *this );
+    }
+
+    //! returns the father entity
+    auto father () const
+    {
+      DUNE_THROW( InvalidStateException, "MMesh entities do no have a father, but a connectedComponent instead!" );
       return *this;
     }
 
     //! returns true if father entity exists
-    bool hasFather () const
-    {
+    bool hasFather () const {
       return false;
+    }
+
+    LocalGeometry geometryInFather() const {
+      DUNE_THROW( InvalidStateException, "MMesh entities do no implement a geometry in father!" );
+      return LocalGeometry( 0 );
     }
 
     //! returns true if this entity is new after adaptation
     const bool isNew () const
     {
-      return false;
+      return hasConnectedComponent();
     }
 
     //! set if this entity is new after adaptation
@@ -320,19 +402,19 @@ namespace Dune
     //! returns true if this entity will vanish after adaptation
     const bool mightVanish () const
     {
-      return hostEntity_->info().mightVanish;
+      return hostEntity_.first->info().mightVanish;
     }
 
     //! set if this entity will vanish after adaptation
     void setWillVanish ( bool mightVanish ) const
     {
-      hostEntity_->info().mightVanish = mightVanish;
+      hostEntity_.first->info().mightVanish = mightVanish;
     }
 
     //! mark entity for refine or coarse
     void mark ( int refCount ) const
     {
-      hostEntity_->info().mark = refCount;
+      hostEntity_.first->info().mark = refCount;
     }
 
     //! get mark of entity
@@ -365,21 +447,23 @@ namespace Dune
       return Geometry( hostEntity_ );
     }
 
-    //! Geometry of this entity in father
-    Geometry geometryInFather () const
-    {
-      DUNE_THROW(NotImplemented, "MMeshInterfaceGrid does not implement a geometry in father!");
-      return geometry();
-    }
-
     //! Return the number of subEntities of codimension cc
     std::size_t subEntities (std::size_t cc) const
     {
       if( dim == 1 )
-        return (cc == 0) ? 0 : 2;
+        return (cc == 0) ? 1 : 2;
 
       if( dim == 2 )
-        return (cc == 0) ? 0 : 3;
+        return (cc == 0) ? 1 : 3;
+    }
+
+    /** \brief Provide access to sub entity i of given codimension. Entities
+     *  are numbered 0 ... subEntities(cc)-1
+     */
+    template <int cc>
+    std::enable_if_t< cc == 0, typename GridImp::template Codim<cc>::Entity >
+    subEntity (std::size_t i) const {
+      return *this;
     }
 
     /** \brief Provide access to sub entity i of given codimension. Entities

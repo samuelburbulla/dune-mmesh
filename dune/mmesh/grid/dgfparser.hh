@@ -125,6 +125,26 @@ namespace Dune
       for( int n = 0; n < dgf_.nofelements; ++n )
         factory_.insertElement( GeometryTypes::simplex(dimension), dgf_.elements[ n ] );
 
+      // Insert boundary segments and ids
+      for( const auto& face : dgf_.facemap )
+      {
+        const auto& entityKey = face.first;
+        const std::size_t boundaryId = face.second.first;
+
+        std::vector< unsigned int > vertices;
+        for( int i = 0; i < entityKey.size(); ++i )
+          vertices.push_back( entityKey[i] );
+
+        std::sort( vertices.begin(), vertices.end() );
+
+        // insert boundary segment
+        factory_.insertBoundarySegment( vertices );
+
+        // insert boundary id
+        std::size_t index = factory_.boundarySegments().size()-1;
+        factory_.addBoundaryId( index, boundaryId );
+      }
+
       grid_ = factory_.createGrid();
       return true;
     }

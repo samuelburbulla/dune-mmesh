@@ -34,6 +34,22 @@ namespace Dune
   }
 
   /**
+   * Incident vertices range implementation without PartitionSet parameter. The default implementation obtains the
+   * iterators by calling incidentVerticesBegin() and incidentVerticesEnd() without specifying a partition type.
+   *
+   */
+  template<typename Vertex>
+  inline auto incidentVertices(const Vertex& e, bool includeInfinite = false)
+    -> IteratorRange<decltype(e.impl().incidentVerticesBegin( includeInfinite ))>
+  {
+    static_assert(Vertex::mydimension == 0, "Incident vertices range iterator is only available for vertices!");
+    return IteratorRange<decltype(e.impl().incidentVerticesBegin( includeInfinite ))>(
+      e.impl().incidentVerticesBegin( includeInfinite ),
+      e.impl().incidentVerticesEnd( includeInfinite )
+    );
+  }
+
+  /**
    * Interface elements range implementation without PartitionSet parameter. The default implementation obtains the
    * iterators by calling interfaceBegin() and interfaceEnd() without specifying a partition type.
    *
@@ -60,6 +76,22 @@ namespace Dune
     return IteratorRange<decltype(gv.grid().interfaceVerticesBegin( includeBoundary ))>(
       gv.grid().interfaceVerticesBegin( includeBoundary ),
       gv.grid().interfaceVerticesEnd( includeBoundary )
+    );
+  }
+
+  /**
+   * Incident interface vertices range implementation without PartitionSet parameter. The default implementation obtains the
+   * iterators by calling incidentInterfaceVerticesBegin() and incidentInterfaceVerticesEnd() without specifying a partition type.
+   *
+   */
+  template<typename Vertex>
+  inline auto incidentInterfaceVertices(const Vertex& e)
+    -> IteratorRange<decltype(e.impl().incidentInterfaceVerticesBegin())>
+  {
+    static_assert(Vertex::mydimension == 0, "Incident interface vertices range iterator is only available for interface vertices!");
+    return IteratorRange<decltype(e.impl().incidentInterfaceVerticesBegin())>(
+      e.impl().incidentInterfaceVerticesBegin(),
+      e.impl().incidentInterfaceVerticesEnd()
     );
   }
 
