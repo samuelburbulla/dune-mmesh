@@ -1,0 +1,8 @@
+variables:
+  DUNECI_BRANCH: "master"
+  DUNECI_OPTS: "scripts/opts/ci-gcc.opts"
+  DUNECI_PARALLEL: 8
+
+test:
+  image: gitlab.mathematik.uni-stuttgart.de:4430/ians/software/dune-mmesh:latest
+  script: duneci-standard-test
