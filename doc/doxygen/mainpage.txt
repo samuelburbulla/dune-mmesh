@@ -1,9 +1,13 @@
-/** \mainpage dune-mmesh Automatic Documentation
+/** \mainpage Documentation of dune-mmesh
 
 \section intro Introduction
 
 Welcome to the Dune-MMesh documentation pages. This documentation has been
 generated using Doxygen, a free source code documentation system for
 documenting C/C++ code.
+
+For the most common cases, the <a href="examples.html">Examples</a> page might be the place to go.
+
+The full documentation of the MMesh grid class is in \ref Dune::MMeshBase< HostGrid, dim, GridFam >.
 
 */

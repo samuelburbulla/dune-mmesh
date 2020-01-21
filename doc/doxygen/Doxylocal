@@ -20,7 +20,7 @@ INPUT                 += @top_srcdir@/dune \
 # directories that contain example code fragments that are included (see
 # the \include command).
 
-# EXAMPLE_PATH          += @top_srcdir@/examples
+EXAMPLE_PATH          += @top_srcdir@/examples
 
 # The IMAGE_PATH tag can be used to specify one or more files or
 # directories that contain image that are included in the documentation (see
