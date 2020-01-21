@@ -271,6 +271,7 @@ int main(int argc, char *argv[])
       decltype(seed) seed2;
       seed2 = seed;
       const auto entity = mMesh.entity( seed2 );
+      entity.geometry(); // dummy
       assert( e == entity );
 
       elementCount++;

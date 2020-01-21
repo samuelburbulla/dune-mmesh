@@ -62,7 +62,8 @@ int main(int argc, char** argv)
       const double intersectionAreaCGAL =
         PC::intersectionVolumeCGAL(polygon1, polygon2);
 
-      assert (std::abs(intersectionArea - intersectionAreaCGAL) < 1e-10);
+      if (std::abs(intersectionArea - intersectionAreaCGAL) > 1e-10)
+        DUNE_THROW( Dune::InvalidStateException, "The intersection volumes differ!" );
     }
 
     return 0;

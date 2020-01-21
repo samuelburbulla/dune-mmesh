@@ -49,7 +49,7 @@ namespace Dune
     typedef typename GridImp::template MMeshInterfaceEntity<1> HostLeafIntersection;
 
     using LocalIndexMap = std::unordered_map< std::size_t, std::size_t >;
-    typedef typename GridImp::MMesh::template Codim<dimensionworld>::Entity MMeshVertex;
+    typedef typename GridImp::MMeshType::template Codim<dimensionworld>::Entity MMeshVertex;
 
   public:
     typedef typename GridImp::template Codim<1>::Geometry Geometry;

@@ -15,7 +15,7 @@ namespace Dune
   template<int dim, class MMesh>
   struct MMeshInterfaceGridFamily;
 
-  template<class MMesh, int dim, class GridFamily = MMeshInterfaceGridFamily<dim, MMesh>>
+  template<class MMesh, int dim>
   class MMeshInterfaceGrid;
 
   template<int codim, int dim, class GridImp>

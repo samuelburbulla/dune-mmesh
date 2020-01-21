@@ -137,7 +137,7 @@ namespace Dune
 
   //**********************************************************************
   //
-  // --MMeshBase class
+  // --MMesh class
   //
   //************************************************************************
   /*!
@@ -148,7 +148,7 @@ namespace Dune
    * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
   template <class HostGrid, int dim>
-  class MMeshBase
+  class MMesh
    : public GridDefaultImplementation< dim, dim,
                                        /*FieldType=*/typename HostGrid::Point::R::RT,
                                        MMeshFamily<dim, HostGrid> >
@@ -267,7 +267,7 @@ namespace Dune
      * \param boundarySegments   The boundary segment index mapper
      * \param interfaceSegments  The set of interface segments
      */
-    explicit MMeshBase(HostGrid hostgrid,
+    explicit MMesh(HostGrid hostgrid,
                        BoundarySegments boundarySegments,
                        BoundarySegments interfaceBoundarySegments,
                        BoundaryIds boundaryIds,
@@ -285,12 +285,28 @@ namespace Dune
     }
 
     //! The destructor
-    virtual ~MMeshBase() {}
+    virtual ~MMesh() {}
 
     //! This pointer to derived class
     const GridImp* This() const { return static_cast<const GridImp*>(this); }
     GridImp* This() { return static_cast<GridImp*>(this); }
 
+  public:
+    //! update the grid indices and ids
+    void update()
+    {
+      setIndices();
+      interfaceGrid_->setIndices();
+    }
+
+  private:
+    void setIndices()
+    {
+      globalIdSet_->update(This());
+      leafIndexSet_->update(This());
+    }
+
+  public:
     /** \brief Return maximum level defined in this grid.
      *
      * Levels are numbered 0 ... maxlevel with 0 the coarsest level.
@@ -487,6 +503,36 @@ namespace Dune
     template<int codim, PartitionIteratorType PiType>
     typename Traits::template Codim<codim>::template Partition<PiType>::LeafIterator leafend() const {
       return MMeshLeafIterator<codim,PiType, const GridImp>(This(), true);
+    }
+
+    //! iterator to first interface entity
+    template<int codim>
+    MMeshInterfaceIterator<codim, const GridImp> interfaceBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const GridImp>::Implementation;
+      return MMeshInterfaceIterator<codim, const GridImp>( Impl(this, false) );
+    }
+
+    //! one past the end of the sequence of interface entities
+    template<int codim>
+    MMeshInterfaceIterator<codim, const GridImp> interfaceEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceIterator<codim, const GridImp>::Implementation;
+      return MMeshInterfaceIterator<codim, const GridImp>( Impl(this, true, includeBoundary) );
+    }
+
+    //! iterator to first interface entity
+    MMeshInterfaceVertexIterator<const GridImp> interfaceVerticesBegin( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator< const GridImp>::Implementation;
+      return MMeshInterfaceVertexIterator<const GridImp>( Impl(this, includeBoundary) );
+  }
+
+    //! one past the end of the sequence of interface entities
+    MMeshInterfaceVertexIterator<const GridImp> interfaceVerticesEnd( bool includeBoundary = false ) const
+    {
+      using Impl = typename MMeshInterfaceVertexIterator<const GridImp>::Implementation;
+      return MMeshInterfaceVertexIterator<const GridImp>( Impl(this, true, includeBoundary) );
     }
 
     //! Return if vertex is part of the interface
@@ -787,7 +833,7 @@ namespace Dune
       if ( buildComponents )
       {
         // build the connected components
-        std::size_t componentCount = connectedComponents_.size()+1; // 0 is the default component
+        componentCount_ = connectedComponents_.size()+1; // 0 is the default component
 
         // we have to mark the cells repeatedly for the case that conflict zones overlap
         bool markAgain = true;
@@ -802,9 +848,9 @@ namespace Dune
           for ( const auto& ip : insert )
           {
             if ( ip.edgeId != IdType() )
-              markAgain |= markElementsForInsertion_( ip.edge, componentCount, componentNumber );
+              markAgain |= markElementsForInsertion_( ip.edge, componentNumber );
             else
-              markAgain |= markElementForInsertion_( ip.point, componentCount, componentNumber );
+              markAgain |= markElementForInsertion_( ip.point, componentNumber );
 
             insertComponentIds.push_back( componentNumber-1 );
           }
@@ -812,7 +858,7 @@ namespace Dune
           // mark elements as mightVanish
           for ( const auto& vh : remove )
           {
-            markAgain |= markElementsForRemoval_( vh, componentCount, componentNumber );
+            markAgain |= markElementsForRemoval_( vh, componentNumber );
             removeComponentIds.push_back( componentNumber-1 );
           }
         }
@@ -1304,41 +1350,19 @@ namespace Dune
     }
 
   private:
-    virtual bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
-    virtual bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
-    virtual void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId ) = 0;
-    virtual bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber ) = 0;
-    virtual void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId ) = 0;
-
     // count how much elements where marked
     mutable int coarsenMarked_;
     mutable int refineMarked_;
+    mutable std::size_t componentCount_;
 
     //! The storage of the connected components of entities
     std::vector< ConnectedComponent > connectedComponents_;
 
     //! Maps the entities to its connected components
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
-  protected:
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
-  private:
     CollectiveCommunication< GridImp > ccobj;
-
-  public:
-    //! update the grid indices and ids
-    void update()
-    {
-      setIndices();
-      interfaceGrid_->setIndices();
-    }
-
-  private:
-    void setIndices()
-    {
-      globalIdSet_->update(This());
-      leafIndexSet_->update(This());
-    }
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
@@ -1347,409 +1371,33 @@ namespace Dune
     std::vector<VertexHandle> remove_;
     std::unordered_set< IdType > removed_;
 
-  protected:
     //! The host grid which contains the actual grid hierarchy structure
     HostGrid hostgrid_;
     BoundarySegments boundarySegments_;
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
-  }; // end Class MMesh
-
-
-  //**********************************************************************
-  //
-  // --MMesh (2D)
-  //
-  //************************************************************************
-  /*!
-   * \brief Provides a grid wrapper to a CGAL triangulation
-   * \ingroup GridImplementations
-   * \ingroup MMesh
-   *
-   * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
-   */
-  template <class HostGrid>
-  class MMesh<HostGrid, 2>
-   : public MMeshBase<HostGrid, 2>
-  {
-  public:
-    using ThisType = MMesh<HostGrid, 2>;
-    using BaseType = MMeshBase<HostGrid, 2>;
-
-    //! Export types from the base class
-    static constexpr int dimension = 2;
-    using HostGridType = HostGrid;
-    using Point = typename BaseType::Point;
-    using FieldType = typename BaseType::FieldType;
-    using Traits = typename BaseType::Traits;
-    using Edge = typename BaseType::Edge;
-    using IdType = typename BaseType::IdType;
-    using BoundarySegments = typename BaseType::BoundarySegments;
-    using BoundaryIds = typename BaseType::BoundaryIds;
-    using InterfaceSegments = typename BaseType::InterfaceSegments;
-    using ConnectedComponent = typename BaseType::ConnectedComponent;
-    using CachingEntity = typename BaseType::CachingEntity;
-    using ElementOutput = typename BaseType::ElementOutput;
-    using BoundaryEdgesOutput = typename BaseType::BoundaryEdgesOutput;
-
-    //! The type of the underlying entities
-    template<int cd>
-    using HostGridEntity = typename HostGridEntityChooser_<HostGridType, dimension, cd>::type;
-
-    //! The types specific for 2d
-    using HostGridEntityObject = typename HostGrid::Face;
-    using Element_circulator = typename HostGrid::Face_circulator;
-
-    /** \brief Constructor
-     *
-     * \param hostgrid The host grid wrapped by the MMesh
-     */
-    explicit MMesh(HostGrid hostgrid)
-     : BaseType(hostgrid, {}, {}, {}, {})
-    {}
-
-    /** \brief Constructor
-     *
-     * \param hostgrid The host grid wrapped by the MMesh
-     * \param boundarySegments The boundary segment index mapper
-     * \param interfaceBoundarySegments The interface boundary segment index mapper
-     * \param boundaryIds The boundary ids mapper
-     * \param interfaceSegments The set of interface segments
-     */
-    explicit MMesh(HostGrid hostgrid,
-                   BoundarySegments boundarySegments,
-                   BoundarySegments interfaceBoundarySegments,
-                   BoundaryIds boundaryIds,
-                   InterfaceSegments interfaceSegments)
-     : BaseType(hostgrid, boundarySegments, interfaceBoundarySegments, boundaryIds, interfaceSegments)
-    {}
-
-    //! Iterator to first interface entity
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceBegin( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, includeBoundary) );
-    }
-
-    //! one past the end of the sequence of interface entities
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceEnd( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, true, includeBoundary) );
-    }
-
-    //! Iterator to first interface entity
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesBegin( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceVertexIterator< const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, includeBoundary) );
-    }
-
-    //! one past the end of the sequence of interface entities
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesEnd( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, true, includeBoundary) );
-    }
 
   private:
     //! Flag all elements in conflict as mightVanish
-    bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber )
+    bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentNumber )
     {
       const auto& eh = edge.impl().hostEntity();
 
-      ElementOutput elements;
+    ElementOutput elements;
+    #if GRIDDIM == 2  // TODO remove preprocessor if
       elements.push_back( eh.first );
       elements.push_back( eh.first->neighbor( eh.second ) );
-
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        if( element->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element->info().componentNumber;
-        }
-      }
-
-      // if no id was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
-
-      // set componentNumber and mightVanish
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        element->info().componentNumber = componentNumber;
-        element->info().mightVanish = true;
-      }
-
-      return markAgain;
-    }
-
-    //! Flag element in conflict with point
-    bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber )
-    {
-      ElementOutput elements;
-      elements.push_back( this->getHostGrid().locate( point ) );
-
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        if( element->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element->info().componentNumber;
-        }
-      }
-
-      // if no id was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
-
-      // set componentNumber and mightVanish
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        element->info().componentNumber = componentNumber;
-        element->info().mightVanish = true;
-      }
-
-      return markAgain;
-    }
-
-    //! Flag all incident elements as new
-    void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId )
-    {
-      auto element_circulator = this->getHostGrid().incident_faces( vh );
-      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
-      {
-        element_circulator->info().isNew = true;
-        element_circulator->info().componentNumber = componentId + 1;
-        const IdType id = this->globalIdSet().id( this->entity( element_circulator ) );
-        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
-      }
-    }
-
-    //! Flag all incident elements as mightVanish
-    bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber )
-    {
-      auto element_circulator = this->getHostGrid().incident_faces( vh );
-
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
-        if( element_circulator->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element_circulator->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element_circulator->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element_circulator->info().componentNumber;
-        }
-
-      // if no componentNumber was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
-
-      // set componentNumber and mightVanish
-      for( std::size_t i = 0; i < CGAL::circulator_size( element_circulator ); ++i, ++element_circulator )
-      {
-        element_circulator->info().componentNumber = componentNumber;
-        element_circulator->info().mightVanish = true;
-      }
-
-      return markAgain;
-    }
-
-    //! Flag all elements in conflict as new
-    void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId )
-    {
-      // flag all elements in conflict as mightVanish
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        element->info().isNew = true;
-        element->info().componentNumber = componentId + 1;
-
-        const auto id = this->globalIdSet().id( this->entity( element ) );
-        this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
-      }
-    }
-  }; // end Class MMesh (2D)
-
-
-
-  //**********************************************************************
-  //
-  // --MMesh (3D)
-  //
-  //************************************************************************
-  /*!
-   * \brief Provides a grid wrapper to a CGAL triangulation
-   * \ingroup GridImplementations
-   * \ingroup MMesh
-   *
-   * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
-   */
-
-  template <class HostGrid>
-  class MMesh<HostGrid, 3>
-   : public MMeshBase<HostGrid, 3>
-  {
-  public:
-    using ThisType = MMesh<HostGrid, 3>;
-    using BaseType = MMeshBase<HostGrid, 3>;
-
-    //! Export types from the base class
-    static constexpr int dimension = 3;
-    using HostGridType = HostGrid;
-    using Point = typename BaseType::Point;
-    using FieldType = typename BaseType::FieldType;
-    using Traits = typename BaseType::Traits;
-    using Edge = typename BaseType::Edge;
-    using IdType = typename BaseType::IdType;
-    using BoundarySegments = typename BaseType::BoundarySegments;
-    using BoundaryIds = typename BaseType::BoundaryIds;
-    using InterfaceSegments = typename BaseType::InterfaceSegments;
-    using ConnectedComponent = typename BaseType::ConnectedComponent;
-    using CachingEntity = typename BaseType::CachingEntity;
-    using ElementOutput = typename BaseType::ElementOutput;
-
-    //! The type of the underlying entities
-    template<int cd>
-    using HostGridEntity = typename HostGridEntityChooser_<HostGridType, dimension, cd>::type;
-
-    //! The types specific for 3d
-    using HostGridEntityObject = typename HostGrid::Cell;
-    using Element_circulator = typename HostGrid::Cell_circulator;
-    using FacetsOutput = std::list<HostGridEntity<1>>;
-    using VertexOutput = std::list<HostGridEntity<3>>;
-
-    /** \brief Constructor
-     *
-     * \param hostgrid The host grid wrapped by the MMesh
-     */
-    explicit MMesh(HostGrid hostgrid)
-     : BaseType(hostgrid, {}, {}, {}, {})
-    {}
-
-    /** \brief Constructor
-     *
-     * \param hostgrid The host grid wrapped by the MMesh
-     * \param boundarySegments The boundary segment index mapper
-     * \param interfaceBoundarySegments The interface boundary segment index mapper
-     * \param boundaryIds The boundary ids mapper
-     * \param interfaceSegments The set of interface segments
-     */
-    explicit MMesh(HostGrid hostgrid,
-                   BoundarySegments boundarySegments,
-                   BoundarySegments interfaceBoundarySegments,
-                   BoundaryIds boundaryIds,
-                   InterfaceSegments interfaceSegments)
-     : BaseType(hostgrid, boundarySegments, interfaceBoundarySegments, boundaryIds, interfaceSegments)
-    {}
-
-    //! Iterator to first interface entity
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceBegin( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, includeBoundary) );
-    }
-
-    //! one past the end of the sequence of interface entities
-    template<int codim>
-    MMeshInterfaceIterator<codim, const ThisType> interfaceEnd( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceIterator<codim, const ThisType>::Implementation;
-      return MMeshInterfaceIterator<codim, const ThisType>( Impl(this, true, includeBoundary) );
-    }
-
-    //! Iterator to first interface entity
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesBegin( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, includeBoundary) );
-    }
-
-    //! one past the end of the sequence of interface entities
-    MMeshInterfaceVertexIterator<const ThisType> interfaceVerticesEnd( bool includeBoundary = false ) const
-    {
-      using Impl = typename MMeshInterfaceVertexIterator<const ThisType>::Implementation;
-      return MMeshInterfaceVertexIterator<const ThisType>( Impl(this, true, includeBoundary) );
-    }
-
-  private:
-    //! Flag all elements in conflict as mightVanish
-    bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentCount, std::size_t& componentNumber )
-    {
-      const auto& eh = edge.impl().hostEntity();
-
-      ElementOutput elements;
+    #else
       auto cit = this->getHostGrid().incident_cells( eh );
       for ( std::size_t i = 0; i < CGAL::circulator_size(cit); ++i, ++cit )
         elements.push_back( cit );
+    #endif
 
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        if( element->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element->info().componentNumber;
-        }
-      }
-
-      // if no componentNumber was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
+      bool markAgain = getComponentNumber_( elements, componentNumber );
 
       // set componentNumber and mightVanish
-      for(fit = elements.begin(); fit != elements.end(); fit++)
+      for(const auto& element : elements)
       {
-        HostGridEntity<0> element = *fit;
         element->info().componentNumber = componentNumber;
         element->info().mightVanish = true;
       }
@@ -1758,40 +1406,16 @@ namespace Dune
     }
 
     //! Flag element in conflict with point
-    bool markElementForInsertion_ ( const Point& point, std::size_t& componentCount, std::size_t& componentNumber )
+    bool markElementForInsertion_ ( const Point& point, std::size_t& componentNumber )
     {
       ElementOutput elements;
-      elements.push_back( this->getHostGrid().locate( point ) );
+      elements.push_back( this->getHostGrid().locate( point ) ); // TODO get rid of this locate()!
 
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        if( element->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element->info().componentNumber;
-        }
-      }
-
-      // if no componentNumber was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
+      bool markAgain = getComponentNumber_( elements, componentNumber );
 
       // set componentNumber and mightVanish
-      for(fit = elements.begin(); fit != elements.end(); fit++)
+      for(const auto& element : elements)
       {
-        HostGridEntity<0> element = *fit;
         element->info().componentNumber = componentNumber;
         element->info().mightVanish = true;
       }
@@ -1802,56 +1426,27 @@ namespace Dune
     //! Flag all incident elements as new
     void markElementsAfterInsertion_ ( const HostGridEntity<dimension>& vh, const std::size_t componentId )
     {
-      ElementOutput elements;
-      this->getHostGrid().finite_incident_cells( vh, std::back_inserter(elements) );
-
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
+      for( const auto& element : incidentElements( entity( vh ) ) )
       {
-        HostGridEntity<0> element = *fit;
-        element->info().isNew = true;
-        element->info().componentNumber = componentId + 1;
-
-        const auto id = this->globalIdSet().id( this->entity( element ) );
+        element.impl().hostEntity()->info().isNew = true;
+        element.impl().hostEntity()->info().componentNumber = componentId + 1;
+        const IdType id = this->globalIdSet().id( element );
         this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
       }
     }
 
     //! Flag all incident elements as mightVanish
-    bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentCount, std::size_t& componentNumber )
+    bool markElementsForRemoval_ ( const HostGridEntity<dimension>& vh, std::size_t& componentNumber )
     {
       ElementOutput elements;
-      this->getHostGrid().finite_incident_cells( vh, std::back_inserter(elements) );
+      for( const auto& element : incidentElements( entity( vh ) ) )
+        elements.push_back( element.impl().hostEntity() );
 
-      bool markAgain = false;
-      componentNumber = 0;
-
-      // search for a componentNumber
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
-      {
-        HostGridEntity<0> element = *fit;
-        if( element->info().componentNumber > 0 )
-        {
-          // check if we find different component numbers
-          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
-          {
-            markAgain = true;
-            componentNumber = std::min( element->info().componentNumber, componentNumber );
-          }
-          else
-            componentNumber = element->info().componentNumber;
-        }
-      }
-
-      // if no componentNumber was found, create a new one
-      if ( componentNumber == 0 )
-        componentNumber = componentCount++;
+      bool markAgain = getComponentNumber_( elements, componentNumber );
 
       // set componentNumber and mightVanish
-      for(fit = elements.begin(); fit != elements.end(); fit++)
+      for( const auto& element : elements )
       {
-        HostGridEntity<0> element = *fit;
         element->info().componentNumber = componentNumber;
         element->info().mightVanish = true;
       }
@@ -1863,10 +1458,8 @@ namespace Dune
     void markElementsAfterRemoval_ ( ElementOutput& elements, const std::size_t componentId )
     {
       // flag all elements in conflict as mightVanish
-      typename ElementOutput::iterator fit;
-      for(fit = elements.begin(); fit != elements.end(); fit++)
+      for(const auto& element : elements)
       {
-        HostGridEntity<0> element = *fit;
         element->info().isNew = true;
         element->info().componentNumber = componentId + 1;
 
@@ -1874,7 +1467,36 @@ namespace Dune
         this->createdEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
       }
     }
-  }; // end Class MMesh (3D)
+
+    //! Get the component number for a given set of elements
+    bool getComponentNumber_( const ElementOutput& elements, std::size_t& componentNumber ) const
+    {
+      bool markAgain = false;
+      componentNumber = 0;
+
+      // search for a componentNumber
+      for( const auto& element : elements )
+        if( element->info().componentNumber > 0 )
+        {
+          // check if we find different component numbers
+          if( componentNumber != 0 && element->info().componentNumber != componentNumber )
+          {
+            markAgain = true;
+            componentNumber = std::min( element->info().componentNumber, componentNumber );
+          }
+          else
+            componentNumber = element->info().componentNumber;
+        }
+
+      // if no componentNumber was found, create a new one
+      if ( componentNumber == 0 )
+        componentNumber = componentCount_++;
+
+      return markAgain;
+    }
+
+  }; // end Class MMesh
+
 
   // Capabilites of MMesh
   // --------------------

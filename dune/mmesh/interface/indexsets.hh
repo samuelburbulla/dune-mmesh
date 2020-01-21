@@ -346,7 +346,7 @@ namespace Dune
 
     //! Helper function to obtian id of MMesh codim 1 entity
     template< int cd >
-    IdType id (const typename std::remove_const<GridImp>::type::MMesh::Traits::template Codim<cd>::Entity& e) const
+    IdType id (const typename std::remove_const<GridImp>::type::MMeshType::Traits::template Codim<cd>::Entity& e) const
     {
       static_assert( cd == 1 );
       const auto& host = e.impl().hostEntity();

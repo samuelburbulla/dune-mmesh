@@ -53,7 +53,6 @@ namespace Dune
     typedef typename GridImp::template HostGridEntity<0> HostGridEntity;
 
     //! The type of the element circulator
-   using Circulator = typename GridImp::Element_circulator;
    using ElementContainer = std::vector<HostGridEntity>;
 
   public:
@@ -65,7 +64,7 @@ namespace Dune
     : mMesh_(mMesh),
       i_(0)
     {
-      Circulator circulator = mMesh->getHostGrid().incident_faces(hostEntity);
+      auto circulator = mMesh->getHostGrid().incident_faces(hostEntity);
       for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
         if (!mMesh->getHostGrid().is_infinite(circulator))
           elementContainer_.push_back( circulator );
@@ -79,7 +78,7 @@ namespace Dune
       mMesh_(mMesh),
       i_(0)
     {
-      Circulator circulator = mMesh->getHostGrid().incident_faces(hostEntity);
+      auto circulator = mMesh->getHostGrid().incident_faces(hostEntity);
       for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
         if (!mMesh->getHostGrid().is_infinite(circulator))
           ++i_;

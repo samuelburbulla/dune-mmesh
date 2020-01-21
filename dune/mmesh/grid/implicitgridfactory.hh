@@ -75,7 +75,6 @@ namespace Dune
     typedef typename HostGrid::Vertex_handle Vertex_handle;
     typedef typename Grid::template HostGridEntity<0> Element_handle;
     typedef typename Grid::template HostGridEntity<1> Face_handle;
-    typedef typename Grid::Element_circulator Element_circulator;
 
   public:
     //! are boundary ids supported by this factory?
