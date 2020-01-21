@@ -8,6 +8,9 @@ documenting C/C++ code.
 
 For the most common cases, the <a href="examples.html">Examples</a> page might be the place to go.
 
-The full documentation of the MMesh grid class is in \ref Dune::MMeshBase< HostGrid, dim, GridFam >.
+The full documentation of the MMesh grid classes can be found in
+- \ref Dune::MMeshBase< HostGrid, dim, GridFam > and
+- \ref Dune::MMeshInterfaceGrid< HostGrid, dim, GridFam >.
 
+Please report any bugs to the [Gitlab repository](https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh).
 */

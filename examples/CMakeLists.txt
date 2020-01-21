@@ -42,3 +42,8 @@ add_executable("interfacegrid-3d" interfacegrid.cc)
 target_compile_definitions("interfacegrid-3d" PRIVATE GRIDDIM=3)
 target_link_dune_default_libraries("interfacegrid-3d")
 target_link_libraries("interfacegrid-3d" dunemmesh)
+
+add_executable("movement-2d" movement.cc)
+target_compile_definitions("movement-2d" PRIVATE GRIDDIM=2)
+target_link_dune_default_libraries("movement-2d")
+target_link_libraries("movement-2d" dunemmesh)

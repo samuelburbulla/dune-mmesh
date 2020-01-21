@@ -151,6 +151,9 @@ namespace Dune
     //! The type of a connected component
     using ConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension, const GridImp>;
 
+    //! The type of the default remeshing indicator
+    using RemeshingIndicator = RatioIndicator<GridImp>;
+
     /** \brief Constructor
      *
      * \param hostgrid The host grid wrapped by the MMesh
