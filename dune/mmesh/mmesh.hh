@@ -244,10 +244,10 @@ namespace Dune
     using Intersection = typename Traits::LeafIntersection;
 
     //! The type of the interface grid
-    using InterfaceGrid = MMeshInterfaceGrid<GridImp, dimension>;
+    using InterfaceGrid = MMeshInterfaceGrid<GridImp>;
 
     //! The type of an interface grid entity
-    using InterfaceEntity = Dune::Entity<0, dimension-1, const InterfaceGrid, MMeshInterfaceGridEntity>;
+    using InterfaceEntity = typename InterfaceGrid::Traits::template Codim<0>::Entity;
 
     //! The type of a connected component of interface grid entities
     using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension-1, const InterfaceGrid>;

@@ -17,15 +17,15 @@ namespace Dune
    */
 
   //! The grid factory for MMesh InterfaceGrid
-  template< class MMeshImp, int dim >
-  class GridFactory< MMeshInterfaceGrid<MMeshImp, dim> >
-    : public GridFactoryInterface< MMeshInterfaceGrid<MMeshImp, dim> >
+  template< class MMeshImp >
+  class GridFactory< MMeshInterfaceGrid<MMeshImp> >
+    : public GridFactoryInterface< MMeshInterfaceGrid<MMeshImp> >
   {
-    typedef GridFactory< MMeshInterfaceGrid<MMeshImp, dim> > This;
+    typedef GridFactory< MMeshInterfaceGrid<MMeshImp> > This;
 
   public:
     //! type of interface grid
-    typedef MMeshInterfaceGrid<MMeshImp, dim> Grid;
+    typedef MMeshInterfaceGrid<MMeshImp> Grid;
 
     //! type of (scalar) coordinates
     typedef typename Grid::ctype ctype;

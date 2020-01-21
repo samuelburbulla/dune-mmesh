@@ -42,16 +42,16 @@ namespace Dune
 {
 
   // MMeshInterfaceGrid family
-  template<int dim, class MMesh>
+  template<class MMesh>
   struct MMeshInterfaceGridFamily
   {
 
   public:
 
     typedef GridTraits<
-        dim-1, // grid dimension
-        dim, // world dimension
-        MMeshInterfaceGrid<MMesh, dim>,
+        MMesh::dimension-1, // grid dimension
+        MMesh::dimension, // world dimension
+        MMeshInterfaceGrid<MMesh>,
         MMeshInterfaceGridGeometry,
         MMeshInterfaceGridEntity,
         MMeshInterfaceGridLeafIterator, // LevelIterator
@@ -61,13 +61,13 @@ namespace Dune
         MMeshInterfaceGridLeafIntersectionIterator, // LevelIntersectionIterator
         MMeshInterfaceGridHierarchicIterator,
         MMeshInterfaceGridLeafIterator,
-        MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh, dim> >, // LevelIndexSet
-        MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh, dim> >,
-        MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh, dim> >,
+        MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh> >, // LevelIndexSet
+        MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh> >,
+        MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >,
         Impl::MultiId, // GlobalIdSet::IdType,
-        MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh, dim> >, // LocalIdSet
+        MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >, // LocalIdSet
         Impl::MultiId, // LocalIdSet::IdType,
-        CollectiveCommunication< MMeshInterfaceGrid<MMesh, dim> >,
+        CollectiveCommunication< MMeshInterfaceGrid<MMesh> >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshInterfaceGridEntitySeed
@@ -86,15 +86,15 @@ namespace Dune
    *
    * \tparam MMesh The MMesh grid type for which this MMeshInterfaceGrid implements the interface grid
    */
-  template <class MMesh, int dim>
+  template <class MMesh>
   class MMeshInterfaceGrid
-   : public GridDefaultImplementation< dim-1, dim,
+   : public GridDefaultImplementation< MMesh::dimension-1, MMesh::dimension,
                                        typename MMesh::FieldType,
-                                       MMeshInterfaceGridFamily<dim, MMesh> >
+                                       MMeshInterfaceGridFamily<MMesh> >
   {
   public:
-    static constexpr int dimension = dim-1;
-    static constexpr int dimensionworld = dim;
+    static constexpr int dimension = MMesh::dimension-1;
+    static constexpr int dimensionworld = MMesh::dimension;
 
     using FieldType = typename MMesh::FieldType;
 
@@ -105,7 +105,7 @@ namespace Dune
     //**********************************************************
 
     //! the Traits
-    typedef MMeshInterfaceGridFamily<dim, MMesh> GridFamily;
+    typedef MMeshInterfaceGridFamily<MMesh> GridFamily;
     typedef typename GridFamily::Traits Traits;
 
     //! the grid implementation
@@ -583,12 +583,12 @@ namespace Dune
   // DGFGridInfo for MMeshInterfaceGrid
   // ----------------------------------
 
-  template<class MMesh, int dim>
-  struct DGFGridInfo< MMeshInterfaceGrid<MMesh, dim> >
+  template<class MMesh>
+  struct DGFGridInfo< MMeshInterfaceGrid<MMesh> >
   {
     static int refineStepsForHalf ()
     {
-      return dim-1;
+      return MMesh::dimension-1;
     }
 
     static double refineWeight ()
@@ -606,23 +606,23 @@ namespace Dune
     /** \brief has entities for some codimensions
      * \ingroup MMeshInterfaceGrid
      */
-    template<class MMesh, int dim, int codim>
-    struct hasEntity<MMeshInterfaceGrid<MMesh, dim>, codim>
+    template<class MMesh, int codim>
+    struct hasEntity<MMeshInterfaceGrid<MMesh>, codim>
     {
-      static const bool v = (codim >= 0 || codim <= dim-1);
+      static const bool v = (codim >= 0 || codim <= MMesh::dimension-1);
     };
 
-    template<class MMesh, int dim, int codim>
-    struct hasEntityIterator<MMeshInterfaceGrid<MMesh, dim>, codim>
+    template<class MMesh, int codim>
+    struct hasEntityIterator<MMeshInterfaceGrid<MMesh>, codim>
     {
-      static const bool v = (codim >= 0 || codim <= dim-1);
+      static const bool v = (codim >= 0 || codim <= MMesh::dimension-1);
     };
 
     /** \brief has conforming level grids
      * \ingroup MMeshInterfaceGrid
      */
-    template<class MMesh, int dim>
-    struct isLevelwiseConforming<MMeshInterfaceGrid<MMesh, dim>>
+    template<class MMesh>
+    struct isLevelwiseConforming<MMeshInterfaceGrid<MMesh>>
     {
       static const bool v = true;
     };
@@ -630,8 +630,8 @@ namespace Dune
     /** \brief has conforming leaf grids when host grid has
      * \ingroup MMeshInterfaceGrid
      */
-    template<class MMesh, int dim>
-    struct isLeafwiseConforming<MMeshInterfaceGrid<MMesh, dim>>
+    template<class MMesh>
+    struct isLeafwiseConforming<MMeshInterfaceGrid<MMesh>>
     {
       static const bool v = true;
     };

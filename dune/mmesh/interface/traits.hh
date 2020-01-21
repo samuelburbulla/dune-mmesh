@@ -12,10 +12,10 @@
 namespace Dune
 {
   // Forward declarations
-  template<int dim, class MMesh>
+  template<class MMesh>
   struct MMeshInterfaceGridFamily;
 
-  template<class MMesh, int dim>
+  template<class MMesh>
   class MMeshInterfaceGrid;
 
   template<int codim, int dim, class GridImp>
