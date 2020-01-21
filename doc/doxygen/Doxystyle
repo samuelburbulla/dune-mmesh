@@ -10,8 +10,7 @@ PROJECT_NUMBER         = @DUNE_MOD_VERSION@
 # What to parse
 
 RECURSIVE              = YES
-FILE_PATTERNS          = *.hh \
-                         *.cc
+FILE_PATTERNS          = *.hh *.cc
 INPUT                  =
 EXCLUDE                =
 

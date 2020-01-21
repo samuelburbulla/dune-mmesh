@@ -1,1 +1,1 @@
-configure_file(mixeddimensionlaplace.py mixeddimensionlaplace.py COPYONLY)
+configure_file(mmesh.py mmesh.py COPYONLY)

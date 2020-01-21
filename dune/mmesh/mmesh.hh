@@ -61,9 +61,10 @@ namespace Dune
   class TriangulationWrapper;
 
   // Type shortcut with default triangulation
-  template<int dim>
+  template< int dim >
   using MovingMesh = MMesh< TriangulationWrapper<dim>, dim >;
 
+  // Type of Delaunay wrapper triangulation
   template< int dim >
   class DelaunayTriangulationWrapper;
 
@@ -146,11 +147,11 @@ namespace Dune
    *
    * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
-  template <class HostGrid, int dim, class GridFam>
+  template <class HostGrid, int dim>
   class MMeshBase
    : public GridDefaultImplementation< dim, dim,
                                        /*FieldType=*/typename HostGrid::Point::R::RT,
-                                       GridFam >
+                                       MMeshFamily<dim, HostGrid> >
   {
   public:
     //! The world dimension
@@ -160,7 +161,7 @@ namespace Dune
     using HostGridType = HostGrid;
 
     //! The grid family type
-    using GridFamily = GridFam;
+    using GridFamily = MMeshFamily<dim, HostGrid>;
 
     //! The point type
     using Point = typename HostGrid::Point;
@@ -1367,13 +1368,13 @@ namespace Dune
    *
    * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
-  template <class HostGrid, class GridFamily>
-  class MMesh<HostGrid, 2, GridFamily>
-   : public MMeshBase<HostGrid, 2, GridFamily>
+  template <class HostGrid>
+  class MMesh<HostGrid, 2>
+   : public MMeshBase<HostGrid, 2>
   {
   public:
-    using ThisType = MMesh<HostGrid, 2, GridFamily>;
-    using BaseType = MMeshBase<HostGrid, 2, GridFamily>;
+    using ThisType = MMesh<HostGrid, 2>;
+    using BaseType = MMeshBase<HostGrid, 2>;
 
     //! Export types from the base class
     static constexpr int dimension = 2;
@@ -1622,13 +1623,13 @@ namespace Dune
    * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
 
-  template <class HostGrid, class GridFamily>
-  class MMesh<HostGrid, 3, GridFamily>
-   : public MMeshBase<HostGrid, 3, GridFamily>
+  template <class HostGrid>
+  class MMesh<HostGrid, 3>
+   : public MMeshBase<HostGrid, 3>
   {
   public:
-    using ThisType = MMesh<HostGrid, 3, GridFamily>;
-    using BaseType = MMeshBase<HostGrid, 3, GridFamily>;
+    using ThisType = MMesh<HostGrid, 3>;
+    using BaseType = MMeshBase<HostGrid, 3>;
 
     //! Export types from the base class
     static constexpr int dimension = 3;

@@ -8,7 +8,7 @@ namespace Dune
   struct MMeshFamily;
 
   // MMesh
-  template<class HostGrid, int dim, class GridFamily = MMeshFamily<dim, HostGrid>>
+  template<class HostGrid, int dim>
   class MMesh;
 }
 #endif // #ifndef DUNE_MMESH_GRID_DECLARATION_HH
