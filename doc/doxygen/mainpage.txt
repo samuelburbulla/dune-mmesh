@@ -10,7 +10,7 @@ For the most common cases, the <a href="examples.html">Examples</a> page might b
 
 The full documentation of the MMesh grid classes can be found in
 - \ref Dune::MMesh< HostGrid, dim > and
-- \ref Dune::MMeshInterfaceGrid< MMesh, dim >.
+- \ref Dune::MMeshInterfaceGrid< MMesh >.
 
 Please report any bugs to the [Gitlab repository](https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh).
 */

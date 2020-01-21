@@ -261,17 +261,26 @@ namespace Dune
     //! The type of the employed remeshing indicator
     using RemeshingIndicator = RatioIndicator<GridImp>;
 
+    /** \brief Constructor that takes a CGAL triangulation
+     *
+     * \param hostgrid      The CGAL triangulation wrapped by the MMesh
+     */
+    explicit MMesh(HostGrid hostgrid)
+     : MMesh(hostgrid, {}, {}, {}, {}) {}
+
     /** \brief Constructor
      *
-     * \param hostgrid           The host grid wrapped by the MMesh
-     * \param boundarySegments   The boundary segment index mapper
-     * \param interfaceSegments  The set of interface segments
+     * \param hostgrid                     The CGAL triangulation wrapped by the MMesh
+     * \param boundarySegments             The boundary segment index mapper
+     * \param interfaceBoundarySegments    The boundary segment index mapper for the interface grid
+     * \param boundaryIds                  The boundary id mapper
+     * \param interfaceSegments            The set of interface segments
      */
     explicit MMesh(HostGrid hostgrid,
-                       BoundarySegments boundarySegments,
-                       BoundarySegments interfaceBoundarySegments,
-                       BoundaryIds boundaryIds,
-                       InterfaceSegments interfaceSegments)
+                   BoundarySegments boundarySegments,
+                   BoundarySegments interfaceBoundarySegments,
+                   BoundaryIds boundaryIds,
+                   InterfaceSegments interfaceSegments)
      : hostgrid_(hostgrid),
        boundarySegments_(boundarySegments),
        boundaryIds_(boundaryIds),
@@ -281,7 +290,7 @@ namespace Dune
       globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
       setIndices();
 
-      interfaceGrid_ = std::make_shared<InterfaceGrid>( This(), interfaceBoundarySegments );
+      interfaceGrid_ = std::make_unique<InterfaceGrid>( This(), interfaceBoundarySegments );
     }
 
     //! The destructor
@@ -1335,7 +1344,7 @@ namespace Dune
     }
 
     //! get a pointer to the interface grid
-    const std::shared_ptr<InterfaceGrid>& interfaceGridPtr()
+    const std::unique_ptr<InterfaceGrid>& interfaceGridPtr()
     {
       return interfaceGrid_;
     }
@@ -1366,7 +1375,7 @@ namespace Dune
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
-    std::shared_ptr<InterfaceGrid> interfaceGrid_;
+    std::unique_ptr<InterfaceGrid> interfaceGrid_;
 
     std::vector<VertexHandle> remove_;
     std::unordered_set< IdType > removed_;
