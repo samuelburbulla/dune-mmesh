@@ -1193,11 +1193,9 @@ namespace Dune
     }
 
     //! Remove a vertex from the triangulation and connect the corresponding interface elements
-    ElementOutput removeFromInterface_( const VertexHandle& vh )
+    template< int d = dimension >
+    std::enable_if_t< d == 2, ElementOutput> removeFromInterface_( const VertexHandle& vh )
     {
-      if ( dimension == 3 )
-        DUNE_THROW( NotImplemented, "removeFromInterface() in 3d" );
-
       std::size_t id = vh->info().id;
 
       // find and remove interface segments
@@ -1234,6 +1232,12 @@ namespace Dune
       interfaceSegments_.insert( ids );
 
       return elements;
+    }
+
+    template< int d = dimension >
+    std::enable_if_t< d == 3, ElementOutput> removeFromInterface_( const VertexHandle& vh )
+    {
+      DUNE_THROW( NotImplemented, "removeFromInterface() in 3d" );
     }
 
   public:
