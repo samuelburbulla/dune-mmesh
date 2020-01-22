@@ -573,10 +573,7 @@ namespace Dune
 
       int count = interfaceSegments_.count( ids );
       assert( count <= 1 );
-
-      // TODO is this check still necessary?
-      bool isOnBoundary = getHostGrid().is_infinite( (segment.impl().hostEntity().first)->neighbor(segment.impl().hostEntity().second) );
-      return ( count == 1 && !isOnBoundary );
+      return ( count > 0 );
     }
 
     //! Return if edge in 3d is part of an interface segment
@@ -597,14 +594,9 @@ namespace Dune
 
       std::sort(ids.begin(), ids.end());
 
-      for ( const auto& segment : interfaceSegments_ )
-      {
-        if ( (segment[0] == ids[0] && segment[1] == ids[1])
-          || (segment[1] == ids[0] && segment[2] == ids[1]) )
-        {
-          return true; // TODO what about boundary interface segments?
-        }
-      }
+      for ( const auto& seg : interfaceSegments_ )
+        if ( (seg[0] == ids[0] && seg[1] == ids[1]) || (seg[1] == ids[0] && seg[2] == ids[1]) )
+          return true;
 
       return false;
     }
@@ -800,10 +792,14 @@ namespace Dune
                 {
                   const auto& v = oppositeFacet.impl().template subEntity<dimension>(k);
 
-                  // TODO: if vertex is part of interface, we could have a problem
+                  // if vertex is part of interface, we have a problem
                   if ( !v.impl().isInterface() )
+                  {
                     if ( removed_.insert( globalIdSet().id( v ) ).second )
                       remove_.push_back( v.impl().hostEntity() );
+                  }
+                  else
+                    DUNE_THROW( GridError, "The interface crosses itself!" );
                 }
               }
           }
@@ -1203,6 +1199,9 @@ namespace Dune
     //! Remove a vertex from the triangulation and connect the corresponding interface elements
     ElementOutput removeFromInterface_( const VertexHandle& vh )
     {
+      if ( dimension == 3 )
+        DUNE_THROW( NotImplemented, "removeFromInterface() in 3d" );
+
       std::size_t id = vh->info().id;
 
       // find and remove interface segments
@@ -1390,17 +1389,8 @@ namespace Dune
     //! Flag all elements in conflict as mightVanish
     bool markElementsForInsertion_ ( const Edge& edge, std::size_t& componentNumber )
     {
-      const auto& eh = edge.impl().hostEntity();
-
-    ElementOutput elements;
-    #if GRIDDIM == 2  // TODO remove preprocessor if
-      elements.push_back( eh.first );
-      elements.push_back( eh.first->neighbor( eh.second ) );
-    #else
-      auto cit = this->getHostGrid().incident_cells( eh );
-      for ( std::size_t i = 0; i < CGAL::circulator_size(cit); ++i, ++cit )
-        elements.push_back( cit );
-    #endif
+      ElementOutput elements;
+      getIncidentToEdge_( edge, elements );
 
       bool markAgain = getComponentNumber_( elements, componentNumber );
 
@@ -1414,11 +1404,30 @@ namespace Dune
       return markAgain;
     }
 
+    /// @cond
+    template< int d = dimension >
+    std::enable_if_t< d == 2, void > getIncidentToEdge_( const Edge& edge, ElementOutput& elements ) const
+    {
+      const auto& eh = edge.impl().hostEntity();
+      elements.push_back( eh.first );
+      elements.push_back( eh.first->neighbor( eh.second ) );
+    }
+
+    template< int d = dimension >
+    std::enable_if_t< d == 3, void > getIncidentToEdge_( const Edge& edge, ElementOutput& elements ) const
+    {
+      const auto& eh = edge.impl().hostEntity();
+      auto cit = this->getHostGrid().incident_cells( eh );
+      for ( std::size_t i = 0; i < CGAL::circulator_size(cit); ++i, ++cit )
+        elements.push_back( cit );
+    }
+    /// @endcond
+
     //! Flag element in conflict with point
     bool markElementForInsertion_ ( const Point& point, std::size_t& componentNumber )
     {
       ElementOutput elements;
-      elements.push_back( this->getHostGrid().locate( point ) ); // TODO get rid of this locate()!
+      elements.push_back( this->getHostGrid().locate( point ) );
 
       bool markAgain = getComponentNumber_( elements, componentNumber );
 
