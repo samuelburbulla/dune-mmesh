@@ -29,13 +29,13 @@ namespace Dune
     /**
      * \brief Construct empty seed
      */
-    MMeshInterfaceGridEntitySeed() {}
+    MMeshInterfaceGridEntitySeed() : valid_( false ) {}
 
     /**
      * \brief Construct a seed from a host entity.
      */
     MMeshInterfaceGridEntitySeed(const HostGridEntity& hostEntity)
-     : hostEntity_( hostEntity )
+     : hostEntity_( hostEntity ), valid_( true )
     {}
 
     /**
@@ -44,6 +44,7 @@ namespace Dune
     MMeshInterfaceGridEntitySeed operator= (const MMeshInterfaceGridEntitySeed<codim, GridImp>& seed)
     {
       hostEntity_ = seed.hostEntity_;
+      valid_ = seed.valid_;
       return seed;
     }
 
@@ -52,7 +53,7 @@ namespace Dune
      */
     bool isValid() const
     {
-      return hostEntity_->first != HostGridEntity()->first;
+      return valid_;
     }
 
     /**
@@ -66,6 +67,7 @@ namespace Dune
   private:
     //! The host entity
     HostGridEntity hostEntity_;
+    bool valid_;
   };
 
 } // namespace Dune

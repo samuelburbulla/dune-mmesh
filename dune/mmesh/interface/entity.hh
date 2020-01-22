@@ -158,23 +158,6 @@ namespace Dune
         return (cc == 0) ? 0 : 3;
     }
 
-    //! Obtain a cc 2 subEntity of a codim 1 entity
-    template <int cc>
-    std::enable_if_t< codim == 1 && cc == dim, typename GridImp::template Codim<dim>::Entity >
-    subEntity (std::size_t i) const
-    {
-      assert( i < subEntities( cc ) );
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE,
-      // but the mapping should do the right thing here
-      auto& edgeIdx = hostEntity_.second;
-      return MMeshInterfaceGridEntity<cc, dim, GridImp> (
-        grid_,
-        typename GridImp::template MMeshInterfaceEntity<dim> (
-          hostEntity_.first->vertex( (edgeIdx+1+i)%(dim+2) )
-        )
-      );
-    }
-
     //! geometry of this entity
     Geometry geometry () const
     {
@@ -490,12 +473,12 @@ namespace Dune
     std::enable_if_t< cc == 1 && dim == 2, typename GridImp::template Codim<cc>::Entity >
     subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
+      const int j = hostEntity_.second;
+      const int v1 = (j+i+1)%4;
+      const int v2 = (i==2) ? ((j+1)%4) : ((j+i+2)%4);
+
       return MMeshInterfaceGridEntity<cc, dim, GridImp>(
-        grid_, CGAL::Triple<decltype(hostEntity_.first), int, int>(
-          hostEntity_.first,
-          (hostEntity_.second+i+1)%4,
-          i == 2 ? (hostEntity_.second+1)%4 : (hostEntity_.second+i+2)%4
-        )
+        grid_, CGAL::Triple<decltype(hostEntity_.first), int, int>( hostEntity_.first, v1, v2 )
       );
     }
 
