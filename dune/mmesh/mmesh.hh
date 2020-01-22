@@ -794,12 +794,8 @@ namespace Dune
 
                   // if vertex is part of interface, we have a problem
                   if ( !v.impl().isInterface() )
-                  {
                     if ( removed_.insert( globalIdSet().id( v ) ).second )
                       remove_.push_back( v.impl().hostEntity() );
-                  }
-                  else
-                    DUNE_THROW( GridError, "The interface crosses itself!" );
                 }
               }
           }

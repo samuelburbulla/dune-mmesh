@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     using Grid = Dune::MovingMesh<dim>;
 
     using GridFactory = Dune::GmshGridFactory< Grid >;
-    GridFactory gridFactory( "grids/line" + std::to_string(dim) + "d.msh" );
+    GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/horizontal3d.msh" );
 
     Grid& grid = *gridFactory.grid();
 

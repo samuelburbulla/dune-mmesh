@@ -36,6 +36,7 @@ namespace Dune
 
     using LocalIndexMap = std::unordered_map< std::size_t, std::size_t >;
     using IndexMap = std::unordered_map< std::array< std::size_t, dimension >, LocalIndexMap, HashUIntArray >;
+    using EdgeIndexMap = std::unordered_map< std::array< std::size_t, dimension >, std::size_t, HashUIntArray >;
     using VertexIndexMap = std::unordered_map< std::size_t, std::size_t >;
 
     //! constructor stores reference to a grid and level
@@ -79,7 +80,32 @@ namespace Dune
       }
     }
 
-    //! get index of an codim 0 entity
+    //! get index of an codim 1 entity (3D)
+    template<int codim>
+    std::enable_if_t< codim == 1 && dimension == 2, IndexType >
+    index (const Entity< codim, dimension, GridImp, MMeshInterfaceGridEntity>& e) const
+    {
+      auto hostEntity = e.impl().hostEntity();
+
+      std::array<std::size_t, 2> ids;
+      try {
+          ids[0] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.second)->info().index );
+          ids[1] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.third)->info().index );
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
+      std::sort(ids.begin(), ids.end());
+
+      try {
+        IndexType index = edgeIndexMap_.at( ids );
+        assert( index <= size(codim) );
+        return index;
+      } catch (std::exception &e) {
+        DUNE_THROW(InvalidStateException, e.what());
+      }
+    }
+
+    //! get index of an codim dimension entity
     template<int codim>
     std::enable_if_t< codim == dimension, IndexType >
     index (const Entity< codim, dimension, GridImp, MMeshInterfaceGridEntity>& e) const
@@ -125,14 +151,11 @@ namespace Dune
       if ( codim == 0 )
         return index( e );
       else if ( codim == dimension )
-        try {
-          const HostGridEntity<0> hostEntity = e.impl().hostEntity();
-          return vertexIndices_.at( hostEntity.first->vertex( (hostEntity.second+i+1)%(dimensionworld+1) )->info().index );
-        } catch (std::exception &e) {
-          DUNE_THROW(InvalidStateException, e.what());
-        }
+        return index( e.template subEntity<dimension>( i ) );
+      else if ( codim == 1 && dimension == 2)
+        return index( e.template subEntity<1>( i ) );
       else
-          DUNE_THROW( NotImplemented, "SubIndices for codim != dimension." );
+          DUNE_THROW( NotImplemented, "SubIndices for codim == " << codim << " and dimension == " << dimension );
 
       return 0;
     }
@@ -257,6 +280,7 @@ namespace Dune
 
       // Count the finite edges and build index map
       std::size_t vertexCount = 0;
+      std::size_t edgeCount = 0;
       std::size_t elementCount = 0;
       for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
         if ( contains( *eh ) )
@@ -278,11 +302,23 @@ namespace Dune
           indexMap_[{ids[0], ids[1]}].insert( { ids[2], elementCount } );
           indexMap_[{ids[1], ids[2]}].insert( { ids[0], elementCount } );
           indexMap_[{ids[0], ids[2]}].insert( { ids[1], elementCount++ } );
+
+          // store the index for edges
+          for( int i = 0; i < 3; ++ i )
+          {
+            std::array<std::size_t, dimension> edgeIds;
+            edgeIds[0] = ids[i];
+            edgeIds[1] = ids[(i+1)%3];
+            std::sort(edgeIds.begin(), edgeIds.end());
+
+            if ( edgeIndexMap_.count( edgeIds ) == 0 )
+              edgeIndexMap_.insert( { edgeIds, edgeCount++ } );
+          }
         }
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;
-      sizeOfCodim_[1] = indexMap_.size();
+      sizeOfCodim_[1] = edgeCount;
       sizeOfCodim_[2] = vertexCount;
     }
 
@@ -300,6 +336,7 @@ namespace Dune
     GridImp* grid_;
     std::array<std::size_t, dimension+1> sizeOfCodim_;
     IndexMap indexMap_;
+    EdgeIndexMap edgeIndexMap_;
     VertexIndexMap vertexIndices_;
   };
 
@@ -344,11 +381,18 @@ namespace Dune
       return id( host );
     }
 
+    template< int d = dimension >
+    std::enable_if_t< d == 2, IdType > id (const typename std::remove_const<GridImp>::type::Traits::template Codim<1>::Entity& e) const
+    {
+      const auto& host = e.impl().hostEntity();
+      return id( host );
+    }
+
     //! Helper function to obtian id of MMesh codim 1 entity
     template< int cd >
     IdType id (const typename std::remove_const<GridImp>::type::MMeshType::Traits::template Codim<cd>::Entity& e) const
     {
-      static_assert( cd == 1 );
+      static_assert( cd == dimension );
       const auto& host = e.impl().hostEntity();
       return id( host );
     }
@@ -378,6 +422,17 @@ namespace Dune
       ids[0] = host.first->vertex((host.second+1)%(dimensionworld+1))->info().id;
       ids[1] = host.first->vertex((host.second+2)%(dimensionworld+1))->info().id;
       ids[2] = host.first->vertex((host.second+3)%(dimensionworld+1))->info().id;
+      std::sort( ids.begin(), ids.end() );
+      return IdType( ids );
+    }
+
+    template< int d = dimensionworld >
+    std::enable_if_t< d == 3, IdType >
+    id (const typename std::remove_const<GridImp>::type::template MMeshInterfaceEntity<1>& host) const
+    {
+      std::vector< std::size_t > ids ( 2 );
+      ids[0] = host.first->vertex(host.second)->info().id;
+      ids[1] = host.first->vertex(host.third)->info().id;
       std::sort( ids.begin(), ids.end() );
       return IdType( ids );
     }

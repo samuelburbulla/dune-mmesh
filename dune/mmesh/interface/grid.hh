@@ -462,9 +462,18 @@ namespace Dune
     {
       int count = mMesh_->interfaceSegments().count( getVertexIds_( segment ) );
       assert( count <= 1 );
+      return ( count > 0 );
+    }
 
-      bool isOnBoundary = mMesh_->getHostGrid().is_infinite( (segment.first)->neighbor(segment.second) );
-      return ( count == 1 && !isOnBoundary );
+    //! Return if an edge is of the interface
+    template< int d = dimension >
+    std::enable_if_t< d == 2, bool > isInterface( const MMeshInterfaceEntity<1>& edge ) const
+    {
+      auto circulator = mMesh_->getHostGrid().incident_facets( edge );
+      for ( int i = 0; i < CGAL::circulator_size( circulator ); ++i, ++circulator )
+        if ( isInterface( *circulator ) )
+          return true;
+      return false;
     }
 
     //! Return if vertex is part of the interface

@@ -158,7 +158,6 @@ namespace Dune
       if( it != insertionIndexMap_.end() )
         return it->second;
       else
-        // return id // TODO the search above is not really what we want here every call
         return mMesh_->interfaceGrid().globalIdSet().id( entity );
     }
 
@@ -168,7 +167,7 @@ namespace Dune
      */
     unsigned int insertionIndex ( const typename Codim< dimension >::Entity &entity ) const
     {
-      std::size_t index = mMesh_->interfaceGrid().globalIdSet().id( entity ); // TODO is this the right index?
+      std::size_t index = mMesh_->interfaceGrid().globalIdSet().id( entity );
       assert( index < std::numeric_limits<unsigned int>::max() );
       return index;
     }

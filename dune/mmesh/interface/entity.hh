@@ -117,8 +117,13 @@ namespace Dune
     std::enable_if_t< cc == 1 && dim == 2, bool >
     equals(const MMeshInterfaceGridEntity& other) const
     {
-      return (hostEntity_ == other.hostEntity_)
-       || ( hostEntity_ == grid_->getHostGrid().mirror_edge( other.hostEntity_ ) );
+      const auto& vh1 = hostEntity_.first->vertex(hostEntity_.second);
+      const auto& vh2 = hostEntity_.first->vertex(hostEntity_.third);
+      const auto& hostOther_ = other.hostEntity_;
+      const auto& vo1 = hostOther_.first->vertex(hostOther_.second);
+      const auto& vo2 = hostOther_.first->vertex(hostOther_.third);
+
+      return ( (vh1 == vo1) && ( vh2 == vo2 ) ) || ( (vh1 == vo2) && ( vh2 == vo1 ) );
     }
 
     //! returns true if connected component entity exists
@@ -386,7 +391,7 @@ namespace Dune
 
     LocalGeometry geometryInFather() const {
       DUNE_THROW( InvalidStateException, "MMesh entities do no implement a geometry in father!" );
-      return LocalGeometry( 0 );
+      // return LocalGeometry( std::array<Vertex, 3>() ); // dummy
     }
 
     //! returns true if this entity is new after adaptation

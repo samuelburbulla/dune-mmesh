@@ -78,6 +78,16 @@ namespace Dune
        circumcenter_( this->corner(0) )
     {}
 
+    //! Constructor for local geometry of intersection from intersection index for 3D
+    MMeshInterfaceGridGeometry(int i)
+     : BaseType( GeometryTypes::simplex(1),
+                 std::array<FVector, 2>(
+                  {
+                    FVector ( { (i+1)%3 == 1 ? 1.0 : 0.0, (i+1)%3 == 2 ? 1.0 : 0.0 } ), // TODO is this correct?
+                    FVector ( { (i+2)%3 == 1 ? 1.0 : 0.0, (i+2)%3 == 2 ? 1.0 : 0.0 } )
+                  } ) )
+    {}
+
     /** \brief Obtain the circumcenter */
     const FVector circumcenter () const
     {
@@ -200,7 +210,7 @@ namespace Dune
     FVector circumcenter_;
   };
 
-  //! The local geometry
+  //! The local geometry (2D)
   template<int mydim, class GridImp>
   class MMeshInterfaceGridGeometry<mydim, 1, GridImp> :
     public AffineGeometry <typename GridImp::ctype, mydim, 1>

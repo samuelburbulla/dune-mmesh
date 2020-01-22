@@ -42,7 +42,7 @@ public:
     template<class Element>
     static auto refinement (const Element& element)
     {
-      assert( dim <= 2 ); // TODO 3d
+      static_assert( dim == 2 );
 
       if ( dim == 1 )
       {

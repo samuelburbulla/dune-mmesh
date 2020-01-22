@@ -1,7 +1,5 @@
-Mesh.Optimize = 0;
-
-lc = 0.05;
-lcf = 0.05;
+lc = 0.3;
+lcf = 0.3;
 
 // domain corners
 Point(1) = {0, 0, 0, lc};
@@ -56,6 +54,9 @@ Plane Surface(5) = {5};
 Line Loop(6) = {9, 10, 11, 12};
 Plane Surface(6) = {6};
 
+// domain boundary
+Physical Surface(1) = {1:6};
+
 Surface Loop(1) = {1:6};
 Volume(1) = {1};
 Physical Volume(1) = {1};
@@ -67,3 +68,6 @@ Surface {8} In Volume{1};
 
 // physical fractures
 Physical Surface(10) = {8};
+
+// interface boundary
+Physical Curve(1) = {13:16};

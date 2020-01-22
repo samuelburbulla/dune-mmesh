@@ -283,14 +283,12 @@ namespace Dune
     //! local number of codim 1 entity in neighbor where intersection is contained
     int indexInOutside () const
     {
-      assert( dimensionworld == 2 );
-      const auto neighbor = outside();
-      const auto& vertex0 = interfaceEntity_.first->vertex((interfaceEntity_.second+index_+1)%(dimensionworld+1));
+      const auto& subEn = inside().template subEntity<1>( index_ );
 
-      if ( neighbor.template subEntity<dimension>( 0 ).impl().hostEntity() == vertex0 )
-        return 0;
-      if ( neighbor.template subEntity<dimension>( 1 ).impl().hostEntity() == vertex0 )
-        return 1;
+      const auto neighbor = outside();
+      for ( int i = 0; i < dimensionworld; ++i )
+        if ( neighbor.template subEntity<1>( i ) == subEn )
+          return i;
 
       DUNE_THROW( InvalidStateException, "indexInOutside() could not be determined!" );
     }

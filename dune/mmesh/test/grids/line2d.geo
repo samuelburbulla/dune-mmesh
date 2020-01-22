@@ -17,6 +17,7 @@ Line(4) = {4, 5};
 Line(5) = {5, 6};
 Line(6) = {6, 1};
 
+// domain boundary
 Physical Line(1) = {1:6};
 
 // domain surface

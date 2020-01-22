@@ -52,7 +52,7 @@ namespace Dune
      */
     bool isValid() const
     {
-      return hostEntity_ != HostGridEntity();
+      return hostEntity_->first != HostGridEntity()->first;
     }
 
     /**

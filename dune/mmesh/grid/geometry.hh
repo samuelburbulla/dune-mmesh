@@ -273,21 +273,24 @@ namespace Dune
 
      static inline std::array<FVector, 3> getLocalVertices_ ( std::size_t i )
      {
-       assert( 0 <= i && i <= 7 );
+        assert( 0 <= i && i <= 7 );
 
-       static const std::array<FVector, 4> local = {
-         FVector( { 0.0, 0.0, 0.0 } ),
-         FVector( { 1.0, 0.0, 0.0 } ),
-         FVector( { 0.0, 1.0, 0.0 } ),
-         FVector( { 0.0, 0.0, 1.0 } )
-       };
+        static const std::array<FVector, 4> local = {
+          FVector( { 0.0, 0.0, 0.0 } ),
+          FVector( { 1.0, 0.0, 0.0 } ),
+          FVector( { 0.0, 1.0, 0.0 } ),
+          FVector( { 0.0, 0.0, 1.0 } )
+        };
 
-       if ( i < 4 )
-         return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
+        if ( i < 4 )
+          return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
 
-       // TODO
-       else
-         DUNE_THROW( NotImplemented, "LocalGeometry() for outside." );
+        // geometryInOutside()
+        else
+        {
+          i -= 4;
+          return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
+        }
      }
 
     FVector circumcenter_;
