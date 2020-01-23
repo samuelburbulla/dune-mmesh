@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
     for ( int t = 1; t <= 100; t++ )
     {
-      // skip the loop in 3d until the remeshing is not fully implemented in 3d
+      // skip the loop in 3d until the remeshing is fully implemented in 3d
       if ( dim == 3 && t == 2 )
         return 0;
 

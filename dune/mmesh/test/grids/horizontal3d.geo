@@ -1,5 +1,5 @@
-lc = 0.3;
-lcf = 0.3;
+lc = 0.5;
+lcf = 0.1;
 
 // domain corners
 Point(1) = {0, 0, 0, lc};
@@ -12,9 +12,9 @@ Point(7) = {1, 1, 1, lc};
 Point(8) = {0, 1, 1, lc};
 
 // fracture points
-Point(9)  = {0.5, 0.5, 0.75, lcf};
+Point(9)  = {0.75, 0.5, 0.5, lcf};
 Point(10) = {0.5, 0.25, 0.5, lcf};
-Point(11) = {0.5, 0.5, 0.25, lcf};
+Point(11) = {0.25, 0.5, 0.5, lcf};
 Point(12) = {0.5, 0.75, 0.5, lcf};
 
 // center of circle

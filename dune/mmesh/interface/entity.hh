@@ -474,8 +474,9 @@ namespace Dune
     subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
       const int j = hostEntity_.second;
+      i = (3-i)%3; // DUNE mapping
       const int v1 = (j+i+1)%4;
-      const int v2 = (i==2) ? ((j+1)%4) : ((j+i+2)%4);
+      const int v2 = (i==2) ? ((j+i+3)%4) : ((j+i+2)%4);
 
       return MMeshInterfaceGridEntity<cc, dim, GridImp>(
         grid_, CGAL::Triple<decltype(hostEntity_.first), int, int>( hostEntity_.first, v1, v2 )
