@@ -169,14 +169,14 @@ int main(int argc, char *argv[])
 
         checkProperties( "intersection centers",
           { { is0.geometry().center(), {  1.0, 0.5,  0.5 } },
-            { is1.geometry().center(), { 0.75, 0.5, 0.25 } },
-            { is2.geometry().center(), { 0.75, 0.5, 0.75 } } }
+            { is1.geometry().center(), { 0.75, 0.5, 0.75 } },
+            { is2.geometry().center(), { 0.75, 0.5, 0.25 } } }
         );
 
         checkProperties( "intersection normals",
           { { is0.centerUnitOuterNormal(), { 1.0, 0.0, 0.0 } },
-            { is1.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0, -1.0 / std::sqrt(2) } },
-            { is2.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0,  1.0 / std::sqrt(2) } } }
+            { is1.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0,  1.0 / std::sqrt(2) } },
+            { is2.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0, -1.0 / std::sqrt(2) } } }
         );
 
         checkProperties( "index in inside",
@@ -189,8 +189,8 @@ int main(int argc, char *argv[])
         const auto& neighborB = is2.impl().outside();
 
         checkProperties( "neighbors centers",
-          { { neighborA.geometry().center(), { 0.50000000000000011, 0.5, 0.16666666666666666 } },
-            { neighborB.geometry().center(), { 0.5, 0.5, 0.83333333333333337 } } }
+          { { neighborA.geometry().center(), { 0.5, 0.5, 0.83333333333333337 } },
+            { neighborB.geometry().center(), { 0.50000000000000011, 0.5, 0.16666666666666666 } } }
         );
 
         // check global vertex indices obtained by intersection subentities
