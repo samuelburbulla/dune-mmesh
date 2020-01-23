@@ -18,7 +18,6 @@ set(HEADERS
   intersectioniterator.hh
   intersections.hh
   leafiterator.hh
-  mmeshdefaults.hh
   multiid.hh
   pointfieldvector.hh
   rangegenerators.hh

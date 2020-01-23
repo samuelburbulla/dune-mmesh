@@ -27,6 +27,7 @@
 #include <CGAL/utility.h>
 
 // The components of the MMesh interface
+#include "cgal/defaults.hh"
 #include "grid/declaration.hh"
 #include "grid/common.hh"
 #include "grid/connectedcomponent.hh"
@@ -39,7 +40,6 @@
 #include "grid/leafiterator.hh"
 #include "grid/indexsets.hh"
 #include "grid/hierarchiciterator.hh"
-#include "grid/mmeshdefaults.hh"
 #include "grid/pointfieldvector.hh"
 #include "grid/rangegenerators.hh"
 #include "remeshing/edgelengthratioindicator.hh"
@@ -948,7 +948,8 @@ namespace Dune
       {
         // flag incident elements as new and map connected component
         for ( std::size_t i = 0; i < newVertices.size(); ++i )
-          markElementsAfterInsertion_( newVertices[i], insertComponentIds[i] );
+          if ( newVertices[i] != VertexHandle() )
+            markElementsAfterInsertion_( newVertices[i], insertComponentIds[i] );
       }
 
       // update interface grid
