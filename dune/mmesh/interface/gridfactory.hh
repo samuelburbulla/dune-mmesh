@@ -33,7 +33,7 @@ namespace Dune
     typedef typename HostGrid::Vertex_handle VertexHandle;
 
     //! type of corresponding mmesh
-    typedef typename Grid::MMesh MMesh;
+    typedef MMeshImp MMesh;
 
     //! dimension of the grid
     static const int dimension = Grid::dimension;

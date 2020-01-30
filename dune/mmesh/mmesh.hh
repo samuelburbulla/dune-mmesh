@@ -1327,7 +1327,7 @@ namespace Dune
     }
 
     //! get a pointer to the interface grid
-    const std::unique_ptr<InterfaceGrid>& interfaceGridPtr()
+    const std::shared_ptr<InterfaceGrid>& interfaceGridPtr()
     {
       return interfaceGrid_;
     }
@@ -1358,7 +1358,7 @@ namespace Dune
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
-    std::unique_ptr<InterfaceGrid> interfaceGrid_;
+    std::shared_ptr<InterfaceGrid> interfaceGrid_;
 
     std::vector<VertexHandle> remove_;
     std::unordered_set< IdType > removed_;
