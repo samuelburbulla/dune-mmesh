@@ -28,6 +28,7 @@ class LongestEdgeRefinement
     static constexpr int vertexCodim = dim;
     using ctype = typename Grid::ctype;
     using Element = typename Grid::Traits::template Codim<0>::Entity;
+    using Vertex = typename Grid::Traits::template Codim<vertexCodim>::Entity;
 
 public:
     /*!
@@ -65,17 +66,44 @@ public:
      * \param element A grid element
      */
     template<class Element>
-    static auto coarsening (const Element& element)
+    static Vertex coarsening (const Element& element)
     {
+      Vertex vBnd;
+
       for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
       {
-        const auto& v = element.template subEntity<vertexCodim>(i);
-        if( !v.impl().isInterface() || Grid::dimension != Grid::dimensionworld )
+        const Vertex& v = element.template subEntity<vertexCodim>(i);
+
+        // for interface any vertex is fine
+        if ( Grid::dimension != Grid::dimensionworld )
           return v;
+
+        // otherwise, check for interface and boundary
+        if( !v.impl().isInterface() )
+        {
+          const auto& hostgrid = v.impl().grid().getHostGrid();
+          bool atBoundary = false;
+          for ( const auto& vertex : incidentVertices( v, true ) )
+          {
+            atBoundary |= hostgrid.is_infinite( vertex.impl().hostEntity() );
+            if (atBoundary)
+              break;
+          }
+
+          if (!atBoundary)
+            return v;
+          else
+            vBnd = v;
+        }
       }
 
-      DUNE_THROW(GridError, "No vertex could be used for coarsening as they are all part of the interface or boundary.");
-      return element.template subEntity<vertexCodim>(0); // dummy
+      if ( vBnd != Vertex() )
+        return vBnd;
+      else
+      {
+        DUNE_THROW(GridError, "No vertex could be used for coarsening as they are all part of the interface or boundary.");
+        return Vertex(); // dummy
+      }
     }
 };
 
