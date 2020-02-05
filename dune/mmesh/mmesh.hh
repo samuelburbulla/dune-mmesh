@@ -678,7 +678,7 @@ namespace Dune
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0);
+      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || remove_.size() > 0;
     }
 
     //! Triggers the grid adaptation process

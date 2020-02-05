@@ -158,6 +158,14 @@ namespace Dune
         return (cc == 0) ? 0 : 3;
     }
 
+    /** \brief Provide access to sub entity i
+     */
+    template <int cc>
+    typename GridImp::template Codim<cc>::Entity
+    subEntity (std::size_t i) const {
+      return *this;
+    }
+
     //! geometry of this entity
     Geometry geometry () const
     {

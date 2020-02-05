@@ -84,7 +84,7 @@ namespace Dune
     }
 
   private:
-    const typename GridImp::MMesh* mMesh_;
+    const typename GridImp::MMeshType* mMesh_;
     ElementContainer elementContainer_;
     std::size_t i_;
   };

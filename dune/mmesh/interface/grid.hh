@@ -383,7 +383,6 @@ namespace Dune
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      childrenConnectedComponentMap_.clear();
       return mark_.size() > 0;
     }
 
@@ -399,6 +398,7 @@ namespace Dune
     void postAdapt()
     {
       mark_.clear();
+      childrenConnectedComponentMap_.clear();
     }
 
   public:
