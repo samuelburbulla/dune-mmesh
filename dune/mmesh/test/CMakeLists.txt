@@ -16,12 +16,9 @@ target_link_libraries("test-mmesh-2d" CGAL)
 dune_add_test(NAME test-mmesh-3d SOURCES test-mmesh-3d.cc)
 target_link_libraries("test-mmesh-3d" CGAL)
 
-dune_add_test(NAME test-mimesh-3d SOURCES test-mimesh-3d.cc)
-target_link_libraries("test-mimesh-3d" CGAL)
-
 dune_add_test(NAME test-carousel-2d SOURCES test-carousel.cc)
 set_property( TARGET test-carousel-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-target_link_libraries("test-carousel-2d" CGAL mpfr)
+target_link_libraries("test-carousel-2d" CGAL)
 
 dune_add_test(NAME test-mmesh-structured-2d SOURCES test-mmesh-structured-2d.cc)
 target_link_libraries("test-mmesh-structured-2d" CGAL)
