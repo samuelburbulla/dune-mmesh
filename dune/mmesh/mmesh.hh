@@ -781,6 +781,10 @@ namespace Dune
         {
           if ( signedVolume_( element ) <= 0.0 )
           {
+             // disable removing of vertices in 3d
+            if ( dim == 3 )
+              DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
+
             // find opposite facet
             for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
               if( element.template subEntity<dimension>(j) == vertex )

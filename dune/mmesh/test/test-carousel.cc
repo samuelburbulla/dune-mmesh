@@ -73,8 +73,8 @@ int main(int argc, char *argv[])
 
     for ( int t = 1; t <= 100; t++ )
     {
-      // skip the loop in 3d until the remeshing is fully implemented in 3d
-      if ( dim == 3 && t == 2 )
+      // skip the loop in 3d until the remeshing is implemented in 3d
+      if ( dim == 3 && t == 9 )
         return 0;
 
       std::cout << "t = " << t << std::endl;
@@ -92,12 +92,12 @@ int main(int argc, char *argv[])
         grid.mark( indicator(element), element );
       // 2b. mark interface elements
       // for (const auto& ielement : elements(igridView))
-        // igrid.mark( indicator(ielement), ielement );
+      //   igrid.mark( indicator(ielement), ielement );
 
       // 3a. adapt
       grid.adapt();
       // 3b. adapt interface
-      //igrid.adapt();
+      // igrid.adapt();
 
       // 4. transfer data ...
       for (const auto& element : elements(gridView))
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
           if( std::abs( sum - element.geometry().volume() ) > 1e-8 )
           {
             std::cout << "Cell at: " << element.geometry().center() << std::endl;
-            std::cout << sum << " should be " << element.geometry().volume() << std::endl;
+            std::cout << "Sum of intersection volumes " << sum << " should be " << element.geometry().volume() << std::endl;
             std::cout << "Component size: " << component.size() << std::endl;
             std::cout << "Corners at: " << std::endl;
             for( int i = 0; i < dim+1; ++i )

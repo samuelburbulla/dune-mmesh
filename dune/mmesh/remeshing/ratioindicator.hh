@@ -63,28 +63,31 @@ public:
       static constexpr int vertexCodim = Element::dimension;
       static constexpr int edgeCodim = Element::dimension - 1;
 
-      bool allInterfaceOrBoundary = true;
-      for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
+      if ( dim != 3 ) // disable coarsening in 3d
       {
-        const auto& v = element.template subEntity<vertexCodim>(i);
-        allInterfaceOrBoundary &= ( v.impl().hostEntity()->info().isInterface );
-      }
+        bool allInterfaceOrBoundary = true;
+        for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
+        {
+          const auto& v = element.template subEntity<vertexCodim>(i);
+          allInterfaceOrBoundary &= ( v.impl().hostEntity()->info().isInterface );
+        }
 
-      if (!allInterfaceOrBoundary)
-      {
-        const auto& geo = element.geometry();
+        if (!allInterfaceOrBoundary)
+        {
+          const auto& geo = element.geometry();
 
-        // ratio criterion for coarsening
-        ctype sumE = 0.0;
-        for( std::size_t i = 0; i < element.subEntities(1); ++i )
-          sumE += element.template subEntity<1>(i).geometry().volume();
+          // ratio criterion for coarsening
+          ctype sumE = 0.0;
+          for( std::size_t i = 0; i < element.subEntities(1); ++i )
+            sumE += element.template subEntity<1>(i).geometry().volume();
 
-        const ctype innerRadius = dim * geo.volume() / sumE;
-        const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
-        const ctype ratio = outerRadius / (innerRadius * dim);
+          const ctype innerRadius = dim * geo.volume() / sumE;
+          const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
+          const ctype ratio = outerRadius / (innerRadius * dim);
 
-        if (ratio > maxRatio_)
-          return -1;
+          if (ratio > maxRatio_)
+            return -1;
+        }
       }
 
       // refine by edge length criterion
