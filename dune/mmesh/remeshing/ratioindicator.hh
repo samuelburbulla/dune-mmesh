@@ -36,7 +36,7 @@ public:
      * \param grid     The grid implementation
      */
     RatioIndicator(const Grid& grid, ctype ratio = 5.0, ctype maxH = -1.0, ctype minH = 1e100)
-     : maxRatio_( ratio ), maxH_( maxH )
+     : maxRatio_( ratio ), maxH_( maxH ), minH_( minH )
     {
       if ( maxH < 0.0 )
         for ( const auto& edge : edges( grid.leafGridView() ) )

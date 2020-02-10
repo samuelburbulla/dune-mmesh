@@ -678,16 +678,13 @@ namespace Dune
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || remove_.size() > 0;
+      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || (remove_.size() > 0);
     }
 
     //! Triggers the grid adaptation process
     bool adapt(bool buildComponents = true)
     {
       using RefinementStrategy = LongestEdgeRefinement<GridImp>;
-
-      std::vector<RefinementInsertionPoint> insert_;
-      std::unordered_set< IdType > inserted_;
 
       // Obtain the adaption points
       for ( const auto& element : elements( this->leafGridView() ) )
@@ -762,7 +759,7 @@ namespace Dune
       if (buildComponents && ((insert_.size() > 0) || (remove_.size() > 0)))
         std::cout << "- insert " << insert_.size() << "\t remove " << remove_.size() << std::endl;
 
-      return adapt_(insert_, remove_, buildComponents);
+      return adapt_(buildComponents);
     }
 
     //! Assure the movement of interface vertices
@@ -773,38 +770,56 @@ namespace Dune
       // temporarily move vertices
       moveInterface( shifts );
 
-      // remove vertices of crossing edges
-      for ( const auto& ivertex : vertices( this->interfaceGrid().leafGridView() ) )
-      {
-        const auto& vertex = entity( ivertex.impl().hostEntity() );
-        for ( const auto& element : incidentElements( vertex ) )
+      for ( const auto& element : elements( this->leafGridView() ) )
+        if ( signedVolume_( element ) <= 0.0 )
         {
-          if ( signedVolume_( element ) <= 0.0 )
+          // disable removing of vertices in 3d
+          if ( dim == 3 )
+            DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
+
+          for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
           {
-             // disable removing of vertices in 3d
-            if ( dim == 3 )
-              DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
+            const auto& v = element.template subEntity<dimension>(j);
 
-            // find opposite facet
-            for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
-              if( element.template subEntity<dimension>(j) == vertex )
-              {
-                const auto& oppositeFacet = element.impl().template subEntity<1>(dimension-j);
-
-                // coarsen (remove all vertices of oppositeFacet)
-                for( std::size_t k = 0; k < oppositeFacet.subEntities(dimension); ++k )
-                {
-                  const auto& v = oppositeFacet.impl().template subEntity<dimension>(k);
-
-                  // if vertex is part of interface, we have a problem
-                  if ( !v.impl().isInterface() )
-                    if ( removed_.insert( globalIdSet().id( v ) ).second )
-                      remove_.push_back( v.impl().hostEntity() );
-                }
-              }
+            // if vertex is part of interface, we have a problem
+            if ( !v.impl().isInterface() )
+              if ( removed_.insert( globalIdSet().id( v ) ).second )
+                remove_.push_back( v.impl().hostEntity() );
           }
         }
-      }
+
+      // remove vertices of crossing edges
+      // for ( const auto& ivertex : vertices( this->interfaceGrid().leafGridView() ) )
+      // {
+      //   const auto& vertex = entity( ivertex.impl().hostEntity() );
+      //   for ( const auto& element : incidentElements( vertex ) )
+      //   {
+      //     if ( signedVolume_( element ) <= 0.0 )
+      //     {
+      //        // disable removing of vertices in 3d
+      //       if ( dim == 3 )
+      //         DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
+      //
+      //       // find opposite facet
+      //       for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+      //         if( element.template subEntity<dimension>(j) == vertex )
+      //         {
+      //           const auto& oppositeFacet = element.impl().template subEntity<1>(dimension-j);
+      //
+      //           // coarsen (remove all vertices of oppositeFacet)
+      //           for( std::size_t k = 0; k < oppositeFacet.subEntities(dimension); ++k )
+      //           {
+      //             const auto& v = oppositeFacet.impl().template subEntity<dimension>(k);
+      //
+      //             // if vertex is part of interface, we have a problem
+      //             if ( !v.impl().isInterface() )
+      //               if ( removed_.insert( globalIdSet().id( v ) ).second )
+      //                 remove_.push_back( v.impl().hostEntity() );
+      //           }
+      //         }
+      //     }
+      //   }
+      // }
 
       // move vertices back
       for ( GlobalCoordinate& s : shifts )
@@ -827,10 +842,11 @@ namespace Dune
       return hostgrid_.tetrahedron( element.impl().hostEntity() ).volume();
     }
 
-    bool adapt_( std::vector<RefinementInsertionPoint> insert,
-                 std::vector<VertexHandle> remove,
-                 bool buildComponents = true )
+    bool adapt_( bool buildComponents = true )
     {
+      if (insert_.size() == 0 && remove_.size() == 0)
+        return false;
+
       std::vector<std::size_t> insertComponentIds;
       std::vector<std::size_t> removeComponentIds;
       static constexpr bool writeComponents = false; // for debugging
@@ -850,7 +866,7 @@ namespace Dune
           removeComponentIds.clear();
 
           // mark elements as mightVanish
-          for ( const auto& ip : insert )
+          for ( const auto& ip : insert_ )
           {
             if ( ip.edgeId != IdType() )
               markAgain |= markElementsForInsertion_( ip.edge, componentNumber );
@@ -861,7 +877,7 @@ namespace Dune
           }
 
           // mark elements as mightVanish
-          for ( const auto& vh : remove )
+          for ( const auto& vh : remove_ )
           {
             markAgain |= markElementsForRemoval_( vh, componentNumber );
             removeComponentIds.push_back( componentNumber-1 );
@@ -877,7 +893,7 @@ namespace Dune
 
       // actually insert the points
       std::vector<VertexHandle> newVertices;
-      for ( auto ip : insert )
+      for ( const auto& ip : insert_ )
       {
         if ( ip.edgeId != IdType() )
         {
@@ -931,7 +947,7 @@ namespace Dune
 
       // actually remove the points
       int ci = 0;
-      for ( const auto& vh : remove )
+      for ( const auto& vh : remove_ )
       {
         ElementOutput elements;
         if ( vh->info().isInterface )
@@ -965,7 +981,10 @@ namespace Dune
           writeComponents_();
       }
 
-      return (insert.size() > 0) || (remove.size() > 0);
+      insert_.clear();
+      remove_.clear();
+
+      return true;
     }
 
     template<int d = dim>
@@ -1051,7 +1070,8 @@ namespace Dune
         }
       }
 
-      adapt_({ ip }, {});
+      insert_.push_back( ip );
+      adapt_();
 
       const auto& newVertex = getHostGrid().insert( ip.point );
       if ( !getHostGrid().is_edge( ip.v0, newVertex ) )
@@ -1077,7 +1097,7 @@ namespace Dune
       vanishingEntityConnectedComponentMap_.clear();
       connectedComponents_.clear();
 
-      remove_.clear();
+      inserted_.clear();
       removed_.clear();
 
       interfaceGrid_->postAdapt();
@@ -1364,6 +1384,8 @@ namespace Dune
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
     std::shared_ptr<InterfaceGrid> interfaceGrid_;
 
+    std::vector<RefinementInsertionPoint> insert_;
+    std::unordered_set< IdType > inserted_;
     std::vector<VertexHandle> remove_;
     std::unordered_set< IdType > removed_;
 
