@@ -678,7 +678,7 @@ namespace Dune
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || (remove_.size() > 0);
+      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || (remove_.size() > 0) || (insert_.size() > 0);
     }
 
     //! Triggers the grid adaptation process
@@ -923,6 +923,11 @@ namespace Dune
         else
         {
           VertexHandle vh = insertInCell_( ip.point );
+
+          // check if edge is really part of the triangulation
+          // if ( !getHostGrid().is_edge( ip.v0, vh ) // TODO 3D
+            // DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
+
           std::size_t id = globalIdSet_->setNextId( vh );
           vh->info().insertionLevel = ip.insertionLevel;
 
@@ -938,6 +943,11 @@ namespace Dune
 
             // pass this refinement information to the interface grid
             interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
+
+            // set boundary segment to the same as ip.v0
+            auto v0id = interfaceGrid_->globalIdSet().id( interfaceGrid_->entity( ip.v0 ) ).vt()[0];
+            auto vBndSeg = interfaceGrid_->boundarySegments().at( { v0id } );
+            interfaceGrid_->addBoundarySegment( { id }, vBndSeg );
           }
 
           // store vertex handles for later use
@@ -980,9 +990,6 @@ namespace Dune
         if( writeComponents )
           writeComponents_();
       }
-
-      insert_.clear();
-      remove_.clear();
 
       return true;
     }
@@ -1049,7 +1056,7 @@ namespace Dune
 
     //! Add a new interface segment and connect it with vertex
     template< typename Vertex >
-    Vertex addToInterface( const Vertex& vertex, const GlobalCoordinate& p )
+    void addToInterface( const Vertex& vertex, const GlobalCoordinate& p )
     {
       RefinementInsertionPoint ip;
       ip.edgeId = IdType();
@@ -1071,13 +1078,6 @@ namespace Dune
       }
 
       insert_.push_back( ip );
-      adapt_();
-
-      const auto& newVertex = getHostGrid().insert( ip.point );
-      if ( !getHostGrid().is_edge( ip.v0, newVertex ) )
-        DUNE_THROW( GridError, "Edge added to interface is not part of the new traingulation!" );
-
-      return interfaceGrid().entity( newVertex );
     }
 
     //! Clean up refinement markers
@@ -1097,6 +1097,8 @@ namespace Dune
       vanishingEntityConnectedComponentMap_.clear();
       connectedComponents_.clear();
 
+      insert_.clear();
+      remove_.clear();
       inserted_.clear();
       removed_.clear();
 
