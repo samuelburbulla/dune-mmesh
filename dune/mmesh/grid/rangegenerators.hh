@@ -95,6 +95,22 @@ namespace Dune
     );
   }
 
+  /**
+   * Incident interface elements range implementation without PartitionSet parameter. The default implementation obtains the
+   * iterators by calling incidentInterfaceElementsBegin() and incidentInterfaceElementsEnd() without specifying a partition type.
+   *
+   */
+  template<typename Vertex>
+  inline auto incidentInterfaceElements(const Vertex& e)
+    -> IteratorRange<decltype(e.impl().incidentInterfaceElementsBegin())>
+  {
+    static_assert(Vertex::mydimension == 0, "Incident interface vertices range iterator is only available for interface vertices!");
+    return IteratorRange<decltype(e.impl().incidentInterfaceElementsBegin())>(
+      e.impl().incidentInterfaceElementsBegin(),
+      e.impl().incidentInterfaceElementsEnd()
+    );
+  }
+
 } // namespace Dune
 
 #endif // DUNE_MMESH_RANGEGENERATORS_HH

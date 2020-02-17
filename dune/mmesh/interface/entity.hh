@@ -207,7 +207,7 @@ namespace Dune
     auto incidentInterfaceVerticesBegin () const
     {
       using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
-      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_) );
+      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_ ) );
     }
 
     //! Last incident vertex
@@ -215,6 +215,20 @@ namespace Dune
     {
       using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
       return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+    }
+
+    //! First incident element
+    auto incidentInterfaceElementsBegin () const
+    {
+      using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
+      return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+    }
+
+    //! Last incident element
+    auto incidentInterfaceElementsEnd () const
+    {
+      using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
+      return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
     }
 
     //! returns the host entity

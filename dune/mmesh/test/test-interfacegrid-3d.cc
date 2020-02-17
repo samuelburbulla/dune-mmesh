@@ -212,6 +212,30 @@ int main(int argc, char *argv[])
       elementCount++;
     }
 
+    int vi = 0;
+    std::vector<int> numbOfInc = {{ 2, 2, 2, 2, 4 }};
+    std::vector<int> numbOfIncV = {{ 3, 3, 3, 3, 4 }};
+    for(auto v : vertices(gridView))
+    {
+      int c = 0;
+      for(auto e : incidentInterfaceElements(v))
+      {
+        e.geometry();
+        c++;
+      }
+      checkProperty( "number of incident elements", c, numbOfInc[vi] );
+
+      c = 0;
+      for(auto e : incidentInterfaceVertices(v))
+      {
+        e.geometry();
+        c++;
+      }
+      checkProperty( "number of incident vertices", c, numbOfIncV[vi] );
+
+      vi++;
+    }
+
     return EXIT_SUCCESS;
   }
   catch (Dune::Exception &e){
