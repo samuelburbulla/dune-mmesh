@@ -1,6 +1,6 @@
 set(HEADERS
   cellcenterrefinement.hh
-  edgelengthratioindicator.hh
+  edgelengthindicator.hh
   interfaceindicator.hh
   interfacerrefinement.hh
   newestvertexbisection.hh

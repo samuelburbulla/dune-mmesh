@@ -61,49 +61,62 @@ public:
     }
 
     /*!
-     * \brief return coarsening vertex (vertex of shortest edge with highest insertion index)
+     * \brief return coarsening vertex (vertex of shortest edge)
      *
      * \param element A grid element
      */
     template<class Element>
     static Vertex coarsening (const Element& element)
     {
-      Vertex vBnd;
+      // for interface any vertex is fine
+      if ( Grid::dimension != Grid::dimensionworld )
+        return element.template subEntity<vertexCodim>(0);
 
-      for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
+      // return some non-interface vertex at the shortest edge
+      ctype shortest = 1e100;
+      Vertex vertex;
+
+      for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )
       {
-        const Vertex& v = element.template subEntity<vertexCodim>(i);
+        const auto& edge = element.template subEntity<edgeCodim>(i);
+        const ctype edgeLength = edge.geometry().volume();
 
-        // for interface any vertex is fine
-        if ( Grid::dimension != Grid::dimensionworld )
-          return v;
-
-        // otherwise, check for interface and boundary
-        if( !v.impl().isInterface() )
+        if (edgeLength < shortest)
         {
-          const auto& hostgrid = v.impl().grid().getHostGrid();
-          bool atBoundary = false;
-          for ( const auto& vertex : incidentVertices( v, true ) )
+          const auto& v = edge.impl().template subEntity<vertexCodim>(0);
+          if( !v.impl().isInterface() && !atBoundary(v) )
           {
-            atBoundary |= hostgrid.is_infinite( vertex.impl().hostEntity() );
-            if (atBoundary)
-              break;
+            vertex = v;
+            shortest = edgeLength;
           }
-
-          if (!atBoundary)
-            return v;
           else
-            vBnd = v;
+          {
+            const auto& v2 = edge.impl().template subEntity<vertexCodim>(1);
+            if( !v2.impl().isInterface() && !atBoundary(v2) )
+            {
+              vertex = v2;
+              shortest = edgeLength;
+            }
+          }
         }
       }
 
-      if ( vBnd != Vertex() )
-        return vBnd;
-      else
-      {
+      if ( vertex == Vertex() )
         DUNE_THROW(GridError, "No vertex could be used for coarsening as they are all part of the interface or boundary.");
-        return Vertex(); // dummy
-      }
+
+      return vertex;
+    }
+
+  private:
+    //! return if vertex is at the boundary
+    // TODO improve this by marking vertices
+    static inline bool atBoundary( const Vertex& v )
+    {
+      const auto& hostgrid = v.impl().grid().getHostGrid();
+      for ( const auto& vertex : incidentVertices( v, true ) )
+        if ( hostgrid.is_infinite( vertex.impl().hostEntity() ) )
+          return true;
+      return false;
     }
 };
 

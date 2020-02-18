@@ -42,7 +42,7 @@
 #include "grid/hierarchiciterator.hh"
 #include "grid/pointfieldvector.hh"
 #include "grid/rangegenerators.hh"
-#include "remeshing/edgelengthratioindicator.hh"
+#include "remeshing/edgelengthindicator.hh"
 #include "remeshing/interfaceindicator.hh"
 #include "remeshing/interfacerefinement.hh"
 #include "remeshing/cellcenterrefinement.hh"
@@ -259,7 +259,7 @@ namespace Dune
     using RefinementInsertionPoint = RefinementInsertionPointStruct<Point, Edge, IdType, VertexHandle, InterfaceGridConnectedComponent>;
 
     //! The type of the employed remeshing indicator
-    using RemeshingIndicator = RatioIndicator<GridImp>;
+    using RemeshingIndicator = EdgeLengthIndicator<GridImp>;
 
     /** \brief Constructor that takes a CGAL triangulation
      *
