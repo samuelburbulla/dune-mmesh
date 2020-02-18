@@ -777,49 +777,24 @@ namespace Dune
           if ( dim == 3 )
             DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
 
+          bool some = false;
           for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
           {
             const auto& v = element.template subEntity<dimension>(j);
 
             // if vertex is part of interface, we have a problem
             if ( !v.impl().isInterface() )
-              if ( removed_.insert( globalIdSet().id( v ) ).second )
+            {
+              bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
+              if ( inserted )
                 remove_.push_back( v.impl().hostEntity() );
+              some = true;
+            }
           }
-        }
 
-      // remove vertices of crossing edges
-      // for ( const auto& ivertex : vertices( this->interfaceGrid().leafGridView() ) )
-      // {
-      //   const auto& vertex = entity( ivertex.impl().hostEntity() );
-      //   for ( const auto& element : incidentElements( vertex ) )
-      //   {
-      //     if ( signedVolume_( element ) <= 0.0 )
-      //     {
-      //        // disable removing of vertices in 3d
-      //       if ( dim == 3 )
-      //         DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
-      //
-      //       // find opposite facet
-      //       for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
-      //         if( element.template subEntity<dimension>(j) == vertex )
-      //         {
-      //           const auto& oppositeFacet = element.impl().template subEntity<1>(dimension-j);
-      //
-      //           // coarsen (remove all vertices of oppositeFacet)
-      //           for( std::size_t k = 0; k < oppositeFacet.subEntities(dimension); ++k )
-      //           {
-      //             const auto& v = oppositeFacet.impl().template subEntity<dimension>(k);
-      //
-      //             // if vertex is part of interface, we have a problem
-      //             if ( !v.impl().isInterface() )
-      //               if ( removed_.insert( globalIdSet().id( v ) ).second )
-      //                 remove_.push_back( v.impl().hostEntity() );
-      //           }
-      //         }
-      //     }
-      //   }
-      // }
+          if ( !some )
+            DUNE_THROW( GridError, "A cell with negative volume has only interface vertices!" );
+        }
 
       // move vertices back
       for ( GlobalCoordinate& s : shifts )
@@ -925,8 +900,8 @@ namespace Dune
           VertexHandle vh = insertInCell_( ip.point );
 
           // check if edge is really part of the triangulation
-          // if ( !getHostGrid().is_edge( ip.v0, vh ) // TODO 3D
-            // DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
+          if ( !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
+            DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
 
           std::size_t id = globalIdSet_->setNextId( vh );
           vh->info().insertionLevel = ip.insertionLevel;
@@ -944,10 +919,13 @@ namespace Dune
             // pass this refinement information to the interface grid
             interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
 
-            // set boundary segment to the same as ip.v0
+            // set boundary segment to the same as ip.v0 if possible, default to 0
             auto v0id = interfaceGrid_->globalIdSet().id( interfaceGrid_->entity( ip.v0 ) ).vt()[0];
-            auto vBndSeg = interfaceGrid_->boundarySegments().at( { v0id } );
-            interfaceGrid_->addBoundarySegment( { id }, vBndSeg );
+            auto it = interfaceGrid_->boundarySegments().find( { v0id } );
+            if ( it != interfaceGrid_->boundarySegments().end() )
+              interfaceGrid_->addBoundarySegment( { id }, it->second );
+            else
+              interfaceGrid_->addBoundarySegment( { id }, 0 );
           }
 
           // store vertex handles for later use
@@ -1066,16 +1044,12 @@ namespace Dune
       ip.isInterface = true;
 
       // take some incident element as father
-      auto circulator = getHostGrid().incident_edges( vertex.impl().hostEntity() ); // TODO 3D
-      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
-      {
-        const auto elem = interfaceGrid().entity( *circulator );
-        if (interfaceGrid().isInterface( elem ) && !elem.isNew())
+      for ( const auto& elem : incidentInterfaceElements( vertex ) )
+        if (!elem.isNew())
         {
           ip.connectedcomponent = InterfaceGridConnectedComponent( elem );
           break;
         }
-      }
 
       insert_.push_back( ip );
     }
