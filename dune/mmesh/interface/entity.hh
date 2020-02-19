@@ -158,12 +158,21 @@ namespace Dune
         return (cc == 0) ? 0 : 3;
     }
 
-    /** \brief Provide access to sub entity i
+    /** \brief Provide access to sub entity i for cc == dim
      */
     template <int cc>
-    typename GridImp::template Codim<cc>::Entity
+    std::enable_if_t< cc == codim, typename GridImp::template Codim<cc>::Entity >
     subEntity (std::size_t i) const {
       return *this;
+    }
+
+    /** \brief Provide access to sub entity i for cc == dim-1
+     */
+    template <int cc>
+    std::enable_if_t< cc == codim+1, typename GridImp::template Codim<cc>::Entity >
+    subEntity (std::size_t i) const {
+      DUNE_THROW(NotImplemented, "subEntity<1> for codim 1 entity");
+      return typename GridImp::template Codim<cc>::Entity();
     }
 
     //! geometry of this entity
