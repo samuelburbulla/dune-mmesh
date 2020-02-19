@@ -42,14 +42,8 @@
 #include "grid/hierarchiciterator.hh"
 #include "grid/pointfieldvector.hh"
 #include "grid/rangegenerators.hh"
-#include "remeshing/edgelengthindicator.hh"
-#include "remeshing/interfaceindicator.hh"
-#include "remeshing/interfacerefinement.hh"
-#include "remeshing/cellcenterrefinement.hh"
 #include "remeshing/longestedgerefinement.hh"
-#include "remeshing/newestvertexbisection.hh"
 #include "remeshing/ratioindicator.hh"
-#include "remeshing/volumeindicator.hh"
 #include "interface/traits.hh"
 // Further includes below!
 
@@ -259,7 +253,7 @@ namespace Dune
     using RefinementInsertionPoint = RefinementInsertionPointStruct<Point, Edge, IdType, VertexHandle, InterfaceGridConnectedComponent>;
 
     //! The type of the employed remeshing indicator
-    using RemeshingIndicator = EdgeLengthIndicator<GridImp>;
+    using RemeshingIndicator = RatioIndicator<GridImp>;
 
     /** \brief Constructor that takes a CGAL triangulation
      *
@@ -291,6 +285,7 @@ namespace Dune
       setIndices();
 
       interfaceGrid_ = std::make_unique<InterfaceGrid>( This(), interfaceBoundarySegments );
+      indicator_.init(*this);
     }
 
     //! The destructor
@@ -664,6 +659,17 @@ namespace Dune
       if(refCount > 0) ++refineMarked_;
       if(refCount < 0) ++coarsenMarked_;
       return true;
+    }
+
+    /** \brief Mark elements for adaption using the default remeshing indicator
+     */
+    void markElements() const
+    {
+      for (const auto& element : elements( this->leafGridView() ))
+        mark( indicator_(element), element );
+
+      for (const auto& ielement : elements( interfaceGrid_->leafGridView() ))
+        interfaceGrid_->mark( indicator_(ielement), ielement );
     }
 
     /** \brief Return refinement mark for entity
@@ -1370,6 +1376,7 @@ namespace Dune
     BoundarySegments boundarySegments_;
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
+    RemeshingIndicator indicator_;
 
   private:
     //! Flag all elements in conflict as mightVanish

@@ -68,9 +68,6 @@ int main(int argc, char *argv[])
       return s;
     };
 
-    using Indicator = typename Grid::RemeshingIndicator;
-    Indicator indicator( grid );
-
     for ( int t = 1; t <= 100; t++ )
     {
       // skip the loop in 3d until the remeshing is implemented in 3d
@@ -83,21 +80,16 @@ int main(int argc, char *argv[])
       for( const auto& vertex : vertices( igridView ) )
         shifts[iindexSet.index(vertex)] = movement(vertex.geometry().center());
 
-      // 1. ensure movement
       grid.preAdapt();
+
+      // 1. ensure movement
       grid.ensureInterfaceMovement( shifts );
 
       // 2a. mark elements
-      for (const auto& element : elements(gridView))
-        grid.mark( indicator(element), element );
-      // 2b. mark interface elements
-      // for (const auto& ielement : elements(igridView))
-      //   igrid.mark( indicator(ielement), ielement );
+      grid.markElements();
 
       // 3a. adapt
       grid.adapt();
-      // 3b. adapt interface
-      // igrid.adapt();
 
       // 4. transfer data ...
       for (const auto& element : elements(gridView))

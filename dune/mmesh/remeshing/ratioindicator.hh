@@ -19,7 +19,7 @@ namespace Dune
 /*!
  * \ingroup MMesh Adaptive
  * \brief   Class defining an indicator for grid remeshing regarding the ratio of outer to inner sphere radius (normalized by factor 1/dimension).
- *          By default, we take 2x length of the longest edge contained in the interface as maximal edge length.
+ *          By default, we take 2x length of the longest edge contained in the interface as maximal edge length and 0.5x length of the shortest edge as minimal edge length.
  */
 template<class Grid>
 class RatioIndicator
@@ -27,26 +27,32 @@ class RatioIndicator
   static constexpr int dim = Grid::dimensionworld;
   using ctype = typename Grid::ctype;
   using GlobalCoordinate = FieldVector<ctype, dim>;
-  using Element = typename Grid::Traits::template Codim<0>::Entity;
 
 public:
     /*!
      * \brief Calculates the indicator for each grid cell.
      *
      * \param grid     The grid implementation
+     * \param ratio    The maximum ratio (outer to inner radius ratio divided by dimension)
+     * \param minH     The minimal edge length (defaults to 0.5x minimal edge length of interface)
+     * \param maxH     The maximal edge length (defaults to 2x maximal edge length of interface)
      */
-    RatioIndicator(const Grid& grid, ctype ratio = 5.0, ctype maxH = -1.0, ctype minH = 1e100)
-     : maxRatio_( ratio ), maxH_( maxH ), minH_( minH )
-    {
-      if ( maxH < 0.0 )
-        for ( const auto& edge : edges( grid.leafGridView() ) )
-          if ( grid.isInterface( edge ) )
-            maxH_ = std::max( maxH_, 2 * edge.geometry().volume() );
+    RatioIndicator( ctype ratio = 2.66, ctype minH = 1e100, ctype maxH = -1e100 )
+     : maxRatio_( ratio ), minH_( minH ), maxH_( maxH )
+    {}
 
-      if ( minH == 1e100 )
-        for ( const auto& edge : edges( grid.leafGridView() ) )
-          if ( grid.isInterface( edge ) )
-            minH_ = std::min( minH_, 0.5 * edge.geometry().volume() );
+    /*!
+     * \brief Calculates minH and maxH for the current interface.
+     */
+    void init(const Grid& grid)
+    {
+      if ( maxH_ == -1e100 )
+        for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
+          maxH_ = std::max( maxH_, 2. * edge.geometry().volume() );
+
+      if ( minH_ == 1e100 )
+        for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
+          minH_ = std::min( minH_, 0.5 * edge.geometry().volume() );
     };
 
     /*!
@@ -58,48 +64,52 @@ public:
      *
      * \param element A grid element
      */
+    template< class Element >
     int operator() (const Element& element) const
     {
-      static constexpr int vertexCodim = Element::dimension;
       static constexpr int edgeCodim = Element::dimension - 1;
 
-      if ( dim != 3 ) // disable coarsening in 3d
+      int refine = 0;
+      int coarse = 0;
+
+      // edge length
+      for( int i = 0; i < element.subEntities(edgeCodim); ++i )
       {
-        bool allInterfaceOrBoundary = true;
-        for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
-        {
-          const auto& v = element.template subEntity<vertexCodim>(i);
-          allInterfaceOrBoundary &= ( v.impl().hostEntity()->info().isInterface );
-        }
-
-        if (!allInterfaceOrBoundary)
-        {
-          const auto& geo = element.geometry();
-
-          // ratio criterion for coarsening
-          ctype sumE = 0.0;
-          for( std::size_t i = 0; i < element.subEntities(1); ++i )
-            sumE += element.template subEntity<1>(i).geometry().volume();
-
-          const ctype innerRadius = dim * geo.volume() / sumE;
-          const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
-          const ctype ratio = outerRadius / (innerRadius * dim);
-
-          if (ratio > maxRatio_)
-            return -1;
-        }
-      }
-
-      // refine by edge length criterion
-      for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )
-      {
-        const auto& edge = element.impl().template subEntity<edgeCodim>(i);
-
+        const auto& edge = element.template subEntity<edgeCodim>(i);
         const ctype edgeLength = edge.geometry().volume();
-        if ( edgeLength > maxH_ )
-          return 1;
+
+        if (edgeLength < minH_)
+          coarse++;
+
+        if (edgeLength > maxH_)
+          refine++;
       }
 
+      // ratio criterion for coarsening
+      const auto& geo = element.geometry();
+
+      ctype sumE = 0.0;
+      for( std::size_t i = 0; i < element.subEntities(1); ++i )
+        sumE += element.template subEntity<1>(i).geometry().volume();
+
+      const ctype innerRadius = dim * geo.volume() / sumE;
+      const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
+      const ctype ratio = outerRadius / (innerRadius * dim);
+
+      if (ratio > maxRatio_)
+        coarse++;
+
+
+      // priority on coarse
+      if (coarse > 0)
+        if ( dim != 3 ) // disable coarsening in 3d until it is implemented
+          return -1;
+
+      // then refine
+      if (refine > 0)
+        return 1;
+
+      // nothing to do
       return 0;
     }
 
@@ -120,8 +130,8 @@ public:
 
   private:
     const ctype maxRatio_;
-    ctype maxH_ = -1.0;
-    ctype minH_ = 1e100;
+    ctype minH_;
+    ctype maxH_;
 };
 
 } // end namespace Dumux

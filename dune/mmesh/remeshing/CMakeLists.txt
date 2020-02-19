@@ -1,12 +1,6 @@
 set(HEADERS
-  cellcenterrefinement.hh
-  edgelengthindicator.hh
-  interfaceindicator.hh
-  interfacerrefinement.hh
-  newestvertexbisection.hh
   longestedgerefinement.hh
   ratioindicator.hh
-  volumeindicator.hh
 )
 
 install(FILES ${HEADERS}
