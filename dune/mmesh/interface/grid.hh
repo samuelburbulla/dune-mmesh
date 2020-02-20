@@ -364,8 +364,11 @@ namespace Dune
     bool mark(int refCount, const typename Traits::template Codim<0>::Entity & e) const
     {
       if ( refCount != 0 )
+      {
         mark_[ globalIdSet_->id( e ) ] = refCount;
-      return true;
+        return true;
+      }
+      return false;
     }
 
     /** \brief Return refinement mark for entity
