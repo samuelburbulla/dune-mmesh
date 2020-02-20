@@ -54,10 +54,10 @@ int main(int argc, char *argv[])
     // define the movement
     auto movement = []( GlobalCoordinate x )
     {
-      double speed = 3e-2;
+      double speed = 1e-3;
       GlobalCoordinate m = x;
       m -= GlobalCoordinate( 0.5 );
-      m *= speed;
+      m *= speed * M_PI;
 
       GlobalCoordinate s( 0.0 );
       s[0] = m[1];
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
       return s;
     };
 
-    for ( int t = 1; t <= 100; t++ )
+    for ( int t = 1; t <= 500; t++ )
     {
       // skip the loop in 3d until the remeshing is implemented in 3d
       if ( dim == 3 && t == 9 )

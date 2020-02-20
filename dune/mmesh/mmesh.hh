@@ -773,6 +773,11 @@ namespace Dune
     {
       assert( shifts.size() == this->interfaceGrid().leafIndexSet().size(dimension-1) );
 
+      // check if grid is still valid
+      for ( const auto& element : elements( this->leafGridView() ) )
+        if ( signedVolume_( element ) <= 0.0 )
+          DUNE_THROW( GridError, "Interface has been moved too far, cells with negative volume occured!" );
+
       // temporarily move vertices
       moveInterface( shifts );
 

@@ -32,27 +32,30 @@ public:
     /*!
      * \brief Calculates the indicator for each grid cell.
      *
-     * \param grid     The grid implementation
-     * \param ratio    The maximum ratio (outer to inner radius ratio divided by dimension)
-     * \param minH     The minimal edge length (defaults to 0.5x minimal edge length of interface)
-     * \param maxH     The maximal edge length (defaults to 2x maximal edge length of interface)
+     * \param h        The objective edge length (aims at edge length in [h/4, 2*h])
      */
-    RatioIndicator( ctype ratio = 2.66, ctype minH = 1e100, ctype maxH = -1e100 )
-     : maxRatio_( ratio ), minH_( minH ), maxH_( maxH )
+    RatioIndicator( ctype h = 0.0 )
+     : edgeRatio_( 4. ),                  // the edge ratio. Decreases minH!
+       K_( 2. ),                          // the factor for the maximal edge length. Defaults to 2, because we use edge bisection.
+       maxH_( K_ * h ),
+       k_( K_ / ( 2. * edgeRatio_ ) ),    // ensure that a triangle with two edges longer than maxH splits up to a triangle where all edges are longer than minH
+       minH_( k_ * h ),
+       radiusRatio_( 30. )               // additional radius ratio to avoid very ugly cells
     {}
 
     /*!
-     * \brief Calculates minH and maxH for the current interface.
+     * \brief Calculates minH and maxH for the current interface edge length.
+     *
+     * \param grid     The grid implementation
      */
     void init(const Grid& grid)
     {
-      if ( maxH_ == -1e100 )
-        for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
-          maxH_ = std::max( maxH_, 2. * edge.geometry().volume() );
-
-      if ( minH_ == 1e100 )
-        for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
-          minH_ = std::min( minH_, 0.5 * edge.geometry().volume() );
+      for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
+      {
+        const ctype h = edge.geometry().volume();
+        maxH_ = std::max( maxH_, K_ * h );
+        minH_ = std::min( minH_, k_ * h );
+      }
     };
 
     /*!
@@ -72,33 +75,42 @@ public:
       int refine = 0;
       int coarse = 0;
 
+      ctype minE =  1e100;
+      ctype maxE = -1e100;
+
+      ctype sumE = 0.0;
+
       // edge length
       for( int i = 0; i < element.subEntities(edgeCodim); ++i )
       {
         const auto& edge = element.template subEntity<edgeCodim>(i);
-        const ctype edgeLength = edge.geometry().volume();
+        const ctype len = edge.geometry().volume();
 
-        if (edgeLength < minH_)
+        if (len < minH_)
           coarse++;
 
-        if (edgeLength > maxH_)
+        if (len > maxH_)
           refine++;
+
+        minE = std::min( minE, len );
+        maxE = std::max( maxE, len );
+
+        sumE += len;
       }
 
-      // ratio criterion for coarsening
-      const auto& geo = element.geometry();
-
-      ctype sumE = 0.0;
-      for( std::size_t i = 0; i < element.subEntities(1); ++i )
-        sumE += element.template subEntity<1>(i).geometry().volume();
-
-      const ctype innerRadius = dim * geo.volume() / sumE;
-      const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
-      const ctype ratio = outerRadius / (innerRadius * dim);
-
-      if (ratio > maxRatio_)
+      // edge ratio criterion
+      const ctype edgeRatio = maxE / minE;
+      if (edgeRatio > edgeRatio_)
         coarse++;
 
+      // radius ratio criterion
+      const auto& geo = element.geometry();
+      const ctype innerRadius = dim * geo.volume() / sumE;
+      const ctype outerRadius = (geo.impl().circumcenter() - geo.corner(0)).two_norm();
+      const ctype radiusRatio = outerRadius / (innerRadius * dim);
+
+      if (radiusRatio > radiusRatio_)
+        coarse++;
 
       // priority on coarse
       if (coarse > 0)
@@ -113,9 +125,9 @@ public:
       return 0;
     }
 
-    ctype maxRatio () const
+    ctype edgeRatio () const
     {
-      return maxRatio_;
+      return edgeRatio_;
     }
 
     ctype maxH () const
@@ -128,10 +140,18 @@ public:
       return minH_;
     }
 
+    ctype radiusRatio () const
+    {
+      return radiusRatio_;
+    }
+
   private:
-    const ctype maxRatio_;
-    ctype minH_;
+    const ctype edgeRatio_;
+    const ctype K_;
     ctype maxH_;
+    const ctype k_;
+    ctype minH_;
+    const ctype radiusRatio_;
 };
 
 } // end namespace Dumux
