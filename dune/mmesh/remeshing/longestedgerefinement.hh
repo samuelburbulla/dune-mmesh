@@ -101,9 +101,6 @@ public:
         }
       }
 
-      if ( vertex == Vertex() )
-        DUNE_THROW(GridError, "No vertex could be used for coarsening as they are all part of the interface or boundary.");
-
       return vertex;
     }
 

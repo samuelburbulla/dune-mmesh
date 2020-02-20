@@ -720,8 +720,9 @@ namespace Dune
         {
           auto vertex = RefinementStrategy::coarsening(element);
 
-          if ( removed_.insert( globalIdSet().id( vertex ) ).second )
-            remove_.push_back( vertex.impl().hostEntity() );
+          if ( vertex != decltype(vertex)() )
+            if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+              remove_.push_back( vertex.impl().hostEntity() );
         }
       }
 
@@ -755,10 +756,13 @@ namespace Dune
         else if (mark == -1)
         {
           auto ivertex = InterfaceRefinementStrategy::coarsening(element);
-          const Vertex& vertex = entity( ivertex.impl().hostEntity() );
+          if ( ivertex != decltype(ivertex)() )
+          {
+            const Vertex& vertex = entity( ivertex.impl().hostEntity() );
 
-          if ( removed_.insert( globalIdSet().id( vertex ) ).second )
-            remove_.push_back( vertex.impl().hostEntity() );
+            if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+              remove_.push_back( vertex.impl().hostEntity() );
+          }
         }
       }
 
@@ -1350,6 +1354,16 @@ namespace Dune
       assert( it != createdEntityConnectedComponentMap_.end() );
       assert( connectedComponents_[ it->second ].size() > 0 );
       return connectedComponents_[ it->second ];
+    }
+
+    const RemeshingIndicator& indicator() const
+    {
+      return indicator_;
+    }
+
+    RemeshingIndicator& indicator()
+    {
+      return indicator_;
     }
 
   private:
