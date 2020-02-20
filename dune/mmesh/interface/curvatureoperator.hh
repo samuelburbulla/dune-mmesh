@@ -3,7 +3,7 @@
 /*!
  * \file
  * \brief   Class defining an operator that assigns a curvature to each element
- *          of the interface grid.
+ *          or each vertex of the interface grid.
  */
 
 #ifndef DUNE_MMESH_INTERFACE_CURVATUREOPERATOR_HH
@@ -17,12 +17,27 @@ namespace Dune
 {
 
 /*!
- * \brief   Class defining an operator that assigns a curvature to each element
- *          of the interface grid. The curvature is approximated by
- *          interpolation with a sphere (through the center points of an
- *          interface element and its neighbors).
+ * \brief   used as template parameter that determines whether the curvature is
+ *          approximated at the elemets or the vertices of the grid
  */
-template<class IGridView, class IGridMapper>
+enum CurvatureLayout
+{
+  Vertex,
+  Element
+};
+
+/*!
+ * \brief   Class defining an operator that assigns a curvature to each element
+ *          or each vertex of the interface grid. The curvature is approximated
+ *          by interpolation with a sphere (through the center points of an
+ *          interface element and its neighbors). The enum CurvatureLayout
+ *          determines whether the curvature is approximated at the vertices
+ *          or elements of the grid.
+ *          NOTE that the algorithm IN 3D might provide poor approximations for
+ *          non-spherical interfaces and IN 3D the algorithm in general does not
+ *          converge under grid refinement
+ */
+template<class IGridView, class IGridMapper, CurvatureLayout CL = Vertex>
 class CurvatureOperator
 {
 public:
@@ -34,55 +49,85 @@ public:
    * \brief Constructor.
    *
    * \param iGridView The grid view of the interface grid
-   * \param iGridMapper Element mapper for the interface grid
+   * \param iGridMapper Element or Vertex mapper for the interface grid
+   *        depending on the specified curvature layout
    */
   CurvatureOperator(const IGridView& iGridView, const IGridMapper& iGridMapper)
    : iGridView_(iGridView), iGridMapper_(iGridMapper) {};
 
   /*!
-   * \brief Operator that assigns a curvature to each element
+   * \brief Operator that assigns a curvature to each element or each vertex
    *        of the interface grid. The curvature is approximated by
-   *        interpolation with a sphere (osculating circle/sphere through the
-   *        center points of an interface element and its neighbors).
+   *        interpolation with a sphere (osculating circle/sphere through
+   *        incident interface vertices).
    *
-   * \param curvatures A container with size = #elements(iGridView) to store the
-   *        curvature of each element of the interface grid
-   * \param centers A container with size = #elements(iGridView) to store the
-   *        centers of curvatures (sphere center points) corresponding to the
-   *        approximated curvature of each element of the interface grid
+   * \param curvatures A container to store the curvature of each element or
+   *        each vertex of the interface grid
+   * \param centers A container to store the centers of curvatures (sphere
+   *        center points) corresponding to the approximated curvature of each
+   *        element or each vertex of the interface grid
    */
-  void operator() (auto& curvatures, auto& centers) const
+  template<CurvatureLayout Layout = CL>
+  std::enable_if_t<Layout == Vertex, void>
+  operator() (auto& curvatures, auto& centers) const
   {
-    //storage for vertices of incident interface elements
+    //storage for incident interface vertices
     std::vector<Vector> vertexPoints;
     Vector center;
 
-    for (const auto& iElem : elements(iGridView_))
+    for (const auto& vertex : vertices(iGridView_))
     {
-      int iElemIdx = iGridMapper_.index(iElem);
+      const int iVertexIdx = iGridMapper_.index(vertex);
       vertexPoints.clear();
+      vertexPoints.push_back(vertex.geometry().center());
 
-      for (const auto& intersct : intersections(iGridView_, iElem))
+      for (const auto& incidentVertex : incidentInterfaceVertices(vertex))
       {
-        const auto& neighborGeo = intersct.outside().geometry();
-
-        for (int i = 0; i < neighborGeo.corners(); i++)
-        {
-          if (std::find(vertexPoints.begin(), vertexPoints.end(),
-            neighborGeo.corner(i)) == vertexPoints.end())
-          {
-            vertexPoints.push_back(neighborGeo.corner(i));
-          }
-        }
+        vertexPoints.push_back(incidentVertex.geometry().center());
       }
 
-      //determine curvature associated with iElem (approximated by a sphere
+      //determine curvature associated with iVertexMapper (approximated by a sphere
       //with center "center")
-      curvatures[iElemIdx] = 1.0 / getRadius(vertexPoints, center);
-      centers[iElemIdx] = center;
+      curvatures[iVertexIdx] = 1.0 / getRadius(vertexPoints, center);
+      centers[iVertexIdx] = center;
     }
   }
 
+  template<CurvatureLayout Layout = CL>
+  std::enable_if_t<Layout == Element, void>
+  operator() (auto& curvatures, auto& centers) const
+  {
+   //storage for vertices of incident interface elements
+   std::vector<Vector> vertexPoints;
+   Vector center;
+
+   for (const auto& iElem : elements(iGridView_))
+   {
+     int iElemIdx = iGridMapper_.index(iElem);
+     vertexPoints.clear();
+
+     for (const auto& intersct : intersections(iGridView_, iElem))
+     {
+       const auto& neighborGeo = intersct.outside().geometry();
+
+       for (int i = 0; i < neighborGeo.corners(); i++)
+       {
+         if (std::find(vertexPoints.begin(), vertexPoints.end(),
+           neighborGeo.corner(i)) == vertexPoints.end())
+         {
+           vertexPoints.push_back(neighborGeo.corner(i));
+         }
+       }
+     }
+
+     //determine curvature associated with iElem (approximated by a sphere
+     //with center "center")
+     curvatures[iElemIdx] = 1.0 / getRadius(vertexPoints, center);
+     centers[iElemIdx] = center;
+   }
+ }
+
+private:
   /*!
    * \brief Determines the radius and center of the sphere that is uniquely
    *        defined by dim+1 points
@@ -148,7 +193,6 @@ public:
   //Element mapper for the interface grid
   const IGridMapper& iGridMapper_;
 
-private:
   //floating point accuracy
   static constexpr double epsilon = std::numeric_limits<double>::epsilon();
 };

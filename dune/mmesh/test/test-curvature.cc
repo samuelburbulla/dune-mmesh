@@ -2,7 +2,6 @@
 #include <cmath>
 #include <string>
 
-#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/exceptions.hh>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -14,14 +13,15 @@ static constexpr int dim = GRIDDIM;
 using Vector = Dune::FieldVector<double, dim>;
 
 #if GRIDDIM == 2
-double exactRadiusOfCurvature (Vector pos, double a = 0.3, double b = 0.15)
+double exactCurvature (Vector pos, double a = 0.3, double b = 0.15)
 {
   double a4 = pow(a, 4);
   double b4 = pow(b, 4);
-  return pow(a4 * pow(pos[1], 2) + b4 * pow(pos[0], 2), 1.5) / (a4*b4);
+  return (a4 * b4) / pow(a4 * pow(pos[1], 2) + b4 * pow(pos[0], 2), 1.5);
 }
+
 #elif GRIDDIM == 3
-double exactRadiusOfCurvature (Vector pos, double a = 0.35, double b = 0.15,
+double exactCurvature (Vector pos, double a = 0.35, double b = 0.15,
   double c = 0.25)
 {
   const double a2 = a * a;
@@ -36,7 +36,7 @@ double exactRadiusOfCurvature (Vector pos, double a = 0.35, double b = 0.15,
 
   const double meanCurvature =
     0.5 * H2 * H * (a2 + b2 + c2 - R2) / (a2 * b2 * c2);
-  const double gaussianCurvature = H2 * H2 / (a2 * b2 * c2);
+  //const double gaussianCurvature = H2 * H2 / (a2 * b2 * c2);
 
   return meanCurvature;
 }
@@ -53,6 +53,44 @@ Vector exactCenterOfCurvature (Vector pos, double a = 0.3, double b = 0.15)
 }
 #endif
 
+void output(const auto& characteristicLengths, const auto& gridfiles,
+  const auto& numOfIElems, const auto& errorsCurvature,
+  const auto& errorsCenter)
+{
+  int numOfGridFiles = numOfIElems.size();
+
+  for (int i = 0; i < numOfGridFiles; i++)
+  {
+    std::cout << "characteristic length: " << gridfiles[i] <<
+      "\t#interface elements: " << numOfIElems[i] << " \terror curvature: "
+      << errorsCurvature[i]
+#if GRIDDIM == 2
+      << "\terror center: " << errorsCenter[i]
+#endif
+      << std::endl;
+  }
+
+  std::cout << "\nEOC curvature: " << std::endl;
+  for (int i = 1; i < numOfGridFiles; i++)
+  {
+    const double EOC = log(errorsCurvature[i-1] / errorsCurvature[i])
+    / log(characteristicLengths[i-1] / characteristicLengths[i]);
+    std::cout << "EOC: " << EOC << "\t(interface elements " <<
+      numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
+  }
+
+#if GRIDDIM == 2
+  std::cout << "\nEOC center of curvature: " << std::endl;
+  for (int i = 1; i < numOfGridFiles; i++)
+  {
+    const double EOC = log(errorsCenter[i-1] / errorsCenter[i])
+    / log(characteristicLengths[i-1] / characteristicLengths[i]);
+    std::cout << "EOC: " << EOC << "\t(interface elements " <<
+      numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
+  }
+#endif
+}
+
 int main(int argc, char** argv)
 {
   try
@@ -62,12 +100,12 @@ int main(int argc, char** argv)
     using IGridView = typename Grid::InterfaceGrid::LeafGridView;
     using IMapper =
       typename Dune::MultipleCodimMultipleGeomTypeMapper<IGridView>;
-    using CurvatureOp = Dune::CurvatureOperator<IGridView, IMapper>;
+    using CurvatureOperatorElement =
+      Dune::CurvatureOperator<IGridView, IMapper, Dune::CurvatureLayout::Element>;
+    using CurvatureOperatorVertex =
+      Dune::CurvatureOperator<IGridView, IMapper, Dune::CurvatureLayout::Vertex>;
 
-    Dune::MPIHelper::instance(argc, argv);
-
-    #if GRIDDIM == 2
-
+#if GRIDDIM == 2
     static constexpr int numOfGridFiles = 11;
     const std::array<std::string, numOfGridFiles>
       gridfiles({"9e-2", "7e-2", "5e-2", "3e-2", "2e-2", "1e-2", "9e-3",
@@ -75,24 +113,26 @@ int main(int argc, char** argv)
     const std::array<double, numOfGridFiles> characteristicLengths({9e-2, 7e-2,
       5e-2, 3e-2, 2e-2, 1e-2, 9e-3, 8e-3, 7e-3, 6e-3, 5e-3});
 
-    #elif GRIDDIM == 3
-
-    static constexpr int numOfGridFiles = 5;
+#elif GRIDDIM == 3
+    static constexpr int numOfGridFiles = 4;
     const std::array<std::string, numOfGridFiles>
-      gridfiles({"9e-2", "7e-2", "5e-2", "3e-2", "2e-2"});
+      gridfiles({"9e-2", "7e-2", "5e-2", "3e-2"});
     const std::array<double, numOfGridFiles>
-      characteristicLengths({9e-2, 7e-2, 5e-2, 3e-2, 2e-2});
+      characteristicLengths({9e-2, 7e-2, 5e-2, 3e-2});
+#endif
 
-    #endif
-
-    std::array<double, numOfGridFiles> errorsCurvature;
-    std::array<double, numOfGridFiles> errorsCenter;
+    std::array<double, numOfGridFiles> errorsCurvatureElement;
+    std::array<double, numOfGridFiles> errorsCenterElement;
+    std::array<double, numOfGridFiles> errorsCurvatureVertex;
+    std::array<double, numOfGridFiles> errorsCenterVertex;
     std::array<double, numOfGridFiles> numOfIElems;
 
     for (int i = 0; i < numOfGridFiles; i++)
     {
-      errorsCurvature[i] = 0.0;
-      errorsCenter[i] = 0.0;
+      errorsCurvatureElement[i] = 0.0;
+      errorsCenterElement[i] = 0.0;
+      errorsCurvatureVertex[i] = 0.0;
+      errorsCenterVertex[i] = 0.0;
 
       //get interface grid view
       GridFactory gridFactory("grids/ellipse" + std::to_string(dim) + "d_"
@@ -105,82 +145,87 @@ int main(int argc, char** argv)
 
       //define element mapper
       IMapper iElemMapper(iGridView, Dune::mcmgElementLayout());
+      IMapper iVertexMapper(iGridView, Dune::mcmgVertexLayout());
 
       //storage curvatures on the interface grid
-      std::vector<double> curvatures(iElemMapper.size());
-      std::vector<Vector> centers(iElemMapper.size());
-
-      std::vector<double> exactCurvatures(iElemMapper.size());
+      std::vector<double> curvaturesElement(iElemMapper.size());
+      std::vector<Vector> centersElement(iElemMapper.size());
+      std::vector<double> exactCurvaturesElement(iElemMapper.size());
+      std::vector<double> curvaturesVertex(iVertexMapper.size());
+      std::vector<Vector> centersVertex(iVertexMapper.size());
+      std::vector<double> exactCurvaturesVertex(iVertexMapper.size());
 
       //determine curvatures and sphere center points
-      CurvatureOp curvatureOp(iGridView, iElemMapper);
-      curvatureOp(curvatures, centers);
+      CurvatureOperatorElement curvOpElem(iGridView, iElemMapper);
+      curvOpElem(curvaturesElement, centersElement);
 
-      //calculate L2 error
+      CurvatureOperatorVertex curvOpVertex(iGridView, iVertexMapper);
+      curvOpVertex(curvaturesVertex, centersVertex);
+
+      //calculate L2 error for element layout
       for (const auto& iElem: elements(iGridView))
       {
         const int iElemIdx = iElemMapper.index(iElem);
         const auto iGeo = iElem.geometry();
         const auto& center = iGeo.center();
         const double iVolume = iGeo.volume();
-        double exactCurvature =  1.0 / exactRadiusOfCurvature(center);
+        double exCurv = exactCurvature(center);
 
-        errorsCurvature[i] +=
-          pow(curvatures[iElemIdx] - exactCurvature, 2)*iVolume;
+        errorsCurvatureElement[i] +=
+          pow(curvaturesElement[iElemIdx] - exCurv, 2)*iVolume;
 
-        #if GRIDDIM == 2
-        errorsCenter[i] += (centers[iElemIdx]
+#if GRIDDIM == 2
+        errorsCenterElement[i] += (centersElement[iElemIdx]
           - exactCenterOfCurvature(center)).two_norm2()*iVolume;
-        #endif
+#endif
 
-        exactCurvatures[iElemIdx] = exactCurvature;
+        exactCurvaturesElement[iElemIdx] = exCurv;
+      }
+
+      //calculate maximum error for vertex layout
+      for (const auto& vertex : vertices(iGridView))
+      {
+        const int vertexIdx = iVertexMapper.index(vertex);
+        const auto& center = vertex.geometry().center();
+
+        double exCurv =  exactCurvature(center);
+
+        errorsCurvatureVertex[i] = std::max(errorsCurvatureVertex[i],
+          std::abs(curvaturesVertex[vertexIdx] - exCurv));
+
+#if GRIDDIM == 2
+        errorsCenterVertex[i] = std::max(errorsCenterVertex[i],
+         (centersVertex[vertexIdx] -
+           exactCenterOfCurvature(center)).infinity_norm());
+#endif
+
+        exactCurvaturesVertex[vertexIdx] = exCurv;
       }
 
       if (i == numOfGridFiles - 1)
       { //write output
         Dune::VTKWriter<IGridView> vtkWriter(iGridView);
-        vtkWriter.addCellData(curvatures, "curvature");
-        vtkWriter.addCellData(exactCurvatures, "exactCurvature");
+        vtkWriter.addCellData(curvaturesElement, "curvatureElement");
+        vtkWriter.addCellData(exactCurvaturesElement, "exactCurvatureElement");
+        vtkWriter.addVertexData(curvaturesVertex, "curvatureVertex");
+        vtkWriter.addVertexData(exactCurvaturesVertex, "exactCurvatureVertex");
         vtkWriter.write("curvature");
       }
 
-      errorsCurvature[i] = sqrt(errorsCurvature[i]);
+      errorsCurvatureElement[i] = sqrt(errorsCurvatureElement[i]);
 
-      #if GRIDDIM == 2
-      errorsCenter[i] = sqrt(errorsCenter[i]);
-      #endif
+#if GRIDDIM == 2
+      errorsCenterElement[i] = sqrt(errorsCenterElement[i]);
+#endif
     }
 
-    for (int i = 0; i < numOfGridFiles; i++)
-    {
-      std::cout << "characteristic length: " << gridfiles[i] <<
-        "\t#interface elements: " << numOfIElems[i] << " \terror curvature: "
-        << errorsCurvature[i]
-        #if GRIDDIM == 2
-        << "\terror center: " << errorsCenter[i]
-        #endif
-        << std::endl;
-    }
+    std::cout << "Element Layout:\n\n";
+    output(characteristicLengths, gridfiles, numOfIElems,
+      errorsCurvatureElement, errorsCenterElement);
 
-    std::cout << "\nEOC curvature: " << std::endl;
-    for (int i = 1; i < numOfGridFiles; i++)
-    {
-      const double EOC = log(errorsCurvature[i-1] / errorsCurvature[i])
-      / log(characteristicLengths[i-1] / characteristicLengths[i]);
-      std::cout << "EOC: " << EOC << "\t(interface elements " <<
-        numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
-    }
-
-    #if GRIDDIM == 2
-    std::cout << "\nEOC center of curvature: " << std::endl;
-    for (int i = 1; i < numOfGridFiles; i++)
-    {
-      const double EOC = log(errorsCenter[i-1] / errorsCenter[i])
-      / log(characteristicLengths[i-1] / characteristicLengths[i]);
-      std::cout << "EOC: " << EOC << "\t(interface elements " <<
-        numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
-    }
-    #endif
+    std::cout << "\n\n\nVertex Layout:\n\n";
+    output(characteristicLengths, gridfiles, numOfIElems, errorsCurvatureVertex,
+      errorsCenterVertex);
 
   }
   catch (Dune::Exception& e)

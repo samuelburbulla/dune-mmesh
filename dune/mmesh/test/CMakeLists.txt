@@ -54,3 +54,11 @@ target_link_libraries("test-fvoninterfacegrid-2d" CGAL)
 dune_add_test(NAME test-intersectionvolume-2d SOURCES test-intersectionvolume.cc)
 set_property( TARGET test-intersectionvolume-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries("test-intersectionvolume-2d" CGAL mpfr)
+
+dune_add_test(NAME test-curvature-2d SOURCES test-curvature.cc)
+set_property( TARGET test-curvature-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+target_link_libraries("test-curvature-2d" CGAL)
+
+dune_add_test(NAME test-curvature-3d SOURCES test-curvature.cc)
+set_property( TARGET test-curvature-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+target_link_libraries("test-curvature-3d" CGAL)
