@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     vtkWriterInterface.write( 0.0 );
 
     const double dtInitial = 0.01;
-    const double tEnd = 0.12;
+    const double tEnd = 0.1;
 
     auto b = []( auto x ){ return x[0] < 1e-8; };
     FieldVector<double, 2> v ( {1.0, 0.0} );
@@ -108,7 +108,6 @@ int main(int argc, char *argv[])
       for (const auto& e : elements( igridView ))
         data.insert( std::make_pair( idSet.id(e), c[ indexSet.index(e) ] * e.geometry().volume() ) );
 
-      grid.preAdapt();
       std::vector<GlobalCoordinate> shifts( igridView.size(dim-1) );
       for( const auto& vertex : vertices( igridView ) )
       {
@@ -120,13 +119,20 @@ int main(int argc, char *argv[])
 
       grid.ensureInterfaceMovement( shifts );
 
-      shifts.resize( igridView.size(dim-1) );
-      for( const auto& vertex : vertices( igridView ) )
+      while ( grid.preAdapt() )
       {
-        // obtain the constant shift
-        const std::size_t idx = igrid.leafIndexSet().index( vertex );
-        shifts[ idx ] = movement(vertex);
-        shifts[ idx ] *= dt;
+        grid.adapt();
+        grid.postAdapt();
+
+        shifts.resize( igridView.size(dim-1) );
+        for( const auto& vertex : vertices( igridView ) )
+        {
+          // obtain the constant shift
+          const std::size_t idx = igrid.leafIndexSet().index( vertex );
+          shifts[ idx ] = movement(vertex);
+          shifts[ idx ] *= dt;
+        }
+        grid.ensureInterfaceMovement( shifts );
       }
 
       grid.moveInterface( shifts );

@@ -85,15 +85,21 @@ int main(int argc, char *argv[])
         shifts[ idx ] = movement( vertex );
       }
 
-      // move vertices and replace them with new ones
       grid.ensureInterfaceMovement( shifts );
 
-      shifts.resize( igridView.size(dim-1) );
-      for( const auto& vertex : vertices( igridView ) )
+      while ( grid.preAdapt() )
       {
-        // obtain the constant shift
-        const std::size_t idx = igrid.leafIndexSet().index( vertex );
-        shifts[ idx ] = movement( vertex );
+        grid.adapt();
+        grid.postAdapt();
+
+        shifts.resize( igridView.size(dim-1) );
+        for( const auto& vertex : vertices( igridView ) )
+        {
+          // obtain the constant shift
+          const std::size_t idx = igrid.leafIndexSet().index( vertex );
+          shifts[ idx ] = movement( vertex );
+        }
+        grid.ensureInterfaceMovement( shifts );
       }
 
       grid.moveInterface( shifts );
