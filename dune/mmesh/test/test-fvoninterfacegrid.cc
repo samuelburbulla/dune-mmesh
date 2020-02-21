@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     }
 
     // define the movement
-    auto movement = [moveVertices, &igrid]( const auto& vertex )
+    auto movement = [&moveVertices, &igrid]( const auto& vertex )
     {
       static const double speedx = 2.5;
       static const double speedy = 0.0;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     vtkWriterInterface.write( 0.0 );
 
     const double dtInitial = 0.01;
-    const double tEnd = 0.1;
+    const double tEnd = 0.2;
 
     auto b = []( auto x ){ return x[0] < 1e-8; };
     FieldVector<double, 2> v ( {1.0, 0.0} );
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
       // store interface data
       std::unordered_map<Dune::Impl::MultiId, double> data;
       for (const auto& e : elements( igridView ))
-        data.insert( std::make_pair( idSet.id(e), c[ indexSet.index(e) ] * e.geometry().volume() ) );
+        data.insert( std::make_pair( idSet.id(e), c[ indexSet.index(e) ] ) );
 
       std::vector<GlobalCoordinate> shifts( igridView.size(dim-1) );
       for( const auto& vertex : vertices( igridView ) )
@@ -119,9 +119,28 @@ int main(int argc, char *argv[])
 
       grid.ensureInterfaceMovement( shifts );
 
+      if ( t > 0.105 )
+        moveVertices.clear();
+
       while ( grid.preAdapt() )
       {
         grid.adapt();
+
+        // restore interface data
+        c.resize( indexSet.size(0) );
+        for (const auto& e : elements( igridView ))
+        {
+          auto it = data.find( idSet.id(e) );
+          if ( it != data.end() )
+            c[ indexSet.index(e) ] = it->second;
+          else
+          {
+            assert( e.impl().hasConnectedComponent() );
+            auto father = e.impl().connectedComponent();
+            c[ indexSet.index(e) ] = data[ idSet.id(father) ];
+          }
+        }
+
         grid.postAdapt();
 
         shifts.resize( igridView.size(dim-1) );
@@ -136,24 +155,6 @@ int main(int argc, char *argv[])
       }
 
       grid.moveInterface( shifts );
-
-      c.resize( indexSet.size(0) );
-
-      grid.postAdapt();
-
-      // restore interface data
-      for (const auto& e : elements( igridView ))
-      {
-        auto it = data.find( idSet.id(e) );
-        if ( it != data.end() )
-          c[ indexSet.index(e) ] = it->second / e.geometry().volume();
-        else
-        {
-          assert( e.impl().hasConnectedComponent() );
-          auto father = e.impl().connectedComponent();
-          c[ indexSet.index(e) ] = data[ idSet.id(father) ] / ( 2.0 * e.geometry().volume() ); // a father has always to equally sized children
-        }
-      }
 
       // ==================
       //      FV step

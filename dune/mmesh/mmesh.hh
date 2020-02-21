@@ -780,7 +780,7 @@ namespace Dune
       // check if grid is still valid
       for ( const auto& element : elements( this->leafGridView() ) )
         if ( signedVolume_( element ) <= 0.0 )
-          DUNE_THROW( GridError, "Interface has been moved too far, cells with negative volume occured!" );
+          DUNE_THROW( GridError, "A cell has a negative volume! Maybe the interface has been moved too far?" );
 
       // temporarily move vertices
       moveInterface( shifts );
@@ -789,26 +789,100 @@ namespace Dune
         if ( signedVolume_( element ) <= 0.0 )
         {
           // disable removing of vertices in 3d
-          if ( dim == 3 )
-            DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
-
-          bool some = false;
-          for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+          if constexpr ( dim == 3 )
           {
-            const auto& v = element.template subEntity<dimension>(j);
-
-            // if vertex is part of interface, we have a problem
-            if ( !v.impl().isInterface() )
+            DUNE_THROW( GridError, "Interface could not be moved, because the removal of vertices is not supported in 3D!" );
+          }
+          else
+          {
+            bool allInterface = true;
+            for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
             {
-              bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
-              if ( inserted )
-                remove_.push_back( v.impl().hostEntity() );
-              some = true;
+              const auto& v = element.template subEntity<dimension>(j);
+
+              // if vertex is part of interface, we have a problem
+              if ( !v.impl().isInterface() )
+              {
+                bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
+                if ( inserted )
+                  remove_.push_back( v.impl().hostEntity() );
+                allInterface = false;
+              }
+            }
+
+            // if all vertices are part of the interface, we can try to compute an intersection
+            if ( allInterface )
+            {
+              Edge interfaceEdge;
+              for( std::size_t j = 0; j < element.subEntities(1); ++j )
+              {
+                const auto& edge = element.template subEntity<1>(j);
+                if( isInterface( edge ) )
+                {
+                  if (interfaceEdge != Edge()) // with more than one interface edge we don't know what to do
+                    DUNE_THROW( GridError, "Interface could not be moved because a constrained cell with more than one interface edge would have negative volume!" );
+
+                  interfaceEdge = edge;
+                }
+              }
+
+              if (interfaceEdge == Edge()) // with no interface edge we don't know what to do
+                DUNE_THROW( GridError, "Interface could not be moved because a constrained cell without any interface edge would have negative volume!" );
+
+              Vertex thirdVertex;
+              for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+              {
+                const auto& v = element.template subEntity<dimension>(j);
+                if ( v != interfaceEdge.impl().template subEntity<dimension>(0)
+                  && v != interfaceEdge.impl().template subEntity<dimension>(1) )
+                  thirdVertex = v;
+              }
+
+              Vertex adjVertex;
+              InterfaceEntity crossingEdge;
+
+              const auto& iThirdVertex = interfaceGrid().entity( thirdVertex.impl().hostEntity() );
+              for ( const auto& e : incidentInterfaceElements( iThirdVertex ) )
+              {
+                if ( crossingEdge != InterfaceEntity() )
+                  DUNE_THROW( GridError, "Interface could not be moved because two interfaces cross!" );
+
+                crossingEdge = e;
+
+                if ( e.impl().template subEntity<1>(0) == iThirdVertex )
+                  adjVertex = entity( e.impl().template subEntity<1>(1).impl().hostEntity() );
+                else
+                  adjVertex = entity( e.impl().template subEntity<1>(0).impl().hostEntity() );
+              }
+
+              // compute intersection
+              const auto iegeo = interfaceEdge.geometry();
+              const auto& c0 = iegeo.corner(0);
+              const auto& c1 = iegeo.corner(1);
+              const auto cegeo = crossingEdge.geometry();
+              GlobalCoordinate x = Dune::PolygonCutting<double, GlobalCoordinate>::lineIntersectionPoint( c0, c1, cegeo.corner(0), cegeo.corner(1) );
+
+              // check if intersection point is in interfaceEdge
+              if ( (c0 - x)*(c1 - x) > 0. )
+                continue;
+
+              RefinementInsertionPoint ip;
+              ip.edge = interfaceEdge;
+              ip.edgeId = globalIdSet().id( interfaceEdge );
+              ip.point = makePoint( x );
+              ip.v0 = thirdVertex.impl().hostEntity();
+              ip.insertionLevel = thirdVertex.impl().insertionLevel() + 1;
+              ip.isInterface = true;
+              ip.connectedcomponent = InterfaceGridConnectedComponent( crossingEdge );
+
+              insert_.push_back( ip );
+
+              // move third vertex back to old position
+              const auto& idx = interfaceGrid().leafIndexSet().index(iThirdVertex);
+              thirdVertex.impl().hostEntity()->point() = makePoint( thirdVertex.geometry().center() - shifts[idx] );
+              shifts[idx] = GlobalCoordinate( 0.0 );
             }
           }
-
-          if ( !some )
-            DUNE_THROW( GridError, "A cell with negative volume has only interface vertices!" );
         }
 
       // move vertices back
@@ -885,6 +959,8 @@ namespace Dune
       std::vector<VertexHandle> newVertices;
       for ( const auto& ip : insert_ )
       {
+        VertexHandle vh;
+        bool connect = false;
         if ( ip.edgeId != IdType() )
         {
           auto eh = ip.edge.impl().hostEntity();
@@ -899,53 +975,57 @@ namespace Dune
             // getEdge_( ip, eh ); // TODO this does not work correct yet
           }
 
-          VertexHandle vh;
+          if ( ip.v0 != ip.edge.impl().template subEntity<dim>(0).impl().hostEntity()
+            && ip.v0 != ip.edge.impl().template subEntity<dim>(1).impl().hostEntity() )
+            connect = true;
+
           if ( ip.isInterface == true )
             vh = insertInInterface_( ip );
           else
             vh = insertInEdge_( ip.point, eh );
 
           vh->info().insertionLevel = ip.insertionLevel;
-
-          // store vertex handles for later use
-          newVertices.push_back( vh );
         }
         else
         {
-          VertexHandle vh = insertInCell_( ip.point );
+          vh = insertInCell_( ip.point );
 
           // check if edge is really part of the triangulation
           if ( !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
             DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
 
-          std::size_t id = globalIdSet_->setNextId( vh );
+          globalIdSet_->setNextId( vh );
           vh->info().insertionLevel = ip.insertionLevel;
 
           if ( ip.isInterface )
-          {
-            vh->info().isInterface = true;
-            // connect vertex and ip.v0 with interface
-            std::vector<std::size_t> ids;
-            ids.push_back( id );
-            ids.push_back( globalIdSet().id( entity( ip.v0 ) ).vt()[0] );
-            std::sort(ids.begin(), ids.end());
-            interfaceSegments_.insert( ids );
-
-            // pass this refinement information to the interface grid
-            interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
-
-            // set boundary segment to the same as ip.v0 if possible, default to 0
-            auto v0id = interfaceGrid_->globalIdSet().id( interfaceGrid_->entity( ip.v0 ) ).vt()[0];
-            auto it = interfaceGrid_->boundarySegments().find( { v0id } );
-            if ( it != interfaceGrid_->boundarySegments().end() )
-              interfaceGrid_->addBoundarySegment( { id }, it->second );
-            else
-              interfaceGrid_->addBoundarySegment( { id }, 0 );
-          }
-
-          // store vertex handles for later use
-          newVertices.push_back( vh );
+            connect = true;
         }
+
+        // connect vertex and ip.v0 with interface
+        if ( connect )
+        {
+          std::size_t id = vh->info().id;
+          vh->info().isInterface = true;
+          std::vector<std::size_t> ids;
+          ids.push_back( id );
+          ids.push_back( globalIdSet().id( entity( ip.v0 ) ).vt()[0] );
+          std::sort(ids.begin(), ids.end());
+          interfaceSegments_.insert( ids );
+
+          // pass this refinement information to the interface grid
+          interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
+
+          // set boundary segment to the same as ip.v0 if possible, default to 0
+          auto v0id = interfaceGrid_->globalIdSet().id( interfaceGrid_->entity( ip.v0 ) ).vt()[0];
+          auto it = interfaceGrid_->boundarySegments().find( { v0id } );
+          if ( it != interfaceGrid_->boundarySegments().end() )
+            interfaceGrid_->addBoundarySegment( { id }, it->second );
+          else
+            interfaceGrid_->addBoundarySegment( { id }, 0 );
+        }
+
+        // store vertex handles for later use
+        newVertices.push_back( vh );
       }
 
       // actually remove the points
