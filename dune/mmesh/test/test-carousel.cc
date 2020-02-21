@@ -33,8 +33,11 @@ int main(int argc, char *argv[])
 
     const auto& gridView = grid.leafGridView();
 
+    Distance distance( grid );
+
     // Write grid
     VTKWriter<typename Grid::LeafGridView> vtkWriter( gridView );
+    vtkWriter.addVertexData( distance, "distance" );
     vtkWriter.write("test-carousel-" + std::to_string(dim) + "d-0");
 
     // Obtain interfacegrid
@@ -54,7 +57,7 @@ int main(int argc, char *argv[])
     // define the movement
     auto movement = []( GlobalCoordinate x )
     {
-      double speed = 1e-3;
+      double speed = 5e-3;
       GlobalCoordinate m = x;
       m -= GlobalCoordinate( 0.5 );
       m *= speed * M_PI;
@@ -68,58 +71,102 @@ int main(int argc, char *argv[])
       return s;
     };
 
-    for ( int t = 1; t <= 500; t++ )
+    for ( int t = 1; t <= 100; t++ )
     {
       // skip the loop in 3d until the remeshing is implemented in 3d
       if ( dim == 3 && t == 9 )
         return 0;
 
       std::cout << "t = " << t << std::endl;
-
       std::vector<GlobalCoordinate> shifts ( igridView.size(dim-1) );
       for( const auto& vertex : vertices( igridView ) )
         shifts[iindexSet.index(vertex)] = movement(vertex.geometry().center());
 
-      grid.preAdapt();
-
-      // 1. ensure movement
-      grid.ensureInterfaceMovement( shifts );
-
       // 2a. mark elements
       grid.markElements();
 
-      // 3a. adapt
-      grid.adapt();
+      // mark by distance
+      const double h = 0.01;
+      const double d = 10.0;
 
-      // 4. transfer data ...
-      for (const auto& element : elements(gridView))
-        if ( element.isNew() )
+      auto longestEdgeLength = []( const auto& element )
+      {
+        double h = 0.0;
+        for ( std::size_t i = 0; i < dim+1; ++i )
         {
-          double sum = 0.0;
-          const auto& component = element.impl().connectedComponent();
-          for( const auto& e : component.children() )
-            sum += e.intersectionVolume( element );
-
-          if( std::abs( sum - element.geometry().volume() ) > 1e-8 )
-          {
-            std::cout << "Cell at: " << element.geometry().center() << std::endl;
-            std::cout << "Sum of intersection volumes " << sum << " should be " << element.geometry().volume() << std::endl;
-            std::cout << "Component size: " << component.size() << std::endl;
-            std::cout << "Corners at: " << std::endl;
-            for( int i = 0; i < dim+1; ++i )
-              std::cout << element.geometry().corner(i) << std::endl;
-            assert(false);
-          }
+          const auto& edge = element.template subEntity<dim-1>(i);
+          h = std::max( h, edge.geometry().volume() );
         }
+        return h;
+      };
 
-      grid.postAdapt();
+      auto shortestEdgeLength = []( const auto& element )
+      {
+        double h = 1e100;
+        for ( std::size_t i = 0; i < dim+1; ++i )
+        {
+          const auto& edge = element.template subEntity<dim-1>(i);
+          h = std::min( h, edge.geometry().volume() );
+        }
+        return h;
+      };
 
-      shifts.resize( igridView.size(dim-1) );
-      for( const auto& vertex : vertices( igridView ) )
-        shifts[iindexSet.index(vertex)] = movement(vertex.geometry().center());
+      for (const auto& element : elements(gridView))
+      {
+        const double dist = distance( element );
+        const double maxDist = 0.25;
+
+        const double aimH = h + dist / maxDist * (d - 1.) * h;
+
+        if ( dist > maxDist )
+          continue;
+
+        if ( shortestEdgeLength( element ) > 2.0 * aimH )
+          grid.mark( 1, element );
+        else if ( longestEdgeLength( element ) < 0.5 * aimH )
+          grid.mark( -1, element );
+      }
+
+      while( grid.preAdapt() )
+      {
+        // 3a. adapt
+        grid.adapt();
+
+        // 4. transfer data ...
+        for (const auto& element : elements(gridView))
+          if ( element.isNew() )
+          {
+            double sum = 0.0;
+            const auto& component = element.impl().connectedComponent();
+            for( const auto& e : component.children() )
+              sum += e.intersectionVolume( element );
+
+            if( std::abs( sum - element.geometry().volume() ) > 1e-8 )
+            {
+              std::cout << "Cell at: " << element.geometry().center() << std::endl;
+              std::cout << "Sum of intersection volumes " << sum << " should be " << element.geometry().volume() << std::endl;
+              std::cout << "Component size: " << component.size() << std::endl;
+              std::cout << "Corners at: " << std::endl;
+              for( int i = 0; i < dim+1; ++i )
+                std::cout << element.geometry().corner(i) << std::endl;
+              assert(false);
+            }
+          }
+
+        grid.postAdapt();
+
+        shifts.resize( igridView.size(dim-1) );
+        for( const auto& vertex : vertices( igridView ) )
+          shifts[iindexSet.index(vertex)] = movement(vertex.geometry().center());
+
+        grid.ensureInterfaceMovement( shifts );
+      }
 
       // move vertices
       grid.moveInterface( shifts );
+
+      // update distance
+      distance.update();
 
       // Write grid
       vtkWriter.write("test-carousel-" + std::to_string(dim) + "d-" + std::to_string(t));

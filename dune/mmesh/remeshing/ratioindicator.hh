@@ -50,12 +50,14 @@ public:
      */
     void init(const Grid& grid)
     {
-      for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
-      {
-        const ctype h = edge.geometry().volume();
-        maxH_ = std::max( maxH_, K_ * h );
-        minH_ = std::min( minH_, k_ * h );
-      }
+      maxH_ = 1e100;
+      minH_ = 0.0;
+      // for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
+      // {
+      //   const ctype h = edge.geometry().volume();
+      //   maxH_ = std::max( maxH_, K_ * h );
+      //   minH_ = std::min( minH_, k_ * h );
+      // }
     };
 
     /*!

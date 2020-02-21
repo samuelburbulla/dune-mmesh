@@ -1,4 +1,5 @@
 set(HEADERS
+  distance.hh
   longestedgerefinement.hh
   ratioindicator.hh
 )

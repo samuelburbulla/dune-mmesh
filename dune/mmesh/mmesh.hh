@@ -42,6 +42,7 @@
 #include "grid/hierarchiciterator.hh"
 #include "grid/pointfieldvector.hh"
 #include "grid/rangegenerators.hh"
+#include "remeshing/distance.hh"
 #include "remeshing/longestedgerefinement.hh"
 #include "remeshing/ratioindicator.hh"
 #include "interface/traits.hh"
@@ -766,7 +767,8 @@ namespace Dune
         }
       }
 
-      if (buildComponents && ((insert_.size() > 0) || (remove_.size() > 0)))
+      static const bool verbose = true;
+      if (verbose && buildComponents && ((insert_.size() > 0) || (remove_.size() > 0)))
         std::cout << "- insert " << insert_.size() << "\t remove " << remove_.size() << std::endl;
 
       return adapt_(buildComponents);

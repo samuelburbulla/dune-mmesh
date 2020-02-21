@@ -1,4 +1,4 @@
-lc = 0.05;
+lc = 0.1;
 lcf = 0.05;
 
 // domain corners
