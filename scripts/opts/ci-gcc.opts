@@ -2,7 +2,7 @@ CMAKE_FLAGS="
   -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
   -DCMAKE_C_COMPILER=/usr/bin/gcc \
   -DCXX_MAX_STANDARD=17 \
-  -DCMAKE_CXX_FLAGS='-Wall -Winit-self -O0 -std=c++17 -lCGAL' \
+  -DCMAKE_CXX_FLAGS='-Wall -Winit-self -O0 -std=c++1z -lCGAL' \
   -DDUNE_GRID_GRIDTYPE_SELECTOR=ON \
   -DDUNE_GRID_EXPERIMENTAL_GRID_EXTENSIONS=TRUE \
   -DCMAKE_BUILD_TYPE=Release \
