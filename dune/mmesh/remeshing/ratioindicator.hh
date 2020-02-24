@@ -12,6 +12,7 @@
 #include <memory>
 #include <dune/common/exceptions.hh>
 #include <dune/grid/common/partitionset.hh>
+#include <dune/mmesh/remeshing/distance.hh>
 
 namespace Dune
 {
@@ -34,31 +35,53 @@ public:
      *
      * \param h        The objective edge length (aims at edge length in [h/4, 2*h])
      */
-    RatioIndicator( ctype h = 0.0 )
+    RatioIndicator( ctype h = 0.0, ctype distProportion = 0.5, ctype factor = 1.0 )
      : edgeRatio_( 4. ),                  // the edge ratio. Decreases minH!
        K_( 2. ),                          // the factor for the maximal edge length. Defaults to 2, because we use edge bisection.
        maxH_( K_ * h ),
        k_( K_ / ( 2. * edgeRatio_ ) ),    // ensure that a triangle with two edges longer than maxH splits up to a triangle where all edges are longer than minH
        minH_( k_ * h ),
-       radiusRatio_( 30. )               // additional radius ratio to avoid very ugly cells
+       radiusRatio_( 30. ),               // additional radius ratio to avoid very ugly cells
+       distProportion_( 0.5 ),            // cells with distance to interface of value greater than distProportion_ * max(dist) are refined to ...
+       factor_( 1.0 )                     // ... edge length in [factor * minH_, factor * maxH_]
     {}
 
     /*!
-     * \brief Calculates minH and maxH for the current interface edge length.
+     * \brief Calculates minH_ and maxH_ for the current interface edge length and sets factor_ to maxh / minh.
      *
      * \param grid     The grid implementation
      */
     void init(const Grid& grid)
     {
-      maxH_ = 1e100;
-      minH_ = 0.0;
-      // for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
-      // {
-      //   const ctype h = edge.geometry().volume();
-      //   maxH_ = std::max( maxH_, K_ * h );
-      //   minH_ = std::min( minH_, k_ * h );
-      // }
+      maxH_ = 0.0;
+      minH_ = 1e100;
+
+      for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
+      {
+        const ctype h = edge.geometry().volume();
+        maxH_ = std::max( maxH_, K_ * h );
+        minH_ = std::min( minH_, k_ * h );
+      }
+
+      ctype maxh = 0.0;
+      ctype minh = 1e100;
+      for ( const auto& edge : edges( grid.leafGridView() ) )
+      {
+        const ctype h = edge.geometry().volume();
+        maxh = std::max( maxh, h );
+        minh = std::min( minh, h );
+      }
+
+      factor_ = maxh / minh;
+      distance_ = Distance<Grid>(grid);
     };
+
+    //! Update the distances of all vertices
+    void update()
+    {
+      distance_.update();
+      maxDist_ = distProportion_ * distance_.maximum();
+    }
 
     /*!
      * \brief function call operator to return mark
@@ -79,19 +102,23 @@ public:
 
       ctype minE =  1e100;
       ctype maxE = -1e100;
-
       ctype sumE = 0.0;
 
       // edge length
+      ctype dist = std::min( maxDist_, distance_( element ) );
+      const ctype l = dist / maxDist_;
+      const ctype minH = (1. - l) * minH_ + l * factor_ * minH_;
+      const ctype maxH = (1. - l) * maxH_ + l * factor_ * maxH_;
+
       for( int i = 0; i < element.subEntities(edgeCodim); ++i )
       {
         const auto& edge = element.template subEntity<edgeCodim>(i);
         const ctype len = edge.geometry().volume();
 
-        if (len < minH_)
+        if (len < minH)
           coarse++;
 
-        if (len > maxH_)
+        if (len > maxH)
           refine++;
 
         minE = std::min( minE, len );
@@ -147,6 +174,16 @@ public:
       return radiusRatio_;
     }
 
+    ctype& distProportion ()
+    {
+      return distProportion_;
+    }
+
+    ctype& factor ()
+    {
+      return factor_;
+    }
+
   private:
     const ctype edgeRatio_;
     const ctype K_;
@@ -154,6 +191,10 @@ public:
     const ctype k_;
     ctype minH_;
     const ctype radiusRatio_;
+    ctype distProportion_;
+    ctype factor_;
+    ctype maxDist_;
+    Distance<Grid> distance_;
 };
 
 } // end namespace Dumux

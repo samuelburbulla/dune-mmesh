@@ -24,38 +24,51 @@ namespace Dune
 template<class Grid>
 class Distance
 {
+  using ThisType = Distance<Grid>;
   static constexpr int dim = Grid::dimensionworld;
   using ctype = typename Grid::ctype;
   using GlobalCoordinate = FieldVector<ctype, dim>;
   using Vertex = typename Grid::Vertex;
   using Element = typename Grid::template Codim<0>::Entity;
+  using InterfaceElement = typename Grid::InterfaceGrid::template Codim<0>::Entity;
 
 public:
-    /*!
-     * \brief Computes the distance to the interface for each vertex
-     *
-     */
+    //! Default constructor
+    Distance() {}
+
+    //! Constructor with grid reference
     Distance(const Grid& grid)
-     : grid_( grid ), indexSet_( grid_.leafIndexSet() )
+     : grid_( &grid )
     {
       update();
+    }
+
+    //! Assignment
+    ThisType& operator=(const ThisType& original)
+    {
+      if (this != &original)
+        grid_ = original.grid_;
+      return *this;
     }
 
     //! Update the distances of all vertices
     void update()
     {
       // Timer timer;
-      distances_.resize( indexSet_.size(dim) );
+      distances_.resize( indexSet().size(dim) );
       std::fill( distances_.begin(), distances_.end(), 1e100 );
 
-      for ( const auto& vertex : vertices( grid_.leafGridView() ) )
+      for ( const auto& vertex : vertices( grid_->leafGridView() ) )
       {
-        const auto& idx = indexSet_.index( vertex );
+        const auto& idx = indexSet().index( vertex );
 
         if ( vertex.impl().isInterface() )
+        {
           distances_[ idx ] = 0.0;
+          continue;
+        }
 
-        for ( const auto& ivertex : vertices( grid_.interfaceGrid().leafGridView() ) )
+        for ( const auto& ivertex : vertices( grid_->interfaceGrid().leafGridView() ) )
         {
           ctype dist = (ivertex.geometry().center() - vertex.geometry().center()).two_norm();
           distances_[ idx ] = std::min( distances_[ idx ], dist );
@@ -71,7 +84,7 @@ public:
      */
     ctype operator() (const Vertex& vertex) const
     {
-      return distances_[ indexSet_.index( vertex ) ];
+      return distances_[ indexSet().index( vertex ) ];
     }
 
     /*!
@@ -85,10 +98,16 @@ public:
       for ( std::size_t i = 0; i < dim+1; ++i )
       {
         const auto& vertex = element.template subEntity<dim>(i);
-        dist += distances_[ indexSet_.index( vertex ) ];
+        dist += distances_[ indexSet().index( vertex ) ];
       }
       dist /= dim+1;
       return dist;
+    }
+
+    //! Interface element
+    ctype operator() (const InterfaceElement& element) const
+    {
+      return 0.0;
     }
 
     /*!
@@ -102,6 +121,15 @@ public:
       return distances_[ index ];
     }
 
+    //! return maximum distance
+    ctype maximum() const
+    {
+      double maximum = 0.0;
+      for ( const auto& d : distances_ )
+        maximum = std::max( d, maximum );
+      return maximum;
+    }
+
     //! return size of distances vector
     std::size_t size() const
     {
@@ -109,9 +137,13 @@ public:
     }
 
   private:
+    const typename Grid::LeafIndexSet& indexSet() const
+    {
+      return grid_->leafIndexSet();
+    }
+
     std::vector<ctype> distances_;
-    const Grid& grid_;
-    const typename Grid::LeafIndexSet& indexSet_;
+    const Grid* grid_;
 };
 
 } // end namespace Dumux
