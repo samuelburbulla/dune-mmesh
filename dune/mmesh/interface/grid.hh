@@ -588,7 +588,7 @@ namespace Dune
 
     std::size_t numBoundarySegments_;
 
-    mutable std::unordered_map< Impl::MultiId, std::size_t > mark_;
+    mutable std::unordered_map< Impl::MultiId, int > mark_;
 
   }; // end Class MMeshInterfaceGrid
 
