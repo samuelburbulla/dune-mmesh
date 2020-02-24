@@ -85,48 +85,6 @@ int main(int argc, char *argv[])
       // 2a. mark elements
       grid.markElements();
 
-      // mark by distance
-      const double h = 0.01;
-      const double d = 10.0;
-
-      auto longestEdgeLength = []( const auto& element )
-      {
-        double h = 0.0;
-        for ( std::size_t i = 0; i < dim+1; ++i )
-        {
-          const auto& edge = element.template subEntity<dim-1>(i);
-          h = std::max( h, edge.geometry().volume() );
-        }
-        return h;
-      };
-
-      auto shortestEdgeLength = []( const auto& element )
-      {
-        double h = 1e100;
-        for ( std::size_t i = 0; i < dim+1; ++i )
-        {
-          const auto& edge = element.template subEntity<dim-1>(i);
-          h = std::min( h, edge.geometry().volume() );
-        }
-        return h;
-      };
-
-      for (const auto& element : elements(gridView))
-      {
-        const double dist = distance( element );
-        const double maxDist = 0.25;
-
-        const double aimH = h + dist / maxDist * (d - 1.) * h;
-
-        if ( dist > maxDist )
-          continue;
-
-        if ( shortestEdgeLength( element ) > 2.0 * aimH )
-          grid.mark( 1, element );
-        else if ( longestEdgeLength( element ) < 0.5 * aimH )
-          grid.mark( -1, element );
-      }
-
       while( grid.preAdapt() )
       {
         // 3a. adapt

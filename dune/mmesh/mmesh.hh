@@ -664,8 +664,10 @@ namespace Dune
 
     /** \brief Mark elements for adaption using the default remeshing indicator
      */
-    void markElements() const
+    void markElements()
     {
+      indicator_.update();
+
       for (const auto& element : elements( this->leafGridView() ))
         mark( indicator_(element), element );
 
