@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
     const auto& gridView = grid.leafGridView();
 
-    Distance distance( grid );
+    Distance<Grid> distance( grid );
 
     // Write grid
     VTKWriter<typename Grid::LeafGridView> vtkWriter( gridView );
