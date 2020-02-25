@@ -90,6 +90,12 @@ namespace Dune
       return children_;
     }
 
+    //! Return the number of children
+    const std::size_t size() const
+    {
+      return children_.size();
+    }
+
   private:
     //! list of caching entities
     std::vector< CachingEntity > children_;

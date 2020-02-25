@@ -901,7 +901,10 @@ namespace Dune
               ip.v0 = thirdVertex.impl().hostEntity();
               ip.insertionLevel = thirdVertex.impl().insertionLevel() + 1;
               ip.isInterface = true;
-              ip.connectedcomponent = InterfaceGridConnectedComponent( crossingEdge );
+              ip.connectedcomponent = InterfaceGridConnectedComponent(
+                (interfaceEdge.geometry().volume() > crossingEdge.geometry().volume()) // take the edge with the larger volume
+                ? interfaceGrid().entity( interfaceEdge.impl().hostEntity() ) : crossingEdge
+              );
 
               if (verbose_)
                 std::cout << "Insert interface intersection point: " << ip.point << std::endl;
