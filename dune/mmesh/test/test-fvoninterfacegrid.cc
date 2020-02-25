@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
           else
           {
             assert( e.impl().hasConnectedComponent() );
-            auto father = e.impl().connectedComponent();
+            auto father = *e.impl().connectedComponent().children().begin();
             c[ indexSet.index(e) ] = data[ idSet.id(father) ];
           }
         }

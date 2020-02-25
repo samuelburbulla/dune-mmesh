@@ -1,4 +1,5 @@
 set(HEADERS
+  cachingentity.hh
   connectedcomponent.hh
   entity.hh
   entityseed.hh

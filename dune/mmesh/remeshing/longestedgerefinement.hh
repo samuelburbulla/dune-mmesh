@@ -69,8 +69,16 @@ public:
     static Vertex coarsening (const Element& element)
     {
       // for interface any vertex is fine
-      if ( Grid::dimension != Grid::dimensionworld )
-        return element.template subEntity<vertexCodim>(0);
+      if constexpr ( Grid::dimension != Grid::dimensionworld )
+      {
+        for( std::size_t i = 0; i < element.subEntities(vertexCodim); ++i )
+        {
+          const Vertex& v = element.template subEntity<vertexCodim>(i);
+          if ( isRemoveable( v ) )
+            return v;
+        }
+        return Vertex();
+      }
 
       // return some non-interface vertex at the shortest edge
       ctype shortest = 1e100;
@@ -104,7 +112,6 @@ public:
       return vertex;
     }
 
-  private:
     //! return if vertex is at the boundary
     // TODO improve this by marking vertices
     static inline bool atBoundary( const Vertex& v )
@@ -114,6 +121,21 @@ public:
         if ( hostgrid.is_infinite( vertex.impl().hostEntity() ) )
           return true;
       return false;
+    }
+
+  private:
+    //! return if interface vertex is neither a tip nor a junction
+    template< class Vertex >
+    static inline bool isRemoveable ( const Vertex& vertex )
+    {
+      int count = 0;
+      for ( const auto& edge : incidentInterfaceElements( vertex ) )
+      {
+        std::ignore = edge;
+        count++;
+      }
+
+      return ( count == 2 );
     }
 };
 

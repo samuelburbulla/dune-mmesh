@@ -256,6 +256,12 @@ namespace Dune
     //! The type of the employed remeshing indicator
     using RemeshingIndicator = RatioIndicator<GridImp>;
 
+    //! The type of the employed refinement strategy
+    using RefinementStrategy = LongestEdgeRefinement<GridImp>;
+
+    //! The type of the employed refinement strategy for the interface grid
+    using InterfaceRefinementStrategy = LongestEdgeRefinement<InterfaceGrid>;
+
     /** \brief Constructor that takes a CGAL triangulation
      *
      * \param hostgrid      The CGAL triangulation wrapped by the MMesh
@@ -693,8 +699,6 @@ namespace Dune
     //! Triggers the grid adaptation process
     bool adapt(bool buildComponents = true)
     {
-      using RefinementStrategy = LongestEdgeRefinement<GridImp>;
-
       // Obtain the adaption points
       for ( const auto& element : elements( this->leafGridView() ) )
       {
@@ -715,7 +719,11 @@ namespace Dune
 
           if ( !isInterface( ip.edge ) )
             if ( inserted_.insert( ip.edgeId ).second )
+            {
               insert_.push_back( ip );
+              if (verbose_)
+                std::cout << "Insert vertex because of marked cell: " << ip.point << std::endl;
+            }
         }
 
         // coarsen
@@ -725,13 +733,15 @@ namespace Dune
 
           if ( vertex != decltype(vertex)() )
             if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+            {
               remove_.push_back( vertex.impl().hostEntity() );
+              if (verbose_)
+                std::cout << "Remove vertex because of marked cell: " << vertex.geometry().center() << std::endl;
+            }
         }
       }
 
       // Obtain the adaption points for the interface
-      using InterfaceRefinementStrategy = LongestEdgeRefinement<InterfaceGrid>;
-
       for ( const auto& element : elements( this->interfaceGrid().leafGridView() ) )
       {
         int mark = this->interfaceGrid().getMark( element );
@@ -752,7 +762,11 @@ namespace Dune
           ip.connectedcomponent = InterfaceGridConnectedComponent( element );
 
           if ( inserted_.insert( ip.edgeId ).second )
+          {
             insert_.push_back( ip );
+            if (verbose_)
+              std::cout << "Insert interface vertex because of marked cell: " << ip.point << std::endl;
+          }
         }
 
         // coarsen
@@ -764,13 +778,16 @@ namespace Dune
             const Vertex& vertex = entity( ivertex.impl().hostEntity() );
 
             if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+            {
               remove_.push_back( vertex.impl().hostEntity() );
+              if (verbose_)
+                std::cout << "Remove interface vertex because of marked cell: " << vertex.geometry().center() << std::endl;
+            }
           }
         }
       }
 
-      static const bool verbose = true;
-      if (verbose && buildComponents && ((insert_.size() > 0) || (remove_.size() > 0)))
+      if (verbose_)
         std::cout << "- insert " << insert_.size() << "\t remove " << remove_.size() << std::endl;
 
       return adapt_(buildComponents);
@@ -804,12 +821,19 @@ namespace Dune
             {
               const auto& v = element.template subEntity<dimension>(j);
 
-              // if vertex is part of interface, we have a problem
+              // if vertex is part of interface, we have to do more
               if ( !v.impl().isInterface() )
               {
+                if ( RefinementStrategy::atBoundary( v ) )
+                  continue;
+
                 bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
                 if ( inserted )
+                {
                   remove_.push_back( v.impl().hostEntity() );
+                  if (verbose_)
+                    std::cout << "Remove vertex because of negative volume: " << v.geometry().center() << std::endl;
+                }
                 allInterface = false;
               }
             }
@@ -879,6 +903,9 @@ namespace Dune
               ip.isInterface = true;
               ip.connectedcomponent = InterfaceGridConnectedComponent( crossingEdge );
 
+              if (verbose_)
+                std::cout << "Insert interface intersection point: " << ip.point << std::endl;
+
               insert_.push_back( ip );
 
               // move third vertex back to old position
@@ -917,7 +944,7 @@ namespace Dune
 
       std::vector<std::size_t> insertComponentIds;
       std::vector<std::size_t> removeComponentIds;
-      static constexpr bool writeComponents = false; // for debugging
+      static constexpr bool writeComponents = verbose_; // for debugging
 
       if ( buildComponents )
       {
@@ -996,7 +1023,25 @@ namespace Dune
 
           // check if edge is really part of the triangulation
           if ( !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
-            DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
+          {
+            // try again with half distance
+            if constexpr (dimension == 2)
+              hostgrid_.remove( vh );
+
+            GlobalCoordinate x;
+            x = makeFieldVector( ip.point );
+            x -= makeFieldVector( ip.v0->point() );
+            x *= 0.5;
+            x += makeFieldVector( ip.v0->point() );
+            vh = insertInCell_( makePoint( x ) );
+
+            if ( !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
+            {
+              // DUNE_THROW( GridError, "Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() );
+              std::cerr << "Error: Edge added to interface is not part of the new triangulation: " << ip.v0->point() << " to " << vh->point() << std::endl;
+              continue;
+            }
+          }
 
           globalIdSet_->setNextId( vh );
           vh->info().insertionLevel = ip.insertionLevel;
@@ -1040,7 +1085,7 @@ namespace Dune
         if ( vh->info().isInterface )
           elements = removeFromInterface_( vh );
         else
-          hostgrid_.removeAndGiveNewElements( vh, std::back_inserter(elements) );
+          hostgrid_.removeAndGiveNewElements( vh, elements );
 
         // flag all elements inside conflict area as new and map connected component
         if ( buildComponents )
@@ -1151,6 +1196,8 @@ namespace Dune
         }
 
       insert_.push_back( ip );
+      if (verbose_)
+        std::cout << "Add vertex to interface: " << ip.point << std::endl;
     }
 
     //! Clean up refinement markers
@@ -1297,23 +1344,31 @@ namespace Dune
     std::enable_if_t< d == 2, ElementOutput> removeFromInterface_( const VertexHandle& vh )
     {
       std::size_t id = vh->info().id;
+      InterfaceGridConnectedComponent connectedComponent;
 
       // find and remove interface segments
       std::vector<VertexHandle> otherVhs;
-      auto other = hostgrid_.incident_vertices(vh);
-      for ( std::size_t i = 0; i < CGAL::circulator_size(other); ++i, ++other )
+      for ( const auto& e : incidentInterfaceElements( interfaceGrid_->entity( vh ) ) )
       {
-        if ( isInterface( entity( other ) ) )
-        {
-          std::vector<std::size_t> ids { id, other->info().id };
-          std::sort(ids.begin(), ids.end());
+        // TODO: handle the case of overlapping components
+        assert( !interfaceGrid_->hasConnectedComponent( e ) );
+        connectedComponent.add( e );
 
-          auto it = interfaceSegments_.find( ids );
-          if ( it != interfaceSegments_.end() )
-          {
-            interfaceSegments_.erase( it );
-            otherVhs.push_back( other );
-          }
+        const auto& v0 = e.template subEntity<1>(0).impl().hostEntity();
+        const auto& v1 = e.template subEntity<1>(1).impl().hostEntity();
+
+        VertexHandle other = (v0 != vh) ? v0 : v1;
+
+        std::vector<std::size_t> ids( 2 );
+        ids[ 0 ] = id;
+        ids[ 1 ] = other->info().id;
+        std::sort(ids.begin(), ids.end());
+
+        auto it = interfaceSegments_.find( ids );
+        if ( it != interfaceSegments_.end() )
+        {
+          interfaceSegments_.erase( it );
+          otherVhs.push_back( other );
         }
       }
 
@@ -1324,12 +1379,15 @@ namespace Dune
       hostgrid_.make_hole(vh, hole);
 
       ElementOutput elements;
-      hostgrid_.remeshHoleConstrained(vh, hole, std::back_inserter(elements), otherVhs);
+      hostgrid_.remeshHoleConstrained(vh, hole, elements, otherVhs);
 
       // add the new interface segment
       std::vector<std::size_t> ids {{ otherVhs[0]->info().id, otherVhs[1]->info().id }};
       std::sort(ids.begin(), ids.end());
       interfaceSegments_.insert( ids );
+
+      // pass this refinement information to the interface grid
+      interfaceGrid_->markAsRefined( /*children*/ { ids }, connectedComponent );
 
       return elements;
     }
@@ -1480,6 +1538,8 @@ namespace Dune
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
     RemeshingIndicator indicator_;
+
+    static const bool verbose_ = true;
 
   private:
     //! Flag all elements in conflict as mightVanish

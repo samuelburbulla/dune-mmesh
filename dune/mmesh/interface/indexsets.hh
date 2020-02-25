@@ -398,9 +398,9 @@ namespace Dune
     }
 
     template<int cd>
-    IdType id (const MMeshInterfaceConnectedComponent<cd,dimension,GridImp>& connectedComponent) const
+    IdType id (const MMeshInterfaceCachingEntity<cd,dimension,GridImp>& cachingEntity) const
     {
-      return connectedComponent.id();
+      return cachingEntity.id();
     }
 
     template< int d = dimensionworld >

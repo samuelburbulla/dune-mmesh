@@ -514,8 +514,16 @@ namespace Dune
       return (count == 1 );
     }
 
-    //! Return if the connected component for a given entity
+    //! Return the connected component for a given entity
     const ConnectedComponent& getConnectedComponent( const Entity& entity ) const
+    {
+      auto it = childrenConnectedComponentMap_.find( getVertexIds_( entity.impl().hostEntity() ) );
+      assert( it != childrenConnectedComponentMap_.end() );
+      return it->second;
+    }
+
+    //! Return a non-const reference to the connected component for a given entity
+    ConnectedComponent& getConnectedComponent( const Entity& entity )
     {
       auto it = childrenConnectedComponentMap_.find( getVertexIds_( entity.impl().hostEntity() ) );
       assert( it != childrenConnectedComponentMap_.end() );
