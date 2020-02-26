@@ -854,67 +854,91 @@ namespace Dune
                 }
               }
 
-              if (interfaceEdge == Edge()) // with no interface edge we don't know what to do
-                DUNE_THROW( GridError, "Interface could not be moved because a constrained cell without any interface edge would have negative volume!" );
-
-              Vertex thirdVertex;
-              for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+               // with no interface edge we can try to coarsen the interface
+              if (interfaceEdge == Edge())
               {
-                const auto& v = element.template subEntity<dimension>(j);
-                if ( v != interfaceEdge.impl().template subEntity<dimension>(0)
-                  && v != interfaceEdge.impl().template subEntity<dimension>(1) )
-                  thirdVertex = v;
+                bool allNonRemovable = true;
+                for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+                {
+                  const auto v = element.template subEntity<dimension>(j);
+                  const auto iv = interfaceGrid().entity( v.impl().hostEntity() );
+                  if ( RefinementStrategy::isRemoveable( iv ) )
+                  {
+                    allNonRemovable = false;
+                    bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
+                    if ( inserted )
+                    {
+                      remove_.push_back( v.impl().hostEntity() );
+                      if (verbose_)
+                        std::cout << "Remove interface vertex because of negative volume: " << v.geometry().center() << std::endl;
+                    }
+                  }
+                }
+                if ( allNonRemovable )
+                  DUNE_THROW( GridError, "Interface could not be moved because a constrained cell without any interface edge would have negative volume!" );
               }
-
-              Vertex adjVertex;
-              InterfaceEntity crossingEdge;
-
-              const auto& iThirdVertex = interfaceGrid().entity( thirdVertex.impl().hostEntity() );
-              for ( const auto& e : incidentInterfaceElements( iThirdVertex ) )
+              else
               {
-                if ( crossingEdge != InterfaceEntity() )
-                  DUNE_THROW( GridError, "Interface could not be moved because two interfaces cross!" );
+                // compute intersection
+                Vertex thirdVertex;
+                for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+                {
+                  const auto& v = element.template subEntity<dimension>(j);
+                  if ( v != interfaceEdge.impl().template subEntity<dimension>(0)
+                    && v != interfaceEdge.impl().template subEntity<dimension>(1) )
+                    thirdVertex = v;
+                }
 
-                crossingEdge = e;
+                Vertex adjVertex;
+                InterfaceEntity crossingEdge;
 
-                if ( e.impl().template subEntity<1>(0) == iThirdVertex )
-                  adjVertex = entity( e.impl().template subEntity<1>(1).impl().hostEntity() );
-                else
-                  adjVertex = entity( e.impl().template subEntity<1>(0).impl().hostEntity() );
+                const auto& iThirdVertex = interfaceGrid().entity( thirdVertex.impl().hostEntity() );
+                for ( const auto& e : incidentInterfaceElements( iThirdVertex ) )
+                {
+                  if ( crossingEdge != InterfaceEntity() )
+                    DUNE_THROW( GridError, "Interface could not be moved because two interfaces cross!" );
+
+                  crossingEdge = e;
+
+                  if ( e.impl().template subEntity<1>(0) == iThirdVertex )
+                    adjVertex = entity( e.impl().template subEntity<1>(1).impl().hostEntity() );
+                  else
+                    adjVertex = entity( e.impl().template subEntity<1>(0).impl().hostEntity() );
+                }
+
+                // compute intersection
+                const auto iegeo = interfaceEdge.geometry();
+                const auto& c0 = iegeo.corner(0);
+                const auto& c1 = iegeo.corner(1);
+                const auto cegeo = crossingEdge.geometry();
+                GlobalCoordinate x = Dune::PolygonCutting<double, GlobalCoordinate>::lineIntersectionPoint( c0, c1, cegeo.corner(0), cegeo.corner(1) );
+
+                // check if intersection point is in interfaceEdge
+                if ( (c0 - x)*(c1 - x) > 0. )
+                  continue;
+
+                RefinementInsertionPoint ip;
+                ip.edge = interfaceEdge;
+                ip.edgeId = globalIdSet().id( interfaceEdge );
+                ip.point = makePoint( x );
+                ip.v0 = thirdVertex.impl().hostEntity();
+                ip.insertionLevel = thirdVertex.impl().insertionLevel() + 1;
+                ip.isInterface = true;
+                ip.connectedcomponent = InterfaceGridConnectedComponent(
+                  (interfaceEdge.geometry().volume() > crossingEdge.geometry().volume()) // take the edge with the larger volume
+                  ? interfaceGrid().entity( interfaceEdge.impl().hostEntity() ) : crossingEdge
+                );
+
+                if (verbose_)
+                  std::cout << "Insert interface intersection point: " << ip.point << std::endl;
+
+                insert_.push_back( ip );
+
+                // move third vertex back to old position
+                const auto& idx = interfaceGrid().leafIndexSet().index(iThirdVertex);
+                thirdVertex.impl().hostEntity()->point() = makePoint( thirdVertex.geometry().center() - shifts[idx] );
+                shifts[idx] = GlobalCoordinate( 0.0 );
               }
-
-              // compute intersection
-              const auto iegeo = interfaceEdge.geometry();
-              const auto& c0 = iegeo.corner(0);
-              const auto& c1 = iegeo.corner(1);
-              const auto cegeo = crossingEdge.geometry();
-              GlobalCoordinate x = Dune::PolygonCutting<double, GlobalCoordinate>::lineIntersectionPoint( c0, c1, cegeo.corner(0), cegeo.corner(1) );
-
-              // check if intersection point is in interfaceEdge
-              if ( (c0 - x)*(c1 - x) > 0. )
-                continue;
-
-              RefinementInsertionPoint ip;
-              ip.edge = interfaceEdge;
-              ip.edgeId = globalIdSet().id( interfaceEdge );
-              ip.point = makePoint( x );
-              ip.v0 = thirdVertex.impl().hostEntity();
-              ip.insertionLevel = thirdVertex.impl().insertionLevel() + 1;
-              ip.isInterface = true;
-              ip.connectedcomponent = InterfaceGridConnectedComponent(
-                (interfaceEdge.geometry().volume() > crossingEdge.geometry().volume()) // take the edge with the larger volume
-                ? interfaceGrid().entity( interfaceEdge.impl().hostEntity() ) : crossingEdge
-              );
-
-              if (verbose_)
-                std::cout << "Insert interface intersection point: " << ip.point << std::endl;
-
-              insert_.push_back( ip );
-
-              // move third vertex back to old position
-              const auto& idx = interfaceGrid().leafIndexSet().index(iThirdVertex);
-              thirdVertex.impl().hostEntity()->point() = makePoint( thirdVertex.geometry().center() - shifts[idx] );
-              shifts[idx] = GlobalCoordinate( 0.0 );
             }
           }
         }
@@ -1357,8 +1381,8 @@ namespace Dune
         assert( !interfaceGrid_->hasConnectedComponent( e ) );
         connectedComponent.add( e );
 
-        const auto& v0 = e.template subEntity<1>(0).impl().hostEntity();
-        const auto& v1 = e.template subEntity<1>(1).impl().hostEntity();
+        const auto v0 = e.template subEntity<1>(0).impl().hostEntity();
+        const auto v1 = e.template subEntity<1>(1).impl().hostEntity();
 
         VertexHandle other = (v0 != vh) ? v0 : v1;
 
@@ -1542,7 +1566,7 @@ namespace Dune
     InterfaceSegments interfaceSegments_;
     RemeshingIndicator indicator_;
 
-    static const bool verbose_ = true;
+    static const bool verbose_ = false;
 
   private:
     //! Flag all elements in conflict as mightVanish

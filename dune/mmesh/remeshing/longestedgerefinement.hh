@@ -123,7 +123,6 @@ public:
       return false;
     }
 
-  private:
     //! return if interface vertex is neither a tip nor a junction
     template< class Vertex >
     static inline bool isRemoveable ( const Vertex& vertex )
