@@ -9,49 +9,47 @@
 #include <dune/mmesh/mmesh.hh>
 #include <dune/mmesh/interface/curvatureoperator.hh>
 
-static constexpr int dim = GRIDDIM;
+
+constexpr int dim = GRIDDIM;
 using Vector = Dune::FieldVector<double, dim>;
 
-#if GRIDDIM == 2
-double exactCurvature (Vector pos, double a = 0.3, double b = 0.15)
+double exactCurvature (Vector pos)
 {
-  double a4 = pow(a, 4);
-  double b4 = pow(b, 4);
-  return (a4 * b4) / pow(a4 * pow(pos[1], 2) + b4 * pow(pos[0], 2), 1.5);
+  if constexpr (dim == 2)
+  {
+    //ellipse with semiaxis a = 0.3 and b = 0.15
+    constexpr double a4 = 8.1e-3;
+    constexpr double b4 = 5.0625e-4;
+    return (a4 * b4) / pow(a4 * pos[1] * pos[1] + b4 * pos[0] * pos[0], 1.5);
+  }
+  else
+  {
+    //sphere with radius r = 0.15
+    constexpr double curvature = 1.0 / 0.15;
+    return curvature;
+  }
 }
 
-#elif GRIDDIM == 3
-double exactCurvature (Vector pos, double a = 0.35, double b = 0.15,
-  double c = 0.25)
-{
-  const double a2 = a * a;
-  const double b2 = b * b;
-  const double c2 = c * c;
-  const double x2 = pos[0] * pos[0];
-  const double y2 = pos[1] * pos[1];
-  const double z2 = pos[2] * pos[2];
-  const double R2 = x2 + y2 + z2;
-  const double H = 1.0 / sqrt(x2 / (a2 * a2) + y2 / (b2 * b2) + z2 / (c2 * c2));
-  const double H2 = H * H;
-
-  const double meanCurvature =
-    0.5 * H2 * H * (a2 + b2 + c2 - R2) / (a2 * b2 * c2);
-  //const double gaussianCurvature = H2 * H2 / (a2 * b2 * c2);
-
-  return meanCurvature;
-}
-#endif
-
-#if GRIDDIM == 2
 Vector exactCenterOfCurvature (Vector pos, double a = 0.3, double b = 0.15)
 {
-  double e2 = pow(a, 2) - pow(b, 2);
-  Vector center;
-  center[0] = e2 * pow(pos[0], 3) / pow(a, 4);
-  center[1] = -e2 * pow(pos[1], 3) / pow(b, 4);
-  return center;
+  if constexpr (dim == 2)
+  {
+    //ellipse with semiaxis a = 0.3 and b = 0.15
+    constexpr double a2 = 9e-2;
+    constexpr double b2 = 2.25e-2;
+    constexpr double e2 = a2 - b2;
+
+    Vector center;
+    center[0] = e2 * pow(pos[0], 3) / (a2 * a2);
+    center[1] = -e2 * pow(pos[1], 3) / (b2 * b2);
+
+    return center;
+  }
+  else
+  {
+    DUNE_THROW(Dune::Exception, "Not implemented");
+  }
 }
-#endif
 
 void output(const auto& characteristicLengths, const auto& gridfiles,
   const auto& numOfIElems, const auto& errorsCurvature,
@@ -63,11 +61,12 @@ void output(const auto& characteristicLengths, const auto& gridfiles,
   {
     std::cout << "characteristic length: " << gridfiles[i] <<
       "\t#interface elements: " << numOfIElems[i] << " \terror curvature: "
-      << errorsCurvature[i]
-#if GRIDDIM == 2
-      << "\terror center: " << errorsCenter[i]
-#endif
-      << std::endl;
+      << errorsCurvature[i];
+    if constexpr (dim == 2)
+    {
+      std::cout << "\terror center: " << errorsCenter[i];
+    }
+    std::cout << std::endl;
   }
 
   std::cout << "\nEOC curvature: " << std::endl;
@@ -77,18 +76,25 @@ void output(const auto& characteristicLengths, const auto& gridfiles,
     / log(characteristicLengths[i-1] / characteristicLengths[i]);
     std::cout << "EOC: " << EOC << "\t(interface elements " <<
       numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
+
+    if constexpr (dim == 2)
+    {
+      assert(EOC > 1.6);
+    }
   }
 
-#if GRIDDIM == 2
-  std::cout << "\nEOC center of curvature: " << std::endl;
-  for (int i = 1; i < numOfGridFiles; i++)
+  if constexpr (dim == 2)
   {
-    const double EOC = log(errorsCenter[i-1] / errorsCenter[i])
-    / log(characteristicLengths[i-1] / characteristicLengths[i]);
-    std::cout << "EOC: " << EOC << "\t(interface elements " <<
-      numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
+    std::cout << "\nEOC center of curvature: " << std::endl;
+    for (int i = 1; i < numOfGridFiles; i++)
+    {
+      const double EOC = log(errorsCenter[i-1] / errorsCenter[i])
+      / log(characteristicLengths[i-1] / characteristicLengths[i]);
+      std::cout << "EOC: " << EOC << "\t(interface elements " <<
+        numOfIElems[i-1] << " -> " << numOfIElems[i] << ")\n";
+      assert(EOC > 1.6);
+    }
   }
-#endif
 }
 
 int main(int argc, char** argv)
@@ -104,22 +110,16 @@ int main(int argc, char** argv)
       Dune::CurvatureOperator<IGridView, IMapper, Dune::CurvatureLayout::Element>;
     using CurvatureOperatorVertex =
       Dune::CurvatureOperator<IGridView, IMapper, Dune::CurvatureLayout::Vertex>;
+    using StringList = std::vector<std::string>;
+    using NumList = std::vector<double>;
 
-#if GRIDDIM == 2
-    static constexpr int numOfGridFiles = 11;
-    const std::array<std::string, numOfGridFiles>
-      gridfiles({"9e-2", "7e-2", "5e-2", "3e-2", "2e-2", "1e-2", "9e-3",
-      "8e-3", "7e-3", "6e-3", "5e-3"});
-    const std::array<double, numOfGridFiles> characteristicLengths({9e-2, 7e-2,
-      5e-2, 3e-2, 2e-2, 1e-2, 9e-3, 8e-3, 7e-3, 6e-3, 5e-3});
-
-#elif GRIDDIM == 3
-    static constexpr int numOfGridFiles = 4;
-    const std::array<std::string, numOfGridFiles>
-      gridfiles({"9e-2", "7e-2", "5e-2", "3e-2"});
-    const std::array<double, numOfGridFiles>
-      characteristicLengths({9e-2, 7e-2, 5e-2, 3e-2});
-#endif
+    constexpr int numOfGridFiles = (dim == 2) ? 9 : 4;
+    const StringList gridfiles = (dim == 2) ? StringList({"5e-2", "3e-2",
+      "2e-2", "1e-2", "9e-3", "8e-3", "7e-3", "6e-3", "5e-3"})
+      : StringList({"9e-2", "7e-2", "5e-2", "3e-2"});
+    const NumList characteristicLengths = (dim == 2)
+      ? NumList({5e-2, 3e-2, 2e-2, 1e-2, 9e-3, 8e-3, 7e-3, 6e-3, 5e-3})
+      :  NumList({9e-2, 7e-2, 5e-2, 3e-2});
 
     std::array<double, numOfGridFiles> errorsCurvatureElement;
     std::array<double, numOfGridFiles> errorsCenterElement;
@@ -134,8 +134,10 @@ int main(int argc, char** argv)
       errorsCurvatureVertex[i] = 0.0;
       errorsCenterVertex[i] = 0.0;
 
+      const std::string gridType = (dim == 2) ? "ellipse" : "sphere";
+
       //get interface grid view
-      GridFactory gridFactory("grids/ellipse" + std::to_string(dim) + "d_"
+      GridFactory gridFactory("grids/" + gridType + std::to_string(dim) + "d_"
         + gridfiles[i] + ".msh");
       const IGridView& iGridView =
         gridFactory.grid()->interfaceGrid().leafGridView();
@@ -144,8 +146,8 @@ int main(int argc, char** argv)
       numOfIElems[i] = iGridView.size(0);
 
       //define element mapper
-      IMapper iElemMapper(iGridView, Dune::mcmgElementLayout());
-      IMapper iVertexMapper(iGridView, Dune::mcmgVertexLayout());
+      const IMapper iElemMapper(iGridView, Dune::mcmgElementLayout());
+      const IMapper iVertexMapper(iGridView, Dune::mcmgVertexLayout());
 
       //storage curvatures on the interface grid
       std::vector<double> curvaturesElement(iElemMapper.size());
@@ -174,10 +176,11 @@ int main(int argc, char** argv)
         errorsCurvatureElement[i] +=
           pow(curvaturesElement[iElemIdx] - exCurv, 2)*iVolume;
 
-#if GRIDDIM == 2
-        errorsCenterElement[i] += (centersElement[iElemIdx]
-          - exactCenterOfCurvature(center)).two_norm2()*iVolume;
-#endif
+        if constexpr (dim == 2)
+        {
+          errorsCenterElement[i] += (centersElement[iElemIdx]
+            - exactCenterOfCurvature(center)).two_norm2()*iVolume;
+        }
 
         exactCurvaturesElement[iElemIdx] = exCurv;
       }
@@ -193,11 +196,12 @@ int main(int argc, char** argv)
         errorsCurvatureVertex[i] = std::max(errorsCurvatureVertex[i],
           std::abs(curvaturesVertex[vertexIdx] - exCurv));
 
-#if GRIDDIM == 2
-        errorsCenterVertex[i] = std::max(errorsCenterVertex[i],
-         (centersVertex[vertexIdx] -
-           exactCenterOfCurvature(center)).infinity_norm());
-#endif
+        if constexpr (dim == 2)
+        {
+          errorsCenterVertex[i] = std::max(errorsCenterVertex[i],
+            (centersVertex[vertexIdx] -
+              exactCenterOfCurvature(center)).infinity_norm());
+        }
 
         exactCurvaturesVertex[vertexIdx] = exCurv;
       }
@@ -214,9 +218,16 @@ int main(int argc, char** argv)
 
       errorsCurvatureElement[i] = sqrt(errorsCurvatureElement[i]);
 
-#if GRIDDIM == 2
-      errorsCenterElement[i] = sqrt(errorsCenterElement[i]);
-#endif
+      if constexpr (dim == 2)
+      {
+        errorsCenterElement[i] = sqrt(errorsCenterElement[i]);
+      }
+
+      if constexpr (dim == 3)
+      {
+        assert(errorsCurvatureElement[i] < 5e-8);
+        assert(errorsCurvatureVertex[i] < 5e-8);
+      }
     }
 
     std::cout << "Element Layout:\n\n";

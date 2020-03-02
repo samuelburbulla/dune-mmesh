@@ -86,8 +86,8 @@ public:
         vertexPoints.push_back(incidentVertex.geometry().center());
       }
 
-      //determine curvature associated with iVertexMapper (approximated by a sphere
-      //with center "center")
+      //determine curvature associated with iVertexMapper (approximated by a
+      //sphere with center "center")
       curvatures[iVertexIdx] = 1.0 / getRadius(vertexPoints, center);
       centers[iVertexIdx] = center;
     }
