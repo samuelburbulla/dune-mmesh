@@ -221,10 +221,7 @@ namespace Dune
 
       auto it = grid_->boundarySegments().find( vertices );
       if( it == grid_->boundarySegments().end() )
-      {
-        std::cerr << "BoundarySegmentIndex was not found, default to 0." << std::endl;
         return 0;
-      }
 
       return it->second;
     }

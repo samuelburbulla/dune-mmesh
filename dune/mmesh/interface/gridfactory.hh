@@ -167,7 +167,7 @@ namespace Dune
      */
     unsigned int insertionIndex ( const typename Codim< dimension >::Entity &entity ) const
     {
-      std::size_t index = mMesh_->interfaceGrid().globalIdSet().id( entity );
+      std::size_t index = mMesh_->interfaceGrid().leafIndexSet().index( entity );
       assert( index < std::numeric_limits<unsigned int>::max() );
       return index;
     }
