@@ -2,5 +2,5 @@ Module: dune-mmesh
 Version: 1.1
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
 Whitespace-Hook: Yes
-Depends: dune-grid (>= 2.7)
+Depends: dune-grid (>= 2.8)
 Python-Modules: dune.mmesh
