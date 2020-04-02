@@ -67,9 +67,9 @@ public:
    *        center points) corresponding to the approximated curvature of each
    *        element or each vertex of the interface grid
    */
-  template<CurvatureLayout Layout = CL>
+  template<class Curvatures, class Centers, CurvatureLayout Layout = CL>
   std::enable_if_t<Layout == Vertex, void>
-  operator() (auto& curvatures, auto& centers) const
+  operator() (Curvatures& curvatures, Centers& centers) const
   {
     //storage for incident interface vertices
     std::vector<Vector> vertexPoints;
@@ -93,9 +93,9 @@ public:
     }
   }
 
-  template<CurvatureLayout Layout = CL>
+  template<class Curvatures, class Centers, CurvatureLayout Layout = CL>
   std::enable_if_t<Layout == Element, void>
-  operator() (auto& curvatures, auto& centers) const
+  operator() (Curvatures& curvatures, Centers& centers) const
   {
    //storage for vertices of incident interface elements
    std::vector<Vector> vertexPoints;
@@ -138,7 +138,8 @@ private:
    * \param points Array with dim+1 points on the sphere
    * \param center storage for the center of the sphere
    */
-  double getRadius (const auto& points, Vector& center) const
+  template< class Points >
+  double getRadius (const Points& points, Vector& center) const
   {
     using LargeVector = Dune::FieldVector<Scalar, dim+1>;
     using Matrix = Dune::FieldMatrix<Scalar, dim+1, dim+1>;

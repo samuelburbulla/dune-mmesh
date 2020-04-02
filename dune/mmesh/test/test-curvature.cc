@@ -51,9 +51,12 @@ Vector exactCenterOfCurvature (Vector pos, double a = 0.3, double b = 0.15)
   }
 }
 
-void output(const auto& characteristicLengths, const auto& gridfiles,
-  const auto& numOfIElems, const auto& errorsCurvature,
-  const auto& errorsCenter)
+template< class Lengths, class GridFiles, class NumOfIElems, class ErrorsCurvature, class ErrorsCenter >
+void output(const Lengths& characteristicLengths,
+            const GridFiles& gridfiles,
+            const NumOfIElems& numOfIElems,
+            const ErrorsCurvature& errorsCurvature,
+            const ErrorsCenter& errorsCenter)
 {
   int numOfGridFiles = numOfIElems.size();
 
