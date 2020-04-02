@@ -46,11 +46,7 @@ namespace Dune
     //! return grid pointer
     Grid* grid() const
     {
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      return grid_.get();
-#else
       return grid_;
-#endif
     }
 
     //! Returns if intersection was inserted
@@ -149,7 +145,7 @@ namespace Dune
       return true;
     }
 
-    typename Grid::GridPtrType grid_;
+    Grid* grid_;
     GridFactory factory_;
     DuneGridFormatParser dgf_;
   };
