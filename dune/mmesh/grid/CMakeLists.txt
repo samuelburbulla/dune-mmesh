@@ -9,6 +9,7 @@ set(HEADERS
   explicitgridfactory.hh
   geometry.hh
   gmshparser.hh
+  gmshreader.hh
   gridfactory.hh
   hierarchiciterator.hh
   implicitgridfactory.hh

@@ -43,8 +43,7 @@ namespace Dune
     > GridFactory;
 
     //! Constructor using istream
-    explicit GmshGridFactory ( std::istream &input,
-                               MPICommunicatorType comm = MPIHelper::getCommunicator() )
+    explicit GmshGridFactory ( std::istream &input )
     {
       input.clear();
       input.seekg( 0 );
@@ -54,9 +53,20 @@ namespace Dune
     }
 
     //! Constructor using filename
-    explicit GmshGridFactory ( const std::string &filename,
-                               MPICommunicatorType comm = MPIHelper::getCommunicator() )
+    explicit GmshGridFactory ( const std::string &filename )
     {
+      factory_ = new GridFactory();
+      std::ifstream input( filename.c_str() );
+      if( !input )
+        DUNE_THROW( DGFException, "Macrofile " << filename << " not found." );
+      if( !generate( input ) )
+        DUNE_THROW( DGFException, "Could not generate MMesh from macrofile " << filename );
+      input.close();
+    }
+
+    explicit GmshGridFactory ( Dune::GridFactory< Grid >& gridFactory, const std::string &filename )
+    {
+      factory_ = &gridFactory;
       std::ifstream input( filename.c_str() );
       if( !input )
         DUNE_THROW( DGFException, "Macrofile " << filename << " not found." );
@@ -68,6 +78,9 @@ namespace Dune
     //! return grid pointer
     Grid* grid() const
     {
+      if ( !grid_ )
+        grid_ = factory_->createGrid();
+
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
       return grid_.get();
 #else
@@ -79,7 +92,7 @@ namespace Dune
     template< class Intersection >
     bool wasInserted ( const Intersection &intersection ) const
     {
-      return factory_.wasInserted( intersection );
+      return factory_->wasInserted( intersection );
     }
 
   private:
@@ -110,7 +123,7 @@ namespace Dune
           }
 
           // insert vertex and move to next line
-          factory_.insertVertex( v );
+          factory_->insertVertex( v );
           std::getline(gridFile, line);
           vertexCount++;
       }
@@ -148,18 +161,18 @@ namespace Dune
 
           // insert element
           if ( gt.dim() == dimension )
-              factory_.insertElement( gt, cornersIndices );
+              factory_->insertElement( gt, cornersIndices );
 
           // insert interface/boundary segments
           if ( gt.dim() == dimension-1 )
           {
-              factory_.insertInterface( cornersIndices );
-              factory_.insertBoundarySegment( cornersIndices );
+              factory_->insertInterface( cornersIndices );
+              factory_->insertBoundarySegment( cornersIndices );
           }
 
           // insert interface's boundary segments
           if ( gt.dim() == dimension-2 )
-              factory_.insertInterfaceBoundarySegment( cornersIndices );
+              factory_->insertInterfaceBoundarySegment( cornersIndices );
 
           // get next line
           std::getline(gridFile, line);
@@ -181,7 +194,6 @@ namespace Dune
         std::getline(gridFile, line);
       }
 
-      grid_ = factory_.createGrid();
       return true;
     }
 
@@ -214,8 +226,8 @@ namespace Dune
         }
     }
 
-    typename Grid::GridPtrType grid_;
-    GridFactory factory_;
+    mutable typename Grid::GridPtrType grid_;
+    GridFactory* factory_;
   };
 
 } // end namespace Dune

@@ -1782,6 +1782,7 @@ std::ostream& operator<< ( std::ostream& stream, const Dune::Entity<codim, dim, 
 #include "grid/structuredgridfactory.hh"
 #include "grid/dgfparser.hh"
 #include "grid/gmshparser.hh"
+#include "grid/gmshreader.hh"
 #include "interface/grid.hh"
 #include "cgal/triangulationwrapper.hh"
 
