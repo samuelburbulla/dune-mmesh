@@ -1,10 +1,23 @@
 ## @example mmesh.py
 #  This is an example of how to use MMesh with dune-python
 
-import dune.grid
-import dune.mmesh
+from dune.grid import reader
+from dune.mmesh import mmesh
 
-domain = dune.grid.cartesianDomain([0, 0], [1, 1], [10, 10])
-gridView = dune.mmesh.mmesh(domain)
-assert gridView.size(0) == 200
+dim = 2
+file = "../grids/horizontal2d.msh"
+
+# MMesh
+gridView = mmesh((reader.gmsh, file), dim)
+
+assert gridView.size(0) == 270
+
 gridView.writeVTK("test-python-mmesh")
+
+# InterfaceGrid
+igridView = gridView.interfaceGrid
+
+print(igridView.size(0))
+assert igridView.size(0) == 5
+
+igridView.writeVTK("test-python-mmesh-interface")
