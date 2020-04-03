@@ -17,7 +17,6 @@ gridView.writeVTK("test-python-mmesh")
 # InterfaceGrid
 igridView = gridView.interfaceGrid
 
-print(igridView.size(0))
 assert igridView.size(0) == 5
 
 igridView.writeVTK("test-python-mmesh-interface")

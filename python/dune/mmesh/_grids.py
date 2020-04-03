@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 from dune.common.checkconfiguration import assertHave, ConfigurationError
 from dune.generator.generator import SimpleGenerator
+from dune.grid.grid_generator import addAttr
 from dune.common.hashit import hashIt
 
 try:
@@ -17,6 +18,8 @@ try:
         typeName = "typename " + grid._typeName + "::Grid"
         moduleName = "interfacegrid_" + hashIt(typeName)
         module = igGenerator.load(includes, typeName, moduleName)
+        addAttr( module, module.LeafGrid );
+
         return grid.hierarchicalGrid._interfaceGrid
 
     def mmesh(constructor, dimgrid=None, **parameters):
