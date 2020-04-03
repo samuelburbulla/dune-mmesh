@@ -474,7 +474,7 @@ namespace Dune
     std::enable_if_t< d == 2, bool > isInterface( const MMeshInterfaceEntity<1>& edge ) const
     {
       auto circulator = mMesh_->getHostGrid().incident_facets( edge );
-      for ( int i = 0; i < CGAL::circulator_size( circulator ); ++i, ++circulator )
+      for ( std::size_t i = 0; i < CGAL::circulator_size( circulator ); ++i, ++circulator )
         if ( isInterface( *circulator ) )
           return true;
       return false;

@@ -58,12 +58,6 @@ int main()
       return s;
     };
 
-    // obtain the default remeshing indicators
-    using Indicator = typename Grid::RemeshingIndicator;
-    Indicator indicator( grid );
-    using IIndicator = typename IGrid::RemeshingIndicator;
-    IIndicator iindicator( igrid );
-
     // time loop
     for ( int t = 1; t <= 100; t++ )
     {
@@ -82,13 +76,8 @@ int main()
       // 1. ensure mesh conformity after movement by adapting the mesh
       grid.ensureInterfaceMovement( shifts );
 
-      // 2a. mark grid elements
-      for ( const auto& element : elements( gridView ) )
-        grid.mark( indicator(element), element );
-
-      // 2b. mark interface elements
-      for ( const auto& ielement : elements( igridView ) )
-        igrid.mark( iindicator(ielement), ielement );
+      // 2. mark grid elements
+      grid.markElements();
 
       // 3. adapt because of indicator value
       grid.adapt();
