@@ -15,7 +15,7 @@ assert gridView.size(0) == 270
 gridView.writeVTK("test-python-mmesh")
 
 # InterfaceGrid
-igridView = gridView.interfaceGrid
+igridView = gridView.hierarchicalGrid.interfaceGrid
 
 assert igridView.size(0) == 5
 
