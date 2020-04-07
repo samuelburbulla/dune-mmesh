@@ -37,34 +37,33 @@ namespace Dune
   namespace Python
   {
 
-    // registerInterfaceGrid
-    // ------------------------
-
-    template< class Grid, class... options >
-    void registerInterfaceGrid ( pybind11::module module, pybind11::class_< Grid, options... > cls )
-    {
-      auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "LeafGridView" ) );
-      if( clsLeafView.second )
-        registerGridView( module, clsLeafView.first );
-      cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
-          return grid.interfaceGrid().leafGridView();
-        }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
-        R"doc(
-          Obtain interface grid of the MMesh
-
-          Returns:  interface grid
-        )doc" );
-    }
-
     namespace MMGrid
     {
+
+      template< class Grid, class... options >
+      void registerInterfaceGrid ( pybind11::module module, pybind11::class_< Grid, options... > cls )
+      {
+        auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "LeafGridView" ) );
+        if( clsLeafView.second )
+          registerGridView( module, clsLeafView.first );
+        cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
+            return grid.interfaceGrid().leafGridView();
+          }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
+          R"doc(
+            Obtain interface grid of the MMesh
+
+            Returns:  interface grid
+          )doc" );
+      }
+
       template< int d, class... options >
       void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Dune::MovingMesh<d>, options...> cls )
       {
         typedef Dune::MovingMesh<d> Grid;
-        Dune::Python::registerHierarchicalGrid(module,cls);
+        Dune::Python::registerHierarchicalGrid( module, cls );
         registerInterfaceGrid ( module, cls );
       }
+
     } // namespace MMGrid
 
   } // namespace Python
