@@ -47,3 +47,13 @@ add_executable("movement-2d" movement.cc)
 target_compile_definitions("movement-2d" PRIVATE GRIDDIM=2)
 target_link_dune_default_libraries("movement-2d")
 target_link_libraries("movement-2d" dunemmesh)
+
+add_executable("interaction-2d" interaction.cc)
+target_compile_definitions("interaction-2d" PRIVATE GRIDDIM=2)
+target_link_dune_default_libraries("interaction-2d")
+target_link_libraries("interaction-2d" dunemmesh)
+
+add_executable("interaction-3d" interaction.cc)
+target_compile_definitions("interaction-3d" PRIVATE GRIDDIM=3)
+target_link_dune_default_libraries("interaction-3d")
+target_link_libraries("interaction-3d" dunemmesh)
