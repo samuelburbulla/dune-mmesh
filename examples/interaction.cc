@@ -56,7 +56,7 @@ int main()
     // Seen from interface
     for ( const auto& element : elements( igridView ) )
     {
-      // obtain intersection coinciding with interface entitity (seen from lower entity index to higher)
+      // obtain intersection coinciding with interface entity (seen from lower entity index to higher)
       const auto intersection = grid.asIntersection( element );
 
       // print some information
