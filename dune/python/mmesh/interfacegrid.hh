@@ -43,7 +43,7 @@ namespace Dune
       template< class Grid, class... options >
       void registerInterfaceGrid ( pybind11::module module, pybind11::class_< Grid, options... > cls )
       {
-        auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "LeafGridView" ) );
+        auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "InterfaceGrid::LeafGridView" ) );
         if( clsLeafView.second )
           registerGridView( module, clsLeafView.first );
         cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
@@ -59,9 +59,62 @@ namespace Dune
       template< int d, class... options >
       void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Dune::MovingMesh<d>, options...> cls )
       {
-        typedef Dune::MovingMesh<d> Grid;
         Dune::Python::registerHierarchicalGrid( module, cls );
-        registerInterfaceGrid ( module, cls );
+        registerInterfaceGrid( module, cls );
+
+        using Grid = Dune::MovingMesh< d >;
+        using Element = typename Grid::template Codim< 0 >::Entity;
+        using CachingEntity = typename Grid::CachingEntity;
+        using FieldVector = Dune::FieldVector< double, d >;
+
+        cls.def( "preAdapt", [] ( Grid &self ) {
+          self.preAdapt();
+        },
+        R"doc(
+          Prepare grid for adaption
+        )doc" );
+
+        cls.def( "ensureInterfaceMovement", [] ( Grid &self, const std::vector< FieldVector >& shifts ) {
+          self.ensureInterfaceMovement( shifts );
+        },
+        R"doc(
+          Ensure the non-degeneration of the mesh after movement of the interface vertices
+        )doc" );
+
+        cls.def( "markElements", [] ( Grid &self ) {
+          self.markElements();
+        },
+        R"doc(
+          Mark all elements in accordance to the default indicator
+        )doc" );
+
+        cls.def( "adapt", [] ( Grid &self ) {
+          self.adapt();
+        },
+        R"doc(
+          Adapt the grid
+        )doc" );
+
+        cls.def( "getConnectedComponent", [] ( Grid &self, const Element& element ) {
+          return self.getConnectedComponent( element );
+        },
+        R"doc(
+          Return the connected component of an entity
+        )doc" );
+
+        cls.def( "moveInterface", [] ( Grid &self, const std::vector< FieldVector >& shifts ) {
+          self.moveInterface( shifts );
+        },
+        R"doc(
+          Move the interface by the given movement for each interface vertex
+        )doc" );
+
+        cls.def( "postAdapt", [] ( Grid &self ) {
+          self.postAdapt();
+        },
+        R"doc(
+          Remove adaption markers and connected components
+        )doc" );
       }
 
     } // namespace MMGrid
