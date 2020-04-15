@@ -1,5 +1,5 @@
-## @example mmesh.py
-#  This is an example of how to use MMesh with dune-python
+## @example movement.py
+#  This is an example of how to use the movement in MMesh with dune-python
 
 import numpy as np
 import dune.geometry

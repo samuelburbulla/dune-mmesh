@@ -42,7 +42,7 @@ namespace Dune
     typedef Dune::Intersection<const GridImp, Dune::MMeshLeafIntersection<GridImp> > Intersection;
 
     //! default constructor
-    MMeshLeafIntersectionIterator() {}
+    MMeshLeafIntersectionIterator() : i_( 0 ) {}
 
     //! constructor for (begin) iterator
     MMeshLeafIntersectionIterator(const GridImp* mMesh,
