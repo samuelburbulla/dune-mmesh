@@ -626,10 +626,10 @@ namespace Dune
     }
 
     //! Return an interface entity as intersection of a MMesh entity
-    MMeshLeafIntersection< const GridImp > asIntersection( const InterfaceEntity& interfaceEntity ) const
+    Intersection asIntersection( const InterfaceEntity& interfaceEntity ) const
     {
       const auto& host = interfaceEntity.impl().hostEntity();
-      return MMeshLeafIntersection< const GridImp > ( This(), host.first, host.second );
+      return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
     }
 
     //! Locate an entity by coordinate

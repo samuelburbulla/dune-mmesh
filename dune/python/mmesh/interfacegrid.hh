@@ -64,7 +64,8 @@ namespace Dune
 
         using Grid = Dune::MovingMesh< d >;
         using Element = typename Grid::template Codim< 0 >::Entity;
-        using CachingEntity = typename Grid::CachingEntity;
+        using Intersection = typename Grid::Intersection;
+        using InterfaceEntity = typename Grid::InterfaceEntity;
         using FieldVector = Dune::FieldVector< double, d >;
 
         cls.def( "preAdapt", [] ( Grid &self ) {
@@ -107,6 +108,27 @@ namespace Dune
         },
         R"doc(
           Move the interface by the given movement for each interface vertex
+        )doc" );
+
+        cls.def( "isInterface", [] ( Grid &self, const Intersection& intersection ) {
+          return self.isInterface( intersection );
+        },
+        R"doc(
+          Return if intersection is part of the interface
+        )doc" );
+
+        cls.def( "asInterfaceEntity", [] ( Grid &self, const Intersection& intersection ) {
+          return self.asInterfaceEntity( intersection );
+        },
+        R"doc(
+          Return intersection as entity of the interface grid
+        )doc" );
+
+        cls.def( "asIntersection", [] ( Grid &self, const InterfaceEntity& interfaceEntity ) {
+          return self.asIntersection( interfaceEntity );
+        },
+        R"doc(
+          Return entity of the interface grid as (some) intersection of the MMesh
         )doc" );
 
         cls.def( "postAdapt", [] ( Grid &self ) {
