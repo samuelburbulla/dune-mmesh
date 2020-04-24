@@ -193,6 +193,13 @@ namespace Dune
       return true;
     }
 
+    //! Return boundary flag (-1 = not set, 0 = can be removed, 1 = important for domain boundary)
+    int boundaryFlag() const
+    {
+      static_assert( codim == dim );
+      return hostEntity_->info().boundaryFlag;
+    }
+
     //! Return the insertion level of the vertex
     std::size_t insertionLevel() const
     {
@@ -203,13 +210,15 @@ namespace Dune
     //! First incident vertex
     auto incidentVerticesBegin ( bool includeInfinite ) const
     {
-      return grid_->getMMesh().entity( hostEntity_ ).impl().incidentVerticesBegin( includeInfinite );
+      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite) );
     }
 
     //! Last incident vertex
     auto incidentVerticesEnd ( bool includeInfinite ) const
     {
-      return grid_->getMMesh().entity( hostEntity_ ).impl().incidentVerticesEnd( includeInfinite );
+      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+      return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite, true ) );
     }
 
     //! First incident vertex

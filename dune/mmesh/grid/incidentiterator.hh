@@ -37,7 +37,7 @@ namespace Dune
 
   //!  The Incident Facets Iterator alias
   template<class Grid>
-  using MMeshIncidentVerticesIterator = EntityIterator<Grid::dimension, Grid, MMeshIncidentVerticesIteratorImp<Grid, Grid::dimension>>;
+  using MMeshIncidentVerticesIterator = EntityIterator<Grid::dimension, Grid, MMeshIncidentVerticesIteratorImp<Grid, Grid::dimensionworld>>;
 
   /** \brief Iterator over all incident entities
    *  \ingroup MMesh
@@ -323,16 +323,16 @@ namespace Dune
   {
   private:
     //! The type of the requested vertex entity
-    typedef typename GridImp::template HostGridEntity<GridImp::dimension> HostGridVertex;
+    typedef typename GridImp::VertexHandle HostGridVertex;
 
     //! The type of the element circulator
    using Circulator = typename GridImp::HostGridType::Vertex_circulator;
    using ElementContainer = std::vector<HostGridVertex>;
 
   public:
-    enum {codimension = 2};
+    enum {codimension = GridImp::dimension};
 
-    typedef typename GridImp::template Codim<2>::Entity Entity;
+    typedef typename GridImp::template Codim<codimension>::Entity Entity;
 
     explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite)
     : mMesh_(mMesh),
@@ -386,7 +386,7 @@ namespace Dune
   {
   private:
     //! The type of the requested vertex entity
-    typedef typename GridImp::template HostGridEntity<3> HostGridVertex;
+    typedef typename GridImp::VertexHandle HostGridVertex;
 
     //! The type of the element output
     using ElementOutput = std::list<HostGridVertex>;
@@ -395,9 +395,9 @@ namespace Dune
     using ElementContainer = std::vector<HostGridVertex>;
 
   public:
-    enum {codimension = 3};
+    enum {codimension = GridImp::dimension};
 
-    typedef typename GridImp::template Codim<3>::Entity Entity;
+    typedef typename GridImp::template Codim<codimension>::Entity Entity;
 
     explicit MMeshIncidentVerticesIteratorImp(const GridImp* mMesh, const HostGridVertex& hostEntity, bool includeInfinite)
     : mMesh_(mMesh),

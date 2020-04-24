@@ -66,6 +66,7 @@ namespace Dune
       std::size_t index;
       std::size_t insertionLevel = 0;
       bool isInterface = false;
+      int boundaryFlag = -1;
     };
 
     /*!

@@ -824,7 +824,7 @@ namespace Dune
               // if vertex is part of interface, we have to do more
               if ( !v.impl().isInterface() )
               {
-                if ( RefinementStrategy::atBoundary( v ) )
+                if ( RefinementStrategy::boundaryFlag( v ) == 1 )
                   continue;
 
                 bool inserted = removed_.insert( globalIdSet().id( v ) ).second;

@@ -112,8 +112,7 @@ public:
       return vertex;
     }
 
-    //! return if vertex is at the boundary
-    // TODO improve this by marking vertices
+    //! return if vertex is incident to infinite vertex
     static inline bool atBoundary( const Vertex& v )
     {
       const auto& hostgrid = v.impl().grid().getHostGrid();
@@ -121,6 +120,36 @@ public:
         if ( hostgrid.is_infinite( vertex.impl().hostEntity() ) )
           return true;
       return false;
+    }
+
+    //! return if vertex is removable at the boundary
+    static inline int boundaryFlag( const Vertex& v )
+    {
+      // check if we have to initialize the boundary flag
+      if ( v.impl().boundaryFlag() == -1 )
+      {
+        v.impl().hostEntity()->info().boundaryFlag = 0;
+        if ( atBoundary( v ) )
+        {
+          // check that all incident vertices are in one plane
+          std::vector< Vertex > incidentAtBoundary;
+          for ( const auto& vertex : incidentVertices( v ) )
+            if ( atBoundary( vertex ) )
+              incidentAtBoundary.push_back( vertex );
+
+          assert( incidentAtBoundary.size() == 2 );
+          auto d1 = v.geometry().center();
+          auto d2 = d1;
+          d1 -= incidentAtBoundary[0].geometry().center();
+          d2 -= incidentAtBoundary[1].geometry().center();
+          d1 /= d1.two_norm();
+          d2 /= d2.two_norm();
+          if ( ( d1 + d2 ).two_norm() > 1e-8 && ( d1 - d2 ).two_norm() > 1e-8 )
+            v.impl().hostEntity()->info().boundaryFlag = 1;
+        }
+      }
+
+      return v.impl().boundaryFlag();
     }
 
     //! return if interface vertex is neither a tip nor a junction

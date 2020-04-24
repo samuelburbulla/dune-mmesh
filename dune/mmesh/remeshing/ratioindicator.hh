@@ -72,6 +72,13 @@ public:
         minh = std::min( minh, h );
       }
 
+      // fallback if there is no interface
+      if ( grid.interfaceGrid().size(1) == 0 )
+      {
+        maxH_ = K_ * maxh;
+        minH_ = k_ * minh;
+      }
+
       factor_ = maxh / minh;
       distance_ = Distance<Grid>(grid);
     };

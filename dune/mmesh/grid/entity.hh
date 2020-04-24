@@ -304,6 +304,13 @@ namespace Dune
       return hostEntity_->info().isInterface;
     }
 
+    //! Return boundary flag (-1 = not set, 0 = can be removed, 1 = important for domain boundary)
+    int boundaryFlag() const
+    {
+      static_assert( codim == dim );
+      return hostEntity_->info().boundaryFlag;
+    }
+
     //! geometry of this entity
     Geometry geometry () const
     {
