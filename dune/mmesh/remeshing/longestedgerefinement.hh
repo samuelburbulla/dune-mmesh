@@ -92,7 +92,7 @@ public:
         if (edgeLength < shortest)
         {
           const auto& v = edge.impl().template subEntity<vertexCodim>(0);
-          if( !v.impl().isInterface() && !atBoundary(v) )
+          if( !v.impl().isInterface() && !atBoundary(v) ) // give prio to interior points
           {
             vertex = v;
             shortest = edgeLength;
@@ -100,7 +100,7 @@ public:
           else
           {
             const auto& v2 = edge.impl().template subEntity<vertexCodim>(1);
-            if( !v2.impl().isInterface() && !atBoundary(v2) )
+            if( !v2.impl().isInterface() && boundaryFlag(v2) == 0 )
             {
               vertex = v2;
               shortest = edgeLength;
