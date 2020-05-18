@@ -7,4 +7,3 @@ target_compile_options(dunemmesh PRIVATE -include${CMAKE_BINARY_DIR}/config.h)
 
 target_link_libraries(dunemmesh ${DUNE_LIBS})
 target_link_libraries(dunemmesh CGAL)
-target_link_libraries(dunemmesh mpfr)
