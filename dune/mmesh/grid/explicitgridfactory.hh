@@ -92,12 +92,25 @@ namespace Dune
     void insertElement ( const GeometryType &type,
                          const std::vector< unsigned int > &v )
     {
+      insertElement( type, v, 0 );
+    }
+
+    /** \brief insert an element into the macro grid with a given domain marker
+     *
+     *  \param[in]  type          GeometryType of the new element
+     *  \param[in]  v             indices of the element vertices (starting with 0)
+     *  \param[in]  domainMarker  domain marker of element
+     */
+    void insertElement ( const GeometryType &type,
+                         const std::vector< unsigned int > &v,
+                         const size_t domainMarker )
+    {
       assert( type == GeometryTypes::simplex(dimension) );
       assert( v.size() == dimension+1 );
       auto w = v;
 
       // Create element
-      createElement( w, countElements );
+      createElement( w, countElements, domainMarker );
 
       // Increase element count
       countElements++;
@@ -106,6 +119,7 @@ namespace Dune
       elementVerticesList.push_back( w );
     };
 
+  private:
     /** \brief Creates an element (face) in the underlying triangulation data structure
      *  \ingroup 2D
      *
@@ -113,7 +127,7 @@ namespace Dune
      */
     template< int d = dimension >
     std::enable_if_t< d == 2, void >
-    createElement( std::vector< unsigned int >& v, const size_t insertionIndex )
+    createElement( std::vector< unsigned int >& v, const size_t insertionIndex, const size_t domainMarker )
     {
       auto& p0 = vhs_[v[0]]->point();
       auto& p1 = vhs_[v[1]]->point();
@@ -134,6 +148,7 @@ namespace Dune
 
       // Set insertion index
       face->info().insertionIndex = insertionIndex;
+      face->info().domainMarker = domainMarker;
 
       // Set this face in vertices v0, v1, v2
       v0->set_face(face);
@@ -153,7 +168,7 @@ namespace Dune
      */
     template< int d = dimension >
     std::enable_if_t< d == 3, void >
-    createElement( const std::vector< unsigned int >& v, const size_t insertionIndex )
+    createElement( const std::vector< unsigned int >& v, const size_t insertionIndex, const size_t domainMarker )
     {
       auto&& v0 = vhs_[v[0]];
       auto&& v1 = vhs_[v[1]];
@@ -165,6 +180,7 @@ namespace Dune
 
       // Set insertion index
       cell->info().insertionIndex = insertionIndex;
+      cell->info().domainMarker = domainMarker;
 
       // Set this cell in vertices v0, v1, v2, v3
       v0->set_cell(cell);
@@ -209,6 +225,7 @@ namespace Dune
       }
     }
 
+  public:
     /** \brief Returns if there is a face with the given vertices in the triangulation
      *  \ingroup 2D
      *

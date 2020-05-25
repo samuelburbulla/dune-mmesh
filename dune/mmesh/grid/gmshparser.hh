@@ -161,7 +161,7 @@ namespace Dune
 
           // insert element
           if ( gt.dim() == dimension )
-              factory_->insertElement( gt, cornersIndices );
+              factory_->insertElement( gt, cornersIndices, lineData[3] );
 
           // insert interface/boundary segments
           if ( gt.dim() == dimension-1 )

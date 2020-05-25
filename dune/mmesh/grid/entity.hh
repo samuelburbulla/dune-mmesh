@@ -653,6 +653,12 @@ namespace Dune
       return GeometryTypes::simplex(dim);
     }
 
+    //! return domain marker of entity
+    std::size_t domainMarker() const
+    {
+      return hostEntity_->info().domainMarker;
+    }
+
     //! returns the host entity
     const HostGridEntity& hostEntity () const
     {

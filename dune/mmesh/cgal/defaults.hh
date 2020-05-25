@@ -54,6 +54,7 @@ namespace Dune
     struct ElementInfo {
       std::size_t insertionIndex;
       std::size_t index;
+      size_t domainMarker = 0;
       int mark = 0;
       bool isNew = false;
       bool mightVanish = false;
