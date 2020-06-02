@@ -44,7 +44,7 @@ namespace Dune
                               MPICommunicatorType comm = MPIHelper::getCommunicator() );
 
     //! return grid pointer
-    Grid* grid() const
+    typename Grid::GridPtrType& grid() const
     {
       return grid_;
     }
@@ -60,7 +60,7 @@ namespace Dune
     template< class Intersection >
     int boundaryId ( const Intersection &intersection ) const
     {
-      DUNE_THROW( NotImplemented, "Boundary Ids in .dgf file." );
+      return intersection.impl().boundaryId();
     }
 
     //! Returns dgf element parameters for given element
@@ -145,7 +145,7 @@ namespace Dune
       return true;
     }
 
-    Grid* grid_;
+    mutable typename Grid::GridPtrType grid_;
     GridFactory factory_;
     DuneGridFormatParser dgf_;
   };

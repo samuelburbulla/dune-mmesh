@@ -37,6 +37,13 @@ namespace Dune
     {
       Dune::GmshGridFactory<Grid> gmshFactory( factory, fileName );
     }
+
+    static void read (Dune::GridFactory<Grid>& factory, const std::string& fileName, std::vector<int>& boundaryIDs, std::vector<int>& elementsIDs)
+    {
+      Dune::GmshGridFactory<Grid> gmshFactory( factory, fileName );
+    }
+
+    std::vector<int> elementsIDs;
   };
 
 } // end namespace Dune

@@ -227,6 +227,15 @@ namespace Dune
       return entity.impl().hostEntity()->info().id;
     }
 
+    /** \brief return insertion index of boundary intersection
+     *
+     *  \param[in]  intersection  Leaf intersection
+     */
+    unsigned int insertionIndex ( const typename Grid::LeafIntersection &intersection ) const
+    {
+      return intersection.impl().boundaryId();
+    }
+
     //! returns the boundary segment to index map
     const BoundarySegments& boundarySegments() const
     {
