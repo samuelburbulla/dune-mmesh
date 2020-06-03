@@ -44,7 +44,7 @@ namespace Dune
                               MPICommunicatorType comm = MPIHelper::getCommunicator() );
 
     //! return grid pointer
-    typename Grid::GridPtrType& grid() const
+    Grid* grid() const
     {
       return grid_;
     }
@@ -145,7 +145,7 @@ namespace Dune
       return true;
     }
 
-    mutable typename Grid::GridPtrType grid_;
+    Grid* grid_;
     GridFactory factory_;
     DuneGridFormatParser dgf_;
   };
