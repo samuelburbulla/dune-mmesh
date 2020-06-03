@@ -51,6 +51,7 @@ namespace Dune
   public:
     typedef typename GridImp::template Codim<1>::Geometry Geometry;
     typedef typename GridImp::template Codim<1>::LocalGeometry LocalGeometry;
+    typedef typename GridImp::template Codim<1>::LocalGeometry::Implementation LocalGeometryImpl;
     typedef typename GridImp::template Codim<0>::Entity Entity;
     typedef FieldVector<ctype, dimworld> NormalVector;
 
@@ -155,7 +156,13 @@ namespace Dune
     //! where iteration started.
     LocalGeometry geometryInInside () const
     {
-      return LocalGeometry( hostIntersection_.second );
+      LocalGeometryImpl impl(
+          hostIntersection_.second,
+          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second),
+          *this,
+          true
+      );
+      return LocalGeometry( impl );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.
@@ -163,9 +170,13 @@ namespace Dune
     LocalGeometry geometryInOutside () const
     {
       assert( neighbor() );
-      return LocalGeometry(
-          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second) + (dim+1)
+      LocalGeometryImpl impl(
+          hostIntersection_.second,
+          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second),
+          *this,
+          false
       );
+      return LocalGeometry( impl );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.

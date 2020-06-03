@@ -38,6 +38,7 @@ namespace Dune
     static constexpr int coorddim = 2;
     typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
     typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
+    typedef typename GridImp::LeafIntersection Intersection;
 
   public:
     enum { dimension = GridImp::dimension };
@@ -96,9 +97,9 @@ namespace Dune
         circumcenter_ *= 0.5;
     }
 
-    //! Constructor of local intersection geometry for a given facet index
-    MMeshGeometry( std::size_t i )
-     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( i ) )
+    //! Constructor of local intersection geometry
+    MMeshGeometry( int idxInInside, int idxInOutside, const Intersection& intersection, bool inside )
+     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( idxInInside, idxInOutside, inside ) )
     {}
 
     //! Constructor from host geometry with codim 2
@@ -114,22 +115,20 @@ namespace Dune
     }
 
   private:
-    static inline std::array<FVector, 2> getLocalVertices_ ( std::size_t i )
+    static inline std::array<FVector, 2> getLocalVertices_ ( int i, int j, bool inside )
     {
-      assert( 0 <= i && i <= 5 );
-
       static const std::array<FVector, 3> local = {
         FVector( { 0.0, 0.0 } ),
         FVector( { 1.0, 0.0 } ),
         FVector( { 0.0, 1.0 } )
       };
 
-      if ( i < 3 )
+      if ( inside )
         return { local[ (i+1)%3 ], local[ (i+2)%3 ] };
 
-      // return flipped edge
+      // return flipped edge seen from outside
       else
-        return { local[ (i+2)%3 ], local[ (i+1)%3 ] };
+        return { local[ (j+2)%3 ], local[ (j+1)%3 ] };
     }
 
     FVector circumcenter_;
@@ -145,6 +144,7 @@ namespace Dune
     typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
     typedef typename GridImp::ctype ctype;
     typedef FieldVector<ctype, coorddim> FVector;
+    typedef typename GridImp::LeafIntersection Intersection;
 
   public:
     enum { dimension = GridImp::dimension };
@@ -212,9 +212,9 @@ namespace Dune
       );
     }
 
-    //! Constructor of local intersection geometry for a given facet index
-    MMeshGeometry( std::size_t i )
-     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( i ) )
+    //! Constructor of local intersection geometry
+    MMeshGeometry( int idxInInside, int idxInOutside, const Intersection& intersection, bool inside )
+     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( idxInInside, idxInOutside, intersection, inside ) )
     {}
 
     //! Constructor from host geometry with codim 1
@@ -271,10 +271,8 @@ namespace Dune
        return vertices;
      }
 
-     static inline std::array<FVector, 3> getLocalVertices_ ( std::size_t i )
+     static inline std::array<FVector, 3> getLocalVertices_ ( int i, int j, const Intersection& intersection, bool inside )
      {
-        assert( 0 <= i && i <= 7 );
-
         static const std::array<FVector, 4> local = {
           FVector( { 0.0, 0.0, 0.0 } ),
           FVector( { 1.0, 0.0, 0.0 } ),
@@ -282,14 +280,32 @@ namespace Dune
           FVector( { 0.0, 0.0, 1.0 } )
         };
 
-        if ( i < 4 )
+        if ( inside )
           return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
 
         // geometryInOutside()
         else
         {
-          i -= 4;
-          return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
+          std::array<FVector, 3> v = { local[ (j+1)%4 ], local[ (j+2)%4 ], local[ (j+3)%4 ] };
+
+          // swap orientation if facets have same orientation seen from outside
+          if ( i % 2 == j % 2 )
+            std::swap( v[0], v[2] );
+
+          // search the correct corner(0) vertex
+          const auto& outGeo = intersection.outside().geometry();
+          const auto& isv0 = intersection.geometry().corner(0);
+          std::size_t k;
+          for (k = 0; k < 2; ++k )
+          {
+            if ( (outGeo.global(v[0]) - isv0).two_norm() < 1e-8 )
+              break;
+            std::swap(v[0], v[1]);
+            std::swap(v[1], v[2]);
+          }
+
+          assert( (outGeo.global(v[0]) - isv0).two_norm() < 1e-8 );
+          return v;
         }
      }
 
