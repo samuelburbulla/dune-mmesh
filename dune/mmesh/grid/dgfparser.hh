@@ -141,7 +141,7 @@ namespace Dune
         factory_.addBoundaryId( index, boundaryId );
       }
 
-      grid_ = factory_.createGrid();
+      grid_ = factory_.createGrid().release();
       return true;
     }
 

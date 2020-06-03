@@ -266,7 +266,7 @@ namespace Dune
      *  \note MMesh's grid factory provides a static method for freeing the
      *        grid (destroyGrid).
      */
-    typename Grid::GridPtrType createGrid ()
+    ToUniquePtr<Grid> createGrid ()
     {
       // Return pointer to grid
     #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)

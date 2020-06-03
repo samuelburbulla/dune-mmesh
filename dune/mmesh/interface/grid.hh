@@ -7,8 +7,6 @@
  * \brief The MMeshInterfaceGrid class
  */
 
-#include <config.h>
-
 #include <string>
 #include <unordered_set>
 #include <unordered_map>

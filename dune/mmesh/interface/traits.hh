@@ -7,8 +7,6 @@
  * \brief The MMeshInterfaceGrid traits class
  */
 
-#include <config.h>
-
 namespace Dune
 {
   // Forward declarations

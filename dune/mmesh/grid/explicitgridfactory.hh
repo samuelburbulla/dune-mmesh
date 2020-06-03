@@ -392,7 +392,7 @@ namespace Dune
      *        grid (destroyGrid).
      */
 
-    typename Grid::GridPtrType createGrid ()
+    ToUniquePtr<Grid> createGrid ()
     {
       // Create the infinite cells (neighbors of boundary cells)
       createInfiniteVertex();
