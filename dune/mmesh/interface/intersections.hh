@@ -226,6 +226,12 @@ namespace Dune
       return it->second;
     }
 
+    //! Return the boundary id
+    std::size_t boundaryId() const
+    {
+      return 0; // TODO
+    }
+
     //! Return true if this is a conforming intersection
     bool conforming () const {
       // we are always conforming

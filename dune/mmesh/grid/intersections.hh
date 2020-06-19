@@ -134,7 +134,7 @@ namespace Dune
     {
       auto it = mMesh_->boundaryIds().find( boundarySegmentIndex() );
       if( it == mMesh_->boundaryIds().end() )
-        DUNE_THROW( InvalidStateException, "BoundaryId was not found!" );
+        return 0; // default
 
       return it->second;
     }
