@@ -43,7 +43,7 @@ struct SkeletonGF
     {
       auto xLocal = Dune::Fem::coordinate(x);
       // TODO auto ix     = sideGeometry_.local( xLocal );
-      typename InterfaceGridFunction::LocalCoordinateType ix{1./3.,1./3.};
+      typename InterfaceGridFunction::LocalCoordinateType ix{0.5};
       ilf_.evaluate(ix,ret);
     } else ret = typename Base::RangeType(0);
   }

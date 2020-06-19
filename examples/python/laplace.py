@@ -63,7 +63,7 @@ if True:
         pointdata={"solution":uh,"exact":exact})
 
     ###########################################################
-    print("Solve a problem on the interface grid (no coupling")
+    print("Solve a problem on the interface grid (no coupling)")
     ###########################################################
     ispace = lagrange(igridView, order=3)
     ix = ufl.SpatialCoordinate(ispace)
@@ -161,13 +161,16 @@ if True:
 
     template <class BulkGV, class InterfaceGridFunction>
     auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
+      using SkeletonGFType = SkeletonGF<BulkGV,InterfaceGridFunction>;
       pybind11::object pygf = pybind11::cast( &igf );
-      auto cls = Dune::Python::insertClass<SkeletonGF<BulkGV,InterfaceGridFunction>>(pygf,"SkeletonFunction",
+      auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
                  Dune::Python::GenerateTypeName("SkeletonGF",
                       Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
                  Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
       Dune::FemPy::registerGridFunction( pygf, cls );
-      return SkeletonGF(bulkGV, igf );
+      bool scalar = pygf.attr("scalar").template cast<bool>();
+      cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
+      return SkeletonGFType(bulkGV, igf );
     }
     """
     from dune.generator.algorithm import run
