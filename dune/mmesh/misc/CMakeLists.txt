@@ -1,5 +1,6 @@
 set(HEADERS
   boundaryprovider.hh
+  pyskeletonfunction.hh
   twistutility.hh
 )
 
