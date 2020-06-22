@@ -144,7 +144,7 @@ def moveInterface(hgrid, movedf):
       do
       {
           if (count > 0)
-            grid.markElements( getShifts() );
+            grid.markElements();
 
           grid.ensureInterfaceMovement( getShifts() );
 
@@ -162,8 +162,7 @@ def moveInterface(hgrid, movedf):
           adapt = grid.adapt();
 
           for( const auto& e : elements( gridView ) )
-            // if( e.isNew() )
-            if( grid.hasConnectedComponent(e) )
+            if( e.isNew() )
             {
               const auto evol = e.geometry().volume();
               double marker = 0;

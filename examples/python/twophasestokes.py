@@ -18,7 +18,7 @@ from dune.fem.space import *
 from dune.fem.scheme import galerkin
 from dune.ufl import DirichletBC, latex
 
-dt = 0.5
+dt = 0.25
 T = 100.0
 
 start = timeit.default_timer()
