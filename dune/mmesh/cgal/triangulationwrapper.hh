@@ -124,11 +124,11 @@ namespace Dune
 
       // fill hole1
       helperface->set_vertices( VertexHandle(), right, left );
-      this->fill_hole_delaunay(hole1, std::back_inserter(elements));
+      this->fill_hole(vh, hole1, std::back_inserter(elements));
 
       // fill hole2
       helperface->set_vertices( VertexHandle(), left, right );
-      this->fill_hole_delaunay(hole2, std::back_inserter(elements));
+      this->fill_hole(vh, hole2, std::back_inserter(elements));
 
       // glue the facets at helperface together
       Face_handle f1; int i1;
