@@ -19,8 +19,8 @@ namespace Dune
 
 
 // MMesh includes
-#include <dune/mmesh/grid/cachingentity.hh>
 #include <dune/mmesh/grid/connectedcomponent.hh>
+#include <dune/mmesh/grid/polygoncutting.hh>
 
 namespace Dune
 {
@@ -61,6 +61,9 @@ namespace Dune
     friend class MMeshGlobalIdSet;
 
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
+
+    //! define the type used for persistent indices
+    using IdType = MMeshImpl::MultiId;
 
   private:
     typedef typename GridImp::ctype ctype;
@@ -341,6 +344,17 @@ namespace Dune
       return *mMesh_;
     }
 
+    //! returns id computed by vertex ids
+    IdType id() const
+    {
+      typename IdType::VT idlist( dim+1-codim );
+      for( std::size_t i = 0; i < this->subEntities(dim); ++i )
+        idlist[i] = this->template subEntity<dim>(i).impl().hostEntity()->info().id;
+      std::sort( idlist.begin(), idlist.end() );
+
+      return IdType( idlist );
+    }
+
   private:
     //! the host entity of this entity
     HostGridEntity hostEntity_;
@@ -376,6 +390,9 @@ namespace Dune
 
     typedef typename GridImp::template Codim<0>::LocalGeometry LocalGeometry;
 
+    // type of global coordinate
+    typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
     //! The Iterator over intersections on the leaf level
     typedef MMeshLeafIntersectionIterator<GridImp> LeafIntersectionIterator;
 
@@ -388,28 +405,44 @@ namespace Dune
     //! The type of a ConnectedComponent
     using ConnectedComponent = MMeshConnectedComponent< GridImp >;
 
+    //! define the type used for persistent indices
+    using IdType = MMeshImpl::MultiId;
+
+    //! define the type used for storage the vertices of a caching entity
+    using VertexStorage = std::array<GlobalCoordinate, dim+1>;
+
     MMeshEntity()
-      : mMesh_(nullptr)
+      : isLeaf_(true), mMesh_(nullptr)
     {}
 
     MMeshEntity(const GridImp* mMesh, const HostGridEntity& hostEntity)
-      : hostEntity_(hostEntity)
+      : hostEntity_(hostEntity), isLeaf_(true)
       , mMesh_(mMesh)
     {}
 
     MMeshEntity(const GridImp* mMesh, HostGridEntity&& hostEntity)
-      : hostEntity_(std::move(hostEntity))
+      : hostEntity_(std::move(hostEntity)), isLeaf_(true)
       , mMesh_(mMesh)
     {}
 
+    MMeshEntity(const GridImp* mMesh, const HostGridEntity& hostEntity, const IdType& id)
+      : hostEntity_(hostEntity)
+      , id_(id), isLeaf_(false)
+      , mMesh_(mMesh)
+    {}
+
+    MMeshEntity(const VertexStorage& vertex)
+      : id_( /*dummy*/ IdType({1,1,1}) ), isLeaf_(false), vertex_(vertex)
+    {}
+
     MMeshEntity(const MMeshEntity& original)
-      : hostEntity_(original.hostEntity_)
-      , mMesh_(original.mMesh_)
+      : hostEntity_(original.hostEntity_), id_(original.id_), isLeaf_(original.isLeaf_)
+      , mMesh_(original.mMesh_), vertex_(original.vertex_)
     {}
 
     MMeshEntity(MMeshEntity&& original)
-      : hostEntity_(std::move(original.hostEntity_))
-      , mMesh_(original.mMesh_)
+      : hostEntity_(std::move(original.hostEntity_)), id_(original.id_), isLeaf_(original.isLeaf_)
+      , mMesh_(original.mMesh_), vertex_(original.vertex_)
     {}
 
     MMeshEntity& operator=(const MMeshEntity& original)
@@ -418,6 +451,9 @@ namespace Dune
       {
         mMesh_ = original.mMesh_;
         hostEntity_ = original.hostEntity_;
+        isLeaf_ = original.isLeaf_;
+        id_ = original.id_;
+        vertex_ = original.vertex_;
       }
       return *this;
     }
@@ -428,6 +464,9 @@ namespace Dune
       {
         mMesh_ = original.mMesh_;
         hostEntity_ = std::move(original.hostEntity_);
+        isLeaf_ = original.isLeaf_;
+        id_ = original.id_;
+        vertex_ = original.vertex_;
       }
       return *this;
     }
@@ -527,14 +566,35 @@ namespace Dune
     //! Geometry of this entity
     Geometry geometry () const
     {
-      return Geometry( hostEntity_ );
+      if (isLeaf_)
+        return Geometry( hostEntity_ );
+      else
+        return Geometry( this->vertex_ );
     }
 
     //! Geometry of this entity in father
-    Geometry geometryInFather () const
+    LocalGeometry geometryInFather() const
     {
-      DUNE_THROW(NotImplemented, "MMesh does not implement a geometry in father!");
-      return geometry();
+      DUNE_THROW(GridError, "MMesh entities have no father!");
+      return geometry(); // dummy
+    }
+
+    //! Geometry of this entity in another entity ( assumption: this \subset other )
+    template< class Entity >
+    LocalGeometry geometryInEntity ( const Entity& other ) const
+    {
+      static_assert( dim == 2 );
+      auto thisPoints = this->vertex_;
+
+      if( isLeaf_ )
+        for ( int i = 0; i < 3; ++i )
+          thisPoints[i] = geometry().corner(i);
+
+      std::array< GlobalCoordinate, 3 > local;
+      for ( int i = 0; i < 3; ++i )
+        local[i] = other.geometry().local( thisPoints[i] );
+
+      return LocalGeometry( local );
     }
 
     //! Return the number of subEntities of codimension cc
@@ -632,7 +692,7 @@ namespace Dune
 
     //! returns true if Entity has no children
     bool isLeaf() const {
-      return true;
+      return isLeaf_;
     }
 
     //! returns if grid was refined
@@ -677,15 +737,43 @@ namespace Dune
       return *mMesh_;
     }
 
+    //! returns id computed by vertex ids
+    IdType id() const
+    {
+      // cache id
+      if (id_ == IdType())
+      {
+        typename IdType::VT idlist( dim+1 );
+        for( std::size_t i = 0; i < this->subEntities(dim); ++i )
+          idlist[i] = this->template subEntity<dim>(i).impl().hostEntity()->info().id;
+        std::sort( idlist.begin(), idlist.end() );
+        id_ = IdType( idlist );
+      }
+
+      return id_;
+    }
+
   private:
     //! the host entity of this entity
     HostGridEntity hostEntity_;
 
+    //! the cached id
+    mutable IdType id_;
+
+    //! return if leaf
+    bool isLeaf_;
+
     //! the grid implementation
     const GridImp* mMesh_;
+
+  protected:
+    //! the vertices of the host entity object of this entity (for caching entity)
+    VertexStorage vertex_;
 
   }; // end of MMeshEntity codim = 0
 
 } // namespace Dune
+
+#include <dune/mmesh/grid/cachingentity.hh>
 
 #endif

@@ -342,7 +342,7 @@ namespace Dune
 
   template <class GridImp>
   class MMeshInterfaceGridGlobalIdSet :
-    public IdSet<GridImp, MMeshInterfaceGridGlobalIdSet<GridImp>, Impl::MultiId>
+    public IdSet<GridImp, MMeshInterfaceGridGlobalIdSet<GridImp>, MMeshImpl::MultiId>
   {
     typedef typename std::remove_const<GridImp>::type::HostGridType HostGrid;
 
@@ -362,7 +362,7 @@ namespace Dune
     {}
 
     //! define the type used for persistent indices
-    using IdType = Impl::MultiId;
+    using IdType = MMeshImpl::MultiId;
 
     //! get id of an entity
     /*

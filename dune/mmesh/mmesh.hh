@@ -19,6 +19,7 @@
 #include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
+#include <dune/grid/common/adaptcallback.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 
 // CGAL includes
@@ -29,6 +30,7 @@
 #include "grid/declaration.hh"
 #include "grid/common.hh"
 #include "grid/connectedcomponent.hh"
+#include "grid/cutsettriangulation.hh"
 #include "grid/incidentiterator.hh"
 #include "grid/geometry.hh"
 #include "grid/entity.hh"
@@ -88,9 +90,9 @@ namespace Dune
         MMeshLeafIndexSet< const MMesh<HostGrid, dim> >, // LevelIndexSet
         MMeshLeafIndexSet< const MMesh<HostGrid, dim> >,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >,
-        Impl::MultiId,
+        MMeshImpl::MultiId,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >, // LocalIdSet
-        Impl::MultiId,
+        MMeshImpl::MultiId,
         CollectiveCommunication< MMesh<HostGrid, dim> >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
@@ -246,7 +248,7 @@ namespace Dune
     using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension-1, const InterfaceGrid>;
 
     //! The type of an id
-    using IdType = Impl::MultiId;
+    using IdType = MMeshImpl::MultiId;
 
     //! The type of a refinement insertion point
     using RefinementInsertionPoint = RefinementInsertionPointStruct<Point, Edge, IdType, VertexHandle, InterfaceGridConnectedComponent>;
@@ -691,7 +693,7 @@ namespace Dune
     /** \brief returns false, if at least one entity is marked for adaption */
     bool preAdapt()
     {
-      return (interfaceGrid_->preAdapt()) || (refineMarked_ > 0) || (coarsenMarked_ > 0) || (remove_.size() > 0) || (insert_.size() > 0);
+      return (interfaceGrid_->preAdapt()) || (coarsenMarked_ > 0) || (remove_.size() > 0);
     }
 
     //! Triggers the grid adaptation process
@@ -947,6 +949,39 @@ namespace Dune
       moveInterface( shifts );
     }
 
+    //! Callback for the grid adaptation process with restrict/prolong
+    template< class GridImp, class DataHandle >
+    bool adapt ( AdaptDataHandleInterface< GridImp, DataHandle > &handle )
+    {
+      preAdapt();
+      adapt();
+
+      for (const auto& element : elements( this->leafGridView() ))
+        if (element.isNew())
+        {
+          bool initialize = true;
+
+          for ( const auto& old : element.impl().connectedComponent().children() )
+          {
+            const Entity& oldDuneEntity = old;
+
+            MMeshImpl::CutSetTriangulation<Entity> cutSetTriangulation( old, element );
+            for ( const auto& triangle : cutSetTriangulation.triangles() )
+            {
+              handle.impl().prolongRestrictLocal( oldDuneEntity, triangle, element,
+                triangle.impl().geometryInEntity( old ),
+                triangle.impl().geometryInEntity( element ),
+                initialize
+              );
+              initialize = false;
+            }
+          }
+        }
+
+      postAdapt();
+      return true;
+    }
+
   private:
     template<int d = dim>
     std::enable_if_t< d == 2, FieldType >
@@ -1138,7 +1173,7 @@ namespace Dune
           writeComponents_();
       }
 
-      return true;
+      return newVertices.size() > 0;
     }
 
     template<int d = dim>

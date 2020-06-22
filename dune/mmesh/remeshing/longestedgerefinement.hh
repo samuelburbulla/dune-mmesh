@@ -137,6 +137,10 @@ public:
             if ( atBoundary( vertex ) )
               incidentAtBoundary.push_back( vertex );
 
+          // could be that there are more than two incident boundary vertices, e.g. in grid corners
+          if( incidentAtBoundary.size() > 2 )
+            return 0;
+
           assert( incidentAtBoundary.size() == 2 );
           auto d1 = v.geometry().center();
           auto d2 = d1;

@@ -28,7 +28,7 @@ namespace Dune
     typedef std::size_t IndexType;
     typedef const std::vector< GeometryType > Types;
 
-    typedef std::unordered_map< Impl::MultiId, std::size_t > CodimIndexMap;
+    typedef std::unordered_map< MMeshImpl::MultiId, std::size_t > CodimIndexMap;
 
     /*
      * We use the remove_const to extract the Type from the mutable class,
@@ -307,7 +307,7 @@ namespace Dune
 
   template <class GridImp>
   class MMeshGlobalIdSet :
-    public IdSet<GridImp, MMeshGlobalIdSet<GridImp>, Impl::MultiId>
+    public IdSet<GridImp, MMeshGlobalIdSet<GridImp>, MMeshImpl::MultiId>
   {
     typedef typename std::remove_const<GridImp>::type::HostGridType HostGrid;
 
@@ -322,7 +322,7 @@ namespace Dune
 
   public:
     //! define the type used for persistent indices
-    using IdType = Impl::MultiId;
+    using IdType = MMeshImpl::MultiId;
 
     //! constructor stores reference to a grid
     MMeshGlobalIdSet (const GridImp* g) : grid_(g), nextVertexId_(0)
@@ -357,19 +357,7 @@ namespace Dune
     std::enable_if_t< cd != dim, IdType >
     id (const typename std::remove_const<GridImp>::type::Traits::template Codim<cd>::Entity& e) const
     {
-      typename IdType::VT idlist( dim+1-cd );
-      for( std::size_t i = 0; i < e.subEntities(dim); ++i )
-        idlist[i] = e.impl().template subEntity<dim>(i).impl().hostEntity()->info().id;
-      std::sort( idlist.begin(), idlist.end() );
-
-      return IdType( idlist );
-    }
-
-    //! get id of a caching entity
-    template<int cd>
-    IdType id (const MMeshCachingEntity<cd,dim,GridImp>& cachingEntity) const
-    {
-      return IdType( cachingEntity.id() );
+      return IdType( e.impl().id() );
     }
 
     //! get id of subEntity

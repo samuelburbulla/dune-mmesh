@@ -2,6 +2,7 @@ set(HEADERS
   cachingentity.hh
   common.hh
   connectedcomponent.hh
+  cutsettriangulation.hh
   dgfparser.hh
   declaration.hh
   entity.hh

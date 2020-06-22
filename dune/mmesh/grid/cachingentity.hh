@@ -38,9 +38,6 @@
 
 namespace Dune
 {
-  // Forward declarations
-  template<int codim, int dim, class GridImp>
-  class MMeshCachingEntity;
 
   //**********************************************************************
   //
@@ -57,7 +54,7 @@ namespace Dune
    */
   template<int dim, class GridImp>
   class MMeshCachingEntity<0,dim,GridImp> :
-    public EntityDefaultImplementation <0,dim,GridImp,MMeshCachingEntity>
+    public MMeshEntity<0,dim,GridImp>
   {
     template <class GridImp_>
     friend class MMeshLeafIndexSet;
@@ -72,6 +69,9 @@ namespace Dune
     // this type
     typedef MMeshCachingEntity<0,dim,GridImp> ThisType;
 
+    // base type
+    typedef MMeshEntity<0,dim,GridImp> BaseType;
+
     // type of scalars
     typedef typename GridImp::ctype ctype;
 
@@ -85,11 +85,14 @@ namespace Dune
     typedef typename GridImp::template Codim<0>::Entity MMeshEntity;
 
     // type of ids
-    typedef Impl::MultiId IdType;
+    typedef MMeshImpl::MultiId IdType;
 
   public:
     // geometry type
     typedef AffineGeometry<ctype, dim, dim> Geometry;
+
+    // local geometry type
+    typedef typename GridImp::template Codim<0>::LocalGeometry LocalGeometry;
 
     // type of global coordinate
     typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
@@ -97,17 +100,16 @@ namespace Dune
     MMeshCachingEntity() = delete;
 
     explicit MMeshCachingEntity(const GridImp* mMesh, const HostGridEntity& hostEntity)
-      : id_(mMesh->globalIdSet().id( mMesh->entity( hostEntity ) ))
-      , mMesh_(mMesh)
+      : BaseType(mMesh, hostEntity, mMesh->globalIdSet().id( mMesh->entity( hostEntity ) ))
     {
       for( int i = 0; i < dim+1; ++i )
-        vertex_[i] = makeFieldVector( hostEntity->vertex(i)->point() );
+        this->vertex_[i] = makeFieldVector( hostEntity->vertex(i)->point() );
     }
 
     //! returns true if host entities are equal
     bool equals(const MMeshCachingEntity& other) const
     {
-      return id_ == other.id_;
+      return this->id_ == other.id_;
     }
 
     //! returns true if host entities are equal
@@ -119,19 +121,19 @@ namespace Dune
     //! returns true if caching entity has same id like mmesh entity
     bool operator==(const MMeshEntity& entity) const
     {
-      return id_ == mMesh_->globalIdSet().id( entity );
+      return this->id_ == this->mMesh_->globalIdSet().id( entity );
     }
 
     //! returns true if id of other is greater
     bool operator<(const MMeshCachingEntity& other) const
     {
-      return id_ < other.id_;
+      return this->id_ < other.id_;
     }
 
     //! returns true if father entity exists
     bool hasFather () const
     {
-      return false;
+      return true;
     }
 
     //! returns true if this entity is new after adaptation
@@ -161,7 +163,7 @@ namespace Dune
     //! Geometry of this entity
     Geometry geometry () const
     {
-      return Geometry( GeometryTypes::simplex(dim), vertex_ );
+      return Geometry( GeometryTypes::simplex(dim), this->vertex_ );
     }
 
     //! Return the number of subEntities of codimension cc
@@ -181,6 +183,11 @@ namespace Dune
       return binomial;
     }
 
+    //! returns true if Entity has no children
+    bool isLeaf() const {
+      return false;
+    }
+
     //calculates the intersection volume with another MMesh entity
     template<int d = dim>
     std::enable_if_t<d == 2, ctype>
@@ -195,7 +202,7 @@ namespace Dune
       }
 
       using PC = Dune::PolygonCutting<ctype, GlobalCoordinate>;
-      return PC::polygonArea( PC::sutherlandHodgman(vertex_, entityPoints) );
+      return PC::polygonArea( PC::sutherlandHodgman(this->vertex_, entityPoints) );
     }
 
     template<int d = dim>
@@ -225,7 +232,7 @@ namespace Dune
       std::array<ExactPoint, 4> peA, peB;
       for ( int i = 0; i < 4; ++i )
       {
-        const auto& p1 = makePoint( vertex_[i] );
+        const auto& p1 = makePoint( this->vertex_[i] );
         piA[i] = p1;
         peA[i] = to_exact( p1 );
 
@@ -314,21 +321,6 @@ namespace Dune
       assert( CGAL::is_closed( poly ) );
       return CGAL::to_double( CGAL::Polygon_mesh_processing::volume( poly ) );
     }
-
-    IdType id() const
-    {
-      return id_;
-    }
-
-  private:
-    //! the vertices of the host entity object of this entity
-    std::array<GlobalCoordinate, dim+1> vertex_;
-
-    //! the id of the cached host entity object
-    IdType id_;
-
-    //! the grid implementation
-    const GridImp* mMesh_;
 
   }; // end of MMeshCachingEntity codim = 0
 

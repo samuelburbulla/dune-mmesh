@@ -35,6 +35,7 @@ namespace Dune
     : public GridFactoryInterface< Grid >
   {
     typedef MMeshExplicitGridFactory< Grid > This;
+    typedef GridFactoryInterface< Grid > Base;
 
   public:
     //! type of (scalar) coordinates
@@ -72,6 +73,7 @@ namespace Dune
     typedef typename HostGrid::Vertex_handle Vertex_handle;
     typedef typename Grid::template HostGridEntity<0> Element_handle;
 
+    using Base::insertElement;
   public:
     //! are boundary ids supported by this factory?
     static const bool supportsBoundaryIds = true;

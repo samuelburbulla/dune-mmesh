@@ -58,7 +58,7 @@ namespace Dune
     typedef typename GridImp::template Codim<0>::Entity MMeshEntity;
 
     // type of ids
-    typedef Impl::MultiId IdType;
+    typedef MMeshImpl::MultiId IdType;
 
   public:
     // geometry type

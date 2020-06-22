@@ -11,8 +11,9 @@
 
 namespace Dune
 {
-  namespace Impl
+  namespace MMeshImpl
   {
+
     class MultiId
     {
     public:
@@ -21,6 +22,10 @@ namespace Dune
       using VT = std::vector<T>;
 
       MultiId() {}
+
+      MultiId( const MultiId& other )
+       : vt_ ( other.vt_ )
+      {}
 
       MultiId( const VT& vt )
        : vt_ ( vt )
@@ -78,15 +83,15 @@ namespace Dune
       VT vt_;
     };
 
-  }  // end namespace Impl
+  }  // end namespace MMeshImpl
 } // end namespace Dune
 
 namespace std
 {
   //! overload std::hash
-  template <> struct hash<Dune::Impl::MultiId>
+  template <> struct hash<Dune::MMeshImpl::MultiId>
   {
-    size_t operator()(const Dune::Impl::MultiId& x) const
+    size_t operator()(const Dune::MMeshImpl::MultiId& x) const
     {
       static constexpr Dune::HashUIntVector hashUIntVector;
       return hashUIntVector( x.vt() );
@@ -94,7 +99,7 @@ namespace std
   };
 
   //! overload operator<<
-  ostream& operator<<(ostream& os, const Dune::Impl::MultiId& multiId)
+  inline ostream& operator<<(ostream& os, const Dune::MMeshImpl::MultiId& multiId)
   {
     for( const auto& v : multiId.vt() )
       os << v << " ";

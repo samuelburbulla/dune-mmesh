@@ -65,6 +65,12 @@ namespace Dune
         );
     }
 
+    MMeshGeometry(const std::array<FVector, 3> points)
+     : BaseType( GeometryTypes::simplex(mydim), points )
+    {
+      // this is only for cachingEntity where we do not use circumcenters
+    }
+
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::HostGridType::Face& face)
      : BaseType( GeometryTypes::simplex(mydim),
@@ -171,6 +177,12 @@ namespace Dune
                 hostEntity->vertex(3)->point()
             )
         );
+    }
+
+    MMeshGeometry(const std::array<FVector, 4> points)
+     : BaseType( GeometryTypes::simplex(mydim), points )
+    {
+      // this is only for cachingEntity where we do not use circumcenters
     }
 
     //! Constructor from host geometry with codim 0

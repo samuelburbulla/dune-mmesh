@@ -14,11 +14,14 @@
 #include <CGAL/Surface_mesh/Surface_mesh.h>
 
 // MMesh includes
-#include <dune/mmesh/grid/cachingentity.hh>
 #include <dune/mmesh/grid/multiid.hh>
 
 namespace Dune
 {
+  // Forward declarations
+  template<int codim, int dim, class GridImp>
+  class MMeshCachingEntity;
+
   //**********************************************************************
   //
   // --MMeshConnectedComponent
@@ -45,7 +48,7 @@ namespace Dune
     using CachingEntity = MMeshCachingEntity< 0, dim, const GridImp >;
 
     //type of ids
-    using IdType = Impl::MultiId;
+    using IdType = MMeshImpl::MultiId;
 
   public:
     MMeshConnectedComponent() : componentNumber_(0) {}

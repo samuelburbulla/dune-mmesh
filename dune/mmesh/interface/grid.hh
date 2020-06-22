@@ -62,9 +62,9 @@ namespace Dune
         MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh> >, // LevelIndexSet
         MMeshInterfaceGridLeafIndexSet< const MMeshInterfaceGrid<MMesh> >,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >,
-        Impl::MultiId, // GlobalIdSet::IdType,
+        MMeshImpl::MultiId, // GlobalIdSet::IdType,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >, // LocalIdSet
-        Impl::MultiId, // LocalIdSet::IdType,
+        MMeshImpl::MultiId, // LocalIdSet::IdType,
         CollectiveCommunication< MMeshInterfaceGrid<MMesh> >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
@@ -594,7 +594,7 @@ namespace Dune
 
     std::size_t numBoundarySegments_;
 
-    mutable std::unordered_map< Impl::MultiId, int > mark_;
+    mutable std::unordered_map< MMeshImpl::MultiId, int > mark_;
 
   }; // end Class MMeshInterfaceGrid
 
@@ -622,6 +622,16 @@ namespace Dune
   /// @cond
   namespace Capabilities
   {
+    /** \brief has only one geometry type for all entities
+    \ingroup MMeshInterfaceGrid
+    */
+    template<class MMesh>
+    struct hasSingleGeometryType<MMeshInterfaceGrid<MMesh>>
+    {
+      static const bool v = true;
+      static const unsigned int topologyId = Dune::GeometryType::simplex;
+    };
+
     /** \brief has entities for some codimensions
      * \ingroup MMeshInterfaceGrid
      */

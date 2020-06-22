@@ -61,7 +61,7 @@ namespace Dune
     using CachingEntity = MMeshInterfaceCachingEntity< 0, dim, const GridImp >;
 
     // id type
-    using IdType = Impl::MultiId;
+    using IdType = MMeshImpl::MultiId;
 
     // vertex storage
     using Vertices = std::array<HostGridVertex, dim+1>;

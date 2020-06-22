@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
       // ==================
 
       // store interface data
-      std::unordered_map<Dune::Impl::MultiId, double> data;
+      std::unordered_map<Dune::MMeshImpl::MultiId, double> data;
       for (const auto& e : elements( igridView ))
         data.insert( std::make_pair( idSet.id(e), c[ indexSet.index(e) ] ) );
 
@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
       }
 
       grid.ensureInterfaceMovement( shifts );
+      grid.markElements();
 
       if ( t > 0.105 )
         moveVertices.clear();
