@@ -3,4 +3,5 @@ Version: 1.1
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
 Whitespace-Hook: Yes
 Depends: dune-grid (>= 2.8)
+Suggests: dune-fem (>= 2.8)
 Python-Modules: dune.mmesh

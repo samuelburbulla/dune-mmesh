@@ -46,6 +46,7 @@
 #include "remeshing/longestedgerefinement.hh"
 #include "remeshing/ratioindicator.hh"
 #include "interface/traits.hh"
+#include "misc/twistutility.hh"
 // Further includes below!
 
 

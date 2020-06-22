@@ -1,6 +1,7 @@
 add_subdirectory(cgal)
-add_subdirectory(interface)
 add_subdirectory(grid)
+add_subdirectory(interface)
+add_subdirectory(misc)
 add_subdirectory(remeshing)
 add_subdirectory(test)
 
