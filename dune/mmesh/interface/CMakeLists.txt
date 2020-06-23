@@ -1,6 +1,7 @@
 set(HEADERS
   cachingentity.hh
   connectedcomponent.hh
+  dgfparser.hh
   entity.hh
   entityseed.hh
   geometry.hh

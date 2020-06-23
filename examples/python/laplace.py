@@ -5,6 +5,10 @@ import io
 from dune.grid import reader
 from dune.mmesh import mmesh, trace, skeletonFunction
 
+import logging
+logger = logging.getLogger('dune')
+logger.setLevel(logging.INFO)
+
 dim = 2
 
 if dim == 3:

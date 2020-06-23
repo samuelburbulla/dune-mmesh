@@ -27,6 +27,7 @@
 #include "entity.hh"
 #include "entityseed.hh"
 #include "connectedcomponent.hh"
+#include "dgfparser.hh"
 #include "geometry.hh"
 #include "gridfactory.hh"
 #include "hierarchiciterator.hh"
