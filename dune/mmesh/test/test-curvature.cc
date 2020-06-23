@@ -18,14 +18,14 @@ double exactCurvature (Vector pos)
   if constexpr (dim == 2)
   {
     //ellipse with semiaxis a = 0.3 and b = 0.15
-    constexpr double a4 = 8.1e-3;
-    constexpr double b4 = 5.0625e-4;
+    double a4 = 8.1e-3;
+    double b4 = 5.0625e-4;
     return (a4 * b4) / pow(a4 * pos[1] * pos[1] + b4 * pos[0] * pos[0], 1.5);
   }
   else
   {
     //sphere with radius r = 0.15
-    constexpr double curvature = 1.0 / 0.15;
+    double curvature = 1.0 / 0.15;
     return curvature;
   }
 }
@@ -35,9 +35,9 @@ Vector exactCenterOfCurvature (Vector pos, double a = 0.3, double b = 0.15)
   if constexpr (dim == 2)
   {
     //ellipse with semiaxis a = 0.3 and b = 0.15
-    constexpr double a2 = 9e-2;
-    constexpr double b2 = 2.25e-2;
-    constexpr double e2 = a2 - b2;
+    double a2 = 9e-2;
+    double b2 = 2.25e-2;
+    double e2 = a2 - b2;
 
     Vector center;
     center[0] = e2 * pow(pos[0], 3) / (a2 * a2);
@@ -142,8 +142,8 @@ int main(int argc, char** argv)
       //get interface grid view
       GridFactory gridFactory("grids/" + gridType + std::to_string(dim) + "d_"
         + gridfiles[i] + ".msh");
-      const IGridView& iGridView =
-        gridFactory.grid()->interfaceGrid().leafGridView();
+      const Grid& grid = *gridFactory.grid();
+      const IGridView& iGridView = grid.interfaceGrid().leafGridView();
 
       //get number of interface segments
       numOfIElems[i] = iGridView.size(0);
