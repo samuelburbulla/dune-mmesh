@@ -46,6 +46,7 @@ namespace Dune
         auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "InterfaceGrid::LeafGridView" ) );
         if( clsLeafView.second )
           registerGridView( module, clsLeafView.first );
+
         cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
             return grid.interfaceGrid().leafGridView();
           }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
