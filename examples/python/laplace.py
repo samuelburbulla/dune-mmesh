@@ -3,7 +3,7 @@
 
 import io
 from dune.grid import reader
-from dune.mmesh import mmesh, trace, skeleton, normals
+from dune.mmesh import mmesh, trace, skeleton
 import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
@@ -117,9 +117,9 @@ exact = ufl.conditional(x[1]<0.5, x[1], -2*x[1])
 uh = space.interpolate(exact, name="uh")
 gridView.writeVTK("laplace-tracenormalexact", pointdata={"uh":uh}, nonconforming=True)
 
-n = normals(igridView)
+n = igridView.normal
 jumpgrad = ufl.jump(ufl.grad(trace(uh)), n)
 
-iexact = 3
+iexact = -3
 print("  error", integrate(igridView, ufl.dot(jumpgrad-iexact,jumpgrad-iexact), order=5))
 igridView.writeVTK("laplace-tracenormaljump", pointdata={"jumpgrad": jumpgrad, "normals": n}, nonconforming=True)
