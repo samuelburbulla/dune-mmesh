@@ -82,7 +82,7 @@ namespace Dune
     typedef typename GridImp::template HostGridEntity<0> HostGridEntity;
 
     // standard MMesh entity implementation
-    typedef typename GridImp::template Codim<0>::Entity MMeshEntity;
+    typedef typename GridImp::template Codim<0>::Entity MMeshEntityType;
 
     // type of ids
     typedef MMeshImpl::MultiId IdType;
@@ -119,7 +119,7 @@ namespace Dune
     }
 
     //! returns true if caching entity has same id like mmesh entity
-    bool operator==(const MMeshEntity& entity) const
+    bool operator==(const MMeshEntityType& entity) const
     {
       return this->id_ == this->mMesh_->globalIdSet().id( entity );
     }
@@ -191,7 +191,7 @@ namespace Dune
     //calculates the intersection volume with another MMesh entity
     template<int d = dim>
     std::enable_if_t<d == 2, ctype>
-    intersectionVolume ( const MMeshEntity& entity ) const
+    intersectionVolume ( const MMeshEntityType& entity ) const
     {
       std::array<GlobalCoordinate, 3> entityPoints;
 
@@ -207,7 +207,7 @@ namespace Dune
 
     template<int d = dim>
     std::enable_if_t<d == 3, ctype>
-    intersectionVolume( const MMeshEntity& entity ) const
+    intersectionVolume( const MMeshEntityType& entity ) const
     {
       // inexact types
       using Epick = CGAL::Exact_predicates_inexact_constructions_kernel;
