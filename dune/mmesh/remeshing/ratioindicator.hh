@@ -117,7 +117,7 @@ public:
       const ctype minH = (1. - l) * minH_ + l * factor_ * minH_;
       const ctype maxH = (1. - l) * maxH_ + l * factor_ * maxH_;
 
-      for( int i = 0; i < element.subEntities(edgeCodim); ++i )
+      for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )
       {
         const auto& edge = element.template subEntity<edgeCodim>(i);
         const ctype len = edge.geometry().volume();

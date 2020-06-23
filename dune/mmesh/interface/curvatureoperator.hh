@@ -167,7 +167,7 @@ private:
 
     for (int i = 0; i <= dim; i++)
       for (int j = 0; j <= dim; j++)
-        for (int k = 0; k < points.size(); k ++)
+        for (std::size_t k = 0; k < points.size(); k ++)
           ATA[i][j] += A[k][i] * A[k][j];
 
     if (std::abs( ATA.determinant() ) > epsilon)
