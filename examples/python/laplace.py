@@ -29,8 +29,9 @@ igridView.writeVTK("test-python-mmesh-interface")
 # try:
 if True:
     import ufl
+    import dune.ufl
     from dune.fem import parameter
-    from dune.fem.function import integrate
+    from dune.fem.function import integrate, uflFunction
     from dune.fem.space import lagrange
     from dune.fem.scheme import galerkin
     from dune.ufl import DirichletBC
@@ -85,102 +86,107 @@ if True:
     print("couple bulk to surface")
     ###############################
     # hide the following in dune.mmesh
-    from dune.fem.function import cppFunction
-    code="""
-    #include <functional>
-    template <class GV, class IGV, class BulkGF>
-    auto trace(const IGV &igv, const BulkGF &bulkgf, bool inside) {
-      using IElement = typename IGV::template Codim<0>::Entity;
-      using LocalCoordinate = typename IElement::Geometry::LocalCoordinate;
-      if (inside)
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          lbulk.bind(intersection.inside()); // lambda must be mutable so that the non const function can be called
-          return lbulk(intersection.geometryInInside().global(xLocal));
-        };
-        return ret;
-      }
-      else
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          typename BulkGF::RangeType ret(0);
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          if (intersection.neighbor())
-          {
-            lbulk.bind(intersection.outside()); // lambda must be mutable so that the non const function can be called
-            ret = lbulk(intersection.geometryInOutside().global(xLocal));
-          }
-          return ret;
-        };
-        return ret;
-      }
-    }
-    """
+    def _trace(interfaceGV, bulkGF):
+        traceGF="""
+        #include <dune/python/common/typeregistry.hh>
+        #include <dune/mmesh/misc/pyskeletonfunction.hh>
 
-    from dune.fem.function import uflFunction
-    # TODO: this uses knowledge about the surface normal direction
-    if dim == 3:
-        surfaceGrad = lambda w: ufl.as_vector([ufl.grad(w)[1],ufl.grad(w)[2]])
-    else:
-        surfaceGrad = lambda w: ufl.as_vector([ufl.grad(w)[0]])
-    graduh = uflFunction(gridView, name="gradUh", order=space.order-1,
-                         ufl=ufl.grad(uh))
-    gradInside  = cppFunction(igridView, name="gradInside", order=ispace.order-1,
-                              fctName="trace",includes=io.StringIO(code),
-                              args=[igridView, graduh,True])
-    gradOutside = cppFunction(igridView, name="gradOutside", order=ispace.order-1,
-                             fctName="trace",includes=io.StringIO(code),
-                             args=[igridView, graduh,False])
-    trace = cppFunction(igridView, name="trace", order=ispace.order,
-                        fctName="trace",includes=io.StringIO(code),
-                        args=[igridView, uh,True])
+        template <Dune::Fem::IntersectionSide side, class InterfaceGV, class BulkGridFunction>
+        auto traceGF(const InterfaceGV &iGV, const BulkGridFunction &bgf) {
+          using GFType = TraceGF<InterfaceGV, BulkGridFunction, side>;
+          std::string sideStr = (side==Dune::Fem::IntersectionSide::in)?
+                                "Dune::Fem::IntersectionSide::in":"Dune::Fem::IntersectionSide::out";
+          pybind11::object pygf = pybind11::cast( &bgf );
+          auto cls = Dune::Python::insertClass<GFType>(pygf,"SkeletonPlus",
+                     Dune::Python::GenerateTypeName("TraceGF",
+                          Dune::MetaType<InterfaceGV>(),Dune::MetaType<BulkGridFunction>(), sideStr),
+                     Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
+          Dune::FemPy::registerGridFunction( pygf, cls );
+          bool scalar = pygf.attr("scalar").template cast<bool>();
+          cls.def_property_readonly( "scalar", [scalar] ( GFType &self) { return scalar; } );
+          return GFType(iGV, bgf);
+        }
+        template <class InterfaceGV, class BulkGridFunction>
+        auto traceGF(const InterfaceGV &iGV, const BulkGridFunction &bgf) {
+          return std::make_pair(
+                 traceGF<Dune::Fem::IntersectionSide::in>(iGV, bgf ),
+                 traceGF<Dune::Fem::IntersectionSide::out>(iGV, bgf ) );
+        }
+        """
+        from dune.generator.algorithm import run
+        from dune.generator import path
+        print("loading",flush=True)
+        trace   = run("traceGF", io.StringIO(traceGF), interfaceGV, bulkGF)
+        # all of this needs hiding in some way - also need to think about
+        # how to add this to integrants. Possibly the 'predefined' needs ot
+        # be attached to the grid function `trace` in this case and then
+        # extracted by the codegen. Then it does not have to be passed in from
+        # the outside. So
+        #    trace = dune.mmesh(igridView, uh)
+        # returns a `ufl Coefficient` that acts like `trace` from above
+        # and includes the predefines given below. Then we could write
+        #    ib = ufl.inner(grad(avg(trace)), ufl.grad(iv)) * ufl.dx
+        #    ischeme = galerkin([ia==ib,DirichletBC(ispace,avg(trace))])
+        trace_p = dune.ufl.GridFunction(trace[0])
+        trace_m = dune.ufl.GridFunction(trace[1])
+        if uh.scalar:
+            trace_p = trace_p.toVectorCoefficient()
+            trace_m = trace_p.toVectorCoefficient()
+        trace   = trace_p # just for now
+        predefined = {}
+        predefined[trace('+')]                     = trace_p
+        predefined[trace('-')]                     = trace_m
+        predefined[ufl.grad(trace)('+')]           = ufl.grad(trace_p)
+        predefined[ufl.grad(trace)('-')]           = ufl.grad(trace_m)
+        predefined[ufl.grad(ufl.grad(trace))('+')] = ufl.grad(ufl.grad(trace_p))
+        predefined[ufl.grad(ufl.grad(trace))('-')] = ufl.grad(ufl.grad(trace_m))
+        trace.predefined = predefined
+        if uh.scalar:
+            trace = trace[0]
+        return trace
+
+    trace = _trace(igridView,uh)
     # replace 'iexact' with the traces of 'uh' in the bilinear form and bc
-    ib = ufl.inner(gradInside+gradOutside, ufl.grad(iv))/2 * ufl.dx
-    ischeme = galerkin([ia==ib,DirichletBC(ispace,trace)])
+    ib = ufl.inner(ufl.grad(ufl.avg(trace)), ufl.grad(iv)) * ufl.dx
+    ischeme = galerkin([ia==ib,DirichletBC(ispace,ufl.avg(trace))])
     iuh.interpolate(0)
     ischeme.solve(target=iuh)
     print("  error", integrate(igridView, ufl.dot(iuh-iexact,iuh-iexact),order=5))
     igridView.writeVTK("test-python-mmesh-bulk2interface",
-    pointdata=[iuh, gradInside, trace ])
+                       pointdata=[iuh, trace ]) # TODO: ufl.grad(iuh) fails for some reason...
 
 
-    # showcase coupling - surface to bulk (TODO assumes scalar interface gf)
     ###############################
     print("couple surface to bulk")
     ###############################
-    skeletonGF="""
-    #include <dune/python/common/typeregistry.hh>
-    #include <dune/mmesh/misc/pyskeletonfunction.hh>
+    def _skeleton(bulkGV, interfaceGF):
+        skeletonGF="""
+        #include <dune/python/common/typeregistry.hh>
+        #include <dune/mmesh/misc/pyskeletonfunction.hh>
 
-    template <class BulkGV, class InterfaceGridFunction>
-    auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
-      using SkeletonGFType = SkeletonGF<BulkGV,InterfaceGridFunction>;
-      pybind11::object pygf = pybind11::cast( &igf );
-      auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
-                 Dune::Python::GenerateTypeName("SkeletonGF",
-                      Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
-                 Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
-      Dune::FemPy::registerGridFunction( pygf, cls );
-      bool scalar = pygf.attr("scalar").template cast<bool>();
-      cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
-      return SkeletonGFType(bulkGV, igf );
-    }
-    """
-    from dune.generator.algorithm import run
-    from dune.generator import path
-    import dune.ufl
-    print("loading",flush=True)
-    skeleton = run("skeletonGF", io.StringIO(skeletonGF),gridView,iuh)
-    skeleton = dune.ufl.GridFunction(skeleton, scalar=True)
-    print("done",flush=True)
+        template <class BulkGV, class InterfaceGridFunction>
+        auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
+          using SkeletonGFType = SkeletonGF<BulkGV,InterfaceGridFunction>;
+          pybind11::object pygf = pybind11::cast( &igf );
+          auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
+                     Dune::Python::GenerateTypeName("SkeletonGF",
+                          Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
+                     Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
+          Dune::FemPy::registerGridFunction( pygf, cls );
+          bool scalar = pygf.attr("scalar").template cast<bool>();
+          cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
+          return SkeletonGFType(bulkGV, igf );
+        }
+        """
+        from dune.generator.algorithm import run
+        from dune.generator import path
+        print("loading",flush=True)
+        skeleton = run("skeletonGF", io.StringIO(skeletonGF), bulkGV, interfaceGF)
+        skeleton = dune.ufl.GridFunction(skeleton)
+        print("done",flush=True)
+        return skeleton
 
+    skeleton = _skeleton(gridView, iuh)
     a = ufl.inner(ufl.grad(u),ufl.grad(v)) * ufl.dx
     b = ufl.avg(skeleton)*ufl.avg(v) * ufl.dS
     uh = space.interpolate(0,name="solution")
@@ -190,11 +196,5 @@ if True:
     gridView.writeVTK("test-python-mmesh-interface2bulk",
         pointdata={"skeleton":uh})
 
-    # Goal 1:
-    # dI = gridView.hierarchicalGrid.interfaceMeasure
-    # use this for skeleton/boundary intergrals - needs a bit of work for the codegen
-    # Goal 2:
-    # constrain solution on interface, i.e., extend DirichletConstraints to
-    # include general interfaces (see dirichletconstraints feature branch in dune-fem?)
 # except ImportError:
 #     pass
