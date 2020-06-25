@@ -1820,5 +1820,6 @@ std::ostream& operator<< ( std::ostream& stream, const Dune::Entity<codim, dim, 
 #include "grid/gmshreader.hh"
 #include "interface/grid.hh"
 #include "cgal/triangulationwrapper.hh"
+#include "misc/persistentcontainer.hh"
 
 #endif // DUNE_MMESH_MMESH_HH

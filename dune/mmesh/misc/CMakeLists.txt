@@ -1,5 +1,6 @@
 set(HEADERS
   boundaryprovider.hh
+  persistentcontainer.hh
   twistutility.hh
 )
 
