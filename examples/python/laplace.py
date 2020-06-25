@@ -89,7 +89,7 @@ def _trace(bulkGF):
         interfaceGV = igridView # bulkGF.space.grid.hierarchicalGrid.interfaceGrid
         traceGF="""
         #include <dune/python/common/typeregistry.hh>
-        #include <dune/mmesh/misc/pyskeletonfunction.hh>
+        #include <dune/mmesh/misc/pyskeletontrace.hh>
 
         template <Dune::Fem::IntersectionSide side, class InterfaceGV, class BulkGridFunction>
         auto traceGF(const InterfaceGV &iGV, const BulkGridFunction &bgf) {
@@ -100,7 +100,7 @@ def _trace(bulkGF):
           auto cls = Dune::Python::insertClass<GFType>(pygf,"SkeletonPlus",
                      Dune::Python::GenerateTypeName("TraceGF",
                           Dune::MetaType<InterfaceGV>(),Dune::MetaType<BulkGridFunction>(), sideStr),
-                     Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
+                     Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletontrace.hh"})).first;
           Dune::FemPy::registerGridFunction( pygf, cls );
           bool scalar = pygf.attr("scalar").template cast<bool>();
           cls.def_property_readonly( "scalar", [scalar] ( GFType &self) { return scalar; } );
@@ -168,7 +168,7 @@ print("couple surface to bulk")
 def _skeleton(bulkGV, interfaceGF):
     skeletonGF="""
     #include <dune/python/common/typeregistry.hh>
-    #include <dune/mmesh/misc/pyskeletonfunction.hh>
+    #include <dune/mmesh/misc/pyskeletontrace.hh>
 
     template <class BulkGV, class InterfaceGridFunction>
     auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
@@ -177,7 +177,7 @@ def _skeleton(bulkGV, interfaceGF):
       auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
                  Dune::Python::GenerateTypeName("SkeletonGF",
                       Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
-                 Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
+                 Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletontrace.hh"})).first;
       Dune::FemPy::registerGridFunction( pygf, cls );
       bool scalar = pygf.attr("scalar").template cast<bool>();
       cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
