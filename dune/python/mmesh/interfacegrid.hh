@@ -37,15 +37,26 @@ namespace Dune
   namespace Python
   {
 
-    namespace MMGrid
+    namespace MMIFGrid
     {
 
       template< class Grid, class... options >
-      void registerInterfaceGrid ( pybind11::module module, pybind11::class_< Grid, options... > cls )
+      void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Grid, options... > cls )
       {
-        auto clsLeafView = insertClass< typename Grid::InterfaceGrid::LeafGridView >( module, "InterfaceGrid", GenerateTypeName( cls, "InterfaceGrid::LeafGridView" ) );
-        if( clsLeafView.second )
-          registerGridView( module, clsLeafView.first );
+        Dune::Python::registerHierarchicalGrid( module, cls );
+      }
+
+    } // end namespace MMIFGrid
+
+    namespace MMGrid
+    {
+      template< int d, class... options >
+      void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Dune::MovingMesh<d>, options...> cls )
+      {
+        Dune::Python::registerHierarchicalGrid( module, cls );
+
+        using Grid = Dune::MovingMesh< d >;
+
         cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
             return grid.interfaceGrid().leafGridView();
           }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
@@ -54,15 +65,7 @@ namespace Dune
 
             Returns:  interface grid
           )doc" );
-      }
 
-      template< int d, class... options >
-      void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Dune::MovingMesh<d>, options...> cls )
-      {
-        Dune::Python::registerHierarchicalGrid( module, cls );
-        registerInterfaceGrid( module, cls );
-
-        using Grid = Dune::MovingMesh< d >;
         using Element = typename Grid::template Codim< 0 >::Entity;
         using Intersection = typename Grid::Intersection;
         using InterfaceEntity = typename Grid::InterfaceEntity;

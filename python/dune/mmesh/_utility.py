@@ -3,9 +3,9 @@ from dune.generator import algorithm
 from dune.fem.function import cppFunction
 
 ################################################################################
-# Compute trace function
+# Trace function
 ################################################################################
-def traceFunction(igridView, bulkGridFunction, name="trace", order=1, inside=True):
+def trace(igridView, bulkGridFunction, name="trace", order=1, inside=True):
     code="""
     #include <functional>
     template <class GV, class IGV, class BulkGF>
@@ -48,6 +48,35 @@ def traceFunction(igridView, bulkGridFunction, name="trace", order=1, inside=Tru
 
 
 ################################################################################
+# Skeleton function
+################################################################################
+def skeletonFunction(gridView, interfaceFunction, name="skeleton", order=1, inside=True):
+    from dune.generator.algorithm import run
+    import dune.ufl
+    code="""
+    #include <dune/python/common/typeregistry.hh>
+    #include <dune/mmesh/misc/pyskeletonfunction.hh>
+
+    template <class BulkGV, class InterfaceGridFunction>
+    auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
+      using SkeletonGFType = Dune::Fem::SkeletonGF<BulkGV,InterfaceGridFunction>;
+      pybind11::object pygf = pybind11::cast( &igf );
+      auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
+                 Dune::Python::GenerateTypeName("SkeletonGF",
+                      Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
+                 Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
+      Dune::FemPy::registerGridFunction( pygf, cls );
+      bool scalar = pygf.attr("scalar").template cast<bool>();
+      cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
+      return SkeletonGFType(bulkGV, igf);
+    }
+    """
+    skeleton = run("skeletonGF", io.StringIO(code), gridView, interfaceFunction)
+    return dune.ufl.GridFunction(skeleton, scalar=True)
+################################################################################
+
+
+################################################################################
 # Obtain domain markers
 ################################################################################
 def domainMarker(gridView):
@@ -70,6 +99,7 @@ def domainMarker(gridView):
 # Move interface and restore domain markers
 ################################################################################
 def moveInterface(hgrid, movedf):
+    print("'moveInterface' is just a legacy function, use adapt() instead!")
     assert hgrid.dimension == hgrid.dimensionworld and hasattr(hgrid, 'leafView'), \
         "please pass the bulk hierarchical grid as first argument of moveInterface()"
 

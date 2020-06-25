@@ -12,6 +12,7 @@ try:
     assertHave("HAVE_DUNE_MMESH")
 
     mmGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMGrid")
+    mmifGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMIFGrid")
     def mmesh(constructor, dimgrid=None, **parameters):
         from dune.grid.grid_generator import module, getDimgrid, addAttr
 
@@ -25,7 +26,8 @@ try:
         typeName = "Dune::MovingMesh< " + str(dimgrid) + " >"
         gridModule = module(includes, typeName, generator=mmGenerator)
 
-        addAttr(gridModule, gridModule.InterfaceGrid)
+        typeName = "typename Dune::MovingMesh< " + str(dimgrid) + " >::InterfaceGrid"
+        igridModule = module(includes, typeName, generator=mmifGenerator)
 
         return gridModule.LeafGrid(gridModule.reader(constructor))
 

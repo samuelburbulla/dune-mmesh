@@ -1,9 +1,13 @@
-## @example mmesh.py
+## @example laplace.py
 #  This is an example of how to use MMesh with dune-python
 
 import io
 from dune.grid import reader
-from dune.mmesh import mmesh
+from dune.mmesh import mmesh, trace, skeletonFunction
+
+import logging
+logger = logging.getLogger('dune')
+logger.setLevel(logging.INFO)
 
 dim = 2
 
@@ -14,12 +18,6 @@ else:
 
 # MMesh
 gridView = mmesh((reader.gmsh, file), dim)
-
-print( gridView.size(0) )
-
-gridView.writeVTK("test-python-mmesh")
-
-# InterfaceGrid
 igridView = gridView.hierarchicalGrid.interfaceGrid
 
 print( igridView.size(0) )
@@ -93,7 +91,7 @@ if True:
 
         template <Dune::Fem::IntersectionSide side, class InterfaceGV, class BulkGridFunction>
         auto traceGF(const InterfaceGV &iGV, const BulkGridFunction &bgf) {
-          using GFType = TraceGF<InterfaceGV, BulkGridFunction, side>;
+          using GFType = Dune::Fem::TraceGF<InterfaceGV, BulkGridFunction, side>;
           std::string sideStr = (side==Dune::Fem::IntersectionSide::in)?
                                 "Dune::Fem::IntersectionSide::in":"Dune::Fem::IntersectionSide::out";
           pybind11::object pygf = pybind11::cast( &bgf );
@@ -166,7 +164,7 @@ if True:
 
         template <class BulkGV, class InterfaceGridFunction>
         auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
-          using SkeletonGFType = SkeletonGF<BulkGV,InterfaceGridFunction>;
+          using SkeletonGFType = Dune::Fem::SkeletonGF<BulkGV,InterfaceGridFunction>;
           pybind11::object pygf = pybind11::cast( &igf );
           auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
                      Dune::Python::GenerateTypeName("SkeletonGF",
@@ -195,6 +193,3 @@ if True:
     scheme.solve(target=uh)
     gridView.writeVTK("test-python-mmesh-interface2bulk",
         pointdata={"skeleton":uh})
-
-# except ImportError:
-#     pass
