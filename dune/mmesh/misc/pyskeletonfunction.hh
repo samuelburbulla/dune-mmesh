@@ -63,15 +63,23 @@ namespace Dune
       template <class Point>
       void jacobian(const Point &x, typename Base::JacobianRangeType &ret) const
       {
-        // TODO
-        DUNE_THROW( Dune::NotImplemented, "SkeletonFunction::jacobian not implemented" );
+        if (onInterface_)
+        {
+          auto xLocal = Dune::Fem::coordinate(x);
+          auto ix     = sideGeometry_.local( xLocal );
+          ilf_.jacobian(ix,ret);
+        } else ret = typename Base::JacobianRangeType(0);
       }
 
       template <class Point>
       void hessian(const Point &x, typename Base::HessianRangeType &ret) const
       {
-        // TODO
-        DUNE_THROW( Dune::NotImplemented, "SkeletonFunction::hessian not implemented" );
+        if (onInterface_)
+        {
+          auto xLocal = Dune::Fem::coordinate(x);
+          auto ix     = sideGeometry_.local( xLocal );
+          ilf_.hessian(ix,ret);
+        } else ret = typename Base::HessianRangeType(0);
       }
 
       ILocalFunction ilf_;
@@ -87,6 +95,7 @@ namespace Dune
       using GridPart = Dune::FemPy::GridPart<IGV>;
       using Base = Dune::Fem::BindableGridFunctionWithSpace<GridPart,typename BulkGridFunction::RangeType>;
       using BLocalFunction = Dune::Fem::ConstLocalFunction<BulkGridFunction>;
+      using SideGeometry = typename GridPart::GridType::MMeshType::Intersection::LocalGeometry::Implementation;
       TraceGF(const IGV &iGV, const BulkGridFunction &bgf)
       : Base(Dune::FemPy::gridPart<IGV>(iGV), "trace_"+bgf.name(), bgf.order() ),
         blf_(bgf)
@@ -100,14 +109,16 @@ namespace Dune
         else if (intersection.neighbor())
           blf_.bind(intersection.outside());
         else // is this the best we can do?
-          blf_.bind(intersection.inside());
+          DUNE_THROW( Dune::NotImplemented, "TraceFunction on boundary can no be used with outside entity" );
+        sideGeometry_ = (side == IntersectionSide::in)
+          ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
       }
       template <class Point>
       void evaluate(const Point &x, typename Base::RangeType &ret) const
       {
         // again need to transfer the x (in this case on the interface) to an x in bulk
         auto xLocal = Dune::Fem::coordinate(x);
-        typename BulkGridFunction::LocalCoordinateType bx{1./3.,1./3.};
+        auto bx     = sideGeometry_.global( xLocal );
         blf_.evaluate(bx,ret);
       }
       // need to implement jacobian and hessian as their tangential components
@@ -116,7 +127,7 @@ namespace Dune
       {
         // again need to transfer the x (in this case on the interface) to an x in bulk
         auto xLocal = Dune::Fem::coordinate(x);
-        typename BulkGridFunction::LocalCoordinateType bx{1./3.,1./3.};
+        auto bx     = sideGeometry_.global( xLocal );
         typename BulkGridFunction::JacobianRangeType bulkJac;
         blf_.jacobian(bx,bulkJac);
         ret = bulkJac; // could decide to remove normal component - but perhaps don't have to?
@@ -129,6 +140,7 @@ namespace Dune
       }
       private:
       BLocalFunction blf_;
+      SideGeometry sideGeometry_;
     };
 
   }  // namespace Fem
