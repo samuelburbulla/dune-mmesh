@@ -382,6 +382,8 @@ namespace Dune
   {
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
+    typedef Entity< 0, dim, GridImp, MMeshEntity > EntityType;
+
   public:
     // equivalent entity in the host grid
     typedef typename GridImp::template HostGridEntity<0> HostGridEntity;
@@ -432,7 +434,7 @@ namespace Dune
     {}
 
     MMeshEntity(const VertexStorage& vertex)
-      : id_( /*dummy*/ IdType({1,1,1}) ), isLeaf_(false), vertex_(vertex)
+      : id_( /*caching id*/ IdType({42,42,42}) ), isLeaf_(false), vertex_(vertex)
     {}
 
     MMeshEntity(const MMeshEntity& original)
@@ -572,18 +574,17 @@ namespace Dune
         return Geometry( this->vertex_ );
     }
 
-    //! Geometry of this entity in father
-    LocalGeometry geometryInFather() const
+    void bindFather( const EntityType& father )
     {
-      DUNE_THROW(GridError, "MMesh entities have no father!");
-      return geometry(); // dummy
+      father_ = &father;
     }
 
-    //! Geometry of this entity in another entity ( assumption: this \subset other )
-    template< class Entity >
-    LocalGeometry geometryInEntity ( const Entity& other ) const
+    //! Geometry of this entity in bounded father entity ( assumption: this \subset father )
+    LocalGeometry geometryInFather() const
     {
       static_assert( dim == 2 );
+      assert( father_ != nullptr );
+
       auto thisPoints = this->vertex_;
 
       if( isLeaf_ )
@@ -592,7 +593,7 @@ namespace Dune
 
       std::array< GlobalCoordinate, 3 > local;
       for ( int i = 0; i < 3; ++i )
-        local[i] = other.geometry().local( thisPoints[i] );
+        local[i] = father_->impl().geometry().local( thisPoints[i] );
 
       return LocalGeometry( local );
     }
@@ -692,7 +693,7 @@ namespace Dune
 
     //! returns true if Entity has no children
     bool isLeaf() const {
-      return isLeaf_;
+      return isLeaf_ && !isNew();
     }
 
     //! returns if grid was refined
@@ -769,6 +770,8 @@ namespace Dune
   protected:
     //! the vertices of the host entity object of this entity (for caching entity)
     VertexStorage vertex_;
+
+    const EntityType* father_;
 
   }; // end of MMeshEntity codim = 0
 

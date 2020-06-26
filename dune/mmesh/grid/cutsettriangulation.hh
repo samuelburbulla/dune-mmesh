@@ -57,7 +57,12 @@ namespace Dune
         }
       }
 
-      const EntityList triangles() const
+      const EntityList& triangles() const
+      {
+        return triangles_;
+      }
+
+      EntityList& triangles()
       {
         return triangles_;
       }

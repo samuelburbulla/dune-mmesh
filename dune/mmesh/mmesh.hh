@@ -965,16 +965,16 @@ namespace Dune
 
           for ( const auto& old : element.impl().connectedComponent().children() )
           {
-            const Entity& oldDuneEntity = old;
+            const Entity& father = old;
 
             MMeshImpl::CutSetTriangulation<Entity> cutSetTriangulation( old, element );
-            for ( const auto& triangle : cutSetTriangulation.triangles() )
+            for ( auto& middle : cutSetTriangulation.triangles() )
             {
-              handle.impl().prolongRestrictLocal( oldDuneEntity, triangle, element,
-                triangle.impl().geometryInEntity( old ),
-                triangle.impl().geometryInEntity( element ),
-                initialize
-              );
+              middle.impl().bindFather( father );
+              handle.prolongLocal( father, middle, true );
+              middle.impl().bindFather( element );
+              handle.restrictLocal( element, middle, initialize );
+
               initialize = false;
             }
           }
