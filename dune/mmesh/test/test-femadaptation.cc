@@ -60,7 +60,7 @@ struct Scheme
   typedef typename GridPartType::GridType GridType;
   typedef FunctionSpace FunctionSpaceType;
 
-#ifdef CONFORMING_SPACE
+#ifdef LAGRANGE
   typedef Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpaceType, GridPartType, POLORDER > DiscreteFunctionSpaceType;
 #else
   typedef Dune::Fem::DiscontinuousGalerkinSpace< FunctionSpaceType, GridPartType, POLORDER > DiscreteFunctionSpaceType;

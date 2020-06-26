@@ -70,3 +70,7 @@ target_link_libraries("test-curvature-3d" CGAL)
 dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
 set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries("test-femadaptation-dg" CGAL)
+
+# dune_add_test(NAME test-femadaptation-lagrange SOURCES test-femadaptation.cc)
+# set_property(TARGET test-femadaptation-lagrange APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;LAGRANGE" )
+# target_link_libraries("test-femadaptation-lagrange" CGAL)

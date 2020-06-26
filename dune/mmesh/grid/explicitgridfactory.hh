@@ -461,6 +461,7 @@ namespace Dune
         tr_.tds().set_dimension(0);
 
       Vertex_handle infinite = tr_.tds().create_vertex();
+      infinite->info().id = std::size_t(-1);
       tr_.set_infinite_vertex(infinite);
     }
 

@@ -42,9 +42,15 @@ namespace Dune
       std::integral_constant< bool, Capabilities::hasEntity< Grid, codim >::v > hasEntity;
       assert( codim == codimension() );
 
-      // add one id for caching during adaptation
+      // add one id for caching entity during adaptation
       MMeshImpl::MultiId id ( {42, 42, 42} );
       this->data_.insert( std::make_pair( id, value ) );
+
+      // add one id for caching vertices during adaptation
+      auto vh = this->grid_->getHostGrid().infinite_vertex();
+      MMeshImpl::MultiId vid ( vh->info().id );
+      this->data_.insert( std::make_pair( vid, value ) );
+      // TODO should add three different caching vertices
 
       // create empty map, but keep old data
       Map data;

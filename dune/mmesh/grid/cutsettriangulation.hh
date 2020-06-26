@@ -51,7 +51,7 @@ namespace Dune
 
         for (int i = 1; i < points.size()-1; ++i)
         {
-          EntityImpl entity ( { points[0], points[i], points[i+1] } );
+          EntityImpl entity ( &first.impl().grid(), { points[0], points[i], points[i+1] } );
           if ( entity.geometry().volume() > 1e-8 )
             triangles_.emplace_back( entity );
         }

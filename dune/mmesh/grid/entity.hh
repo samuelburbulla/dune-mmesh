@@ -433,8 +433,8 @@ namespace Dune
       , mMesh_(mMesh)
     {}
 
-    MMeshEntity(const VertexStorage& vertex)
-      : id_( /*caching id*/ IdType({42,42,42}) ), isLeaf_(false), vertex_(vertex)
+    MMeshEntity(const GridImp* mMesh, const VertexStorage& vertex)
+      : id_( /*caching id*/ IdType({42,42,42}) ), isLeaf_(false), mMesh_(mMesh), vertex_(vertex)
     {}
 
     MMeshEntity(const MMeshEntity& original)
@@ -629,7 +629,14 @@ namespace Dune
     std::enable_if_t< cc == dim, typename GridImp::template Codim<cc>::Entity >
     subEntity (unsigned int i) const {
       assert( i < subEntities( cc ) );
-      return MMeshEntity<cc, dim, GridImp>( mMesh_, hostEntity_->vertex( i ) );
+      if (hostEntity_ != HostGridEntity()) {
+        return MMeshEntity<cc, dim, GridImp>( mMesh_, hostEntity_->vertex( i ) );
+      }
+      else {
+        auto vh = mMesh_->getHostGrid().infinite_vertex();
+        // TODO should distinguish for different i
+        return MMeshEntity<cc, dim, GridImp>( mMesh_, vh );
+      }
     }
 
     template <int cc>
