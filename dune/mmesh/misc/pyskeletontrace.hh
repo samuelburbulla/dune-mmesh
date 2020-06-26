@@ -4,6 +4,7 @@
 #if HAVE_DUNE_FEM
 
 #include <dune/common/exceptions.hh>
+#include <dune/python/common/typeregistry.hh>
 #include <dune/fem/common/intersectionside.hh>
 #include <dune/fem/function/localfunction/const.hh>
 #include <dune/fem/function/localfunction/bindable.hh>
@@ -16,6 +17,10 @@ namespace Dune
   namespace Fem
   {
 
+    ///////////////////////
+    // Skeleton function //
+    ///////////////////////
+
     template <class BulkGV, class InterfaceGridFunction>
     struct SkeletonGF
     : public BindableGridFunctionWithSpace<FemPy::GridPart<BulkGV>,
@@ -25,6 +30,7 @@ namespace Dune
       using Base = BindableGridFunctionWithSpace<GridPart, typename InterfaceGridFunction::RangeType>;
       using ILocalFunction = ConstLocalFunction<InterfaceGridFunction>;
       using SideGeometry = typename GridPart::GridType::Intersection::LocalGeometry::Implementation;
+      static constexpr bool scalar = (InterfaceGridFunction::RangeType::dimension == 1);
 
       SkeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf)
       : Base(FemPy::gridPart<BulkGV>(bulkGV), "skeleton_"+igf.name(), igf.order()),
@@ -82,10 +88,30 @@ namespace Dune
         } else ret = typename Base::HessianRangeType(0);
       }
 
+    private:
       ILocalFunction ilf_;
       bool onInterface_;
       SideGeometry sideGeometry_;
     };
+
+    template< class BulkGV, class InterfaceGridFunction >
+    inline static void registerSkeletonGF(pybind11::module module, pybind11::class_< SkeletonGF<BulkGV, InterfaceGridFunction> > cls)
+    {
+      using pybind11::operator""_a;
+
+      cls.def( pybind11::init( [] ( const BulkGV &bulkGV, const InterfaceGridFunction &bgf ) {
+          return SkeletonGF<BulkGV, InterfaceGridFunction> ( bulkGV, bgf );
+        } ), "bulkGV"_a, "igf"_a, pybind11::keep_alive< 1, 2 >(), pybind11::keep_alive< 1, 3 >() );
+
+      cls.def_property_readonly( "scalar", [] ( SkeletonGF<BulkGV, InterfaceGridFunction> &self ) { return self.scalar; } );
+
+      Dune::FemPy::registerGridFunction( module, cls );
+    }
+
+
+    ////////////////////
+    // Trace function //
+    ////////////////////
 
     template <class IGV, class BulkGridFunction, Dune::Fem::IntersectionSide side>
     struct TraceGF
@@ -96,10 +122,13 @@ namespace Dune
       using Base = Dune::Fem::BindableGridFunctionWithSpace<GridPart,typename BulkGridFunction::RangeType>;
       using BLocalFunction = Dune::Fem::ConstLocalFunction<BulkGridFunction>;
       using SideGeometry = typename GridPart::GridType::MMeshType::Intersection::LocalGeometry::Implementation;
+      static constexpr bool scalar = (BulkGridFunction::RangeType::dimension == 1);
+
       TraceGF(const IGV &iGV, const BulkGridFunction &bgf)
       : Base(Dune::FemPy::gridPart<IGV>(iGV), "trace_"+bgf.name(), bgf.order() ),
         blf_(bgf)
       {}
+
       void bind(const typename Base::EntityType &entity)
       {
         Base::bind(entity);
@@ -113,6 +142,7 @@ namespace Dune
         sideGeometry_ = (side == IntersectionSide::in)
           ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
       }
+
       template <class Point>
       void evaluate(const Point &x, typename Base::RangeType &ret) const
       {
@@ -121,6 +151,7 @@ namespace Dune
         auto bx     = sideGeometry_.global( xLocal );
         blf_.evaluate(bx,ret);
       }
+
       // need to implement jacobian and hessian as their tangential components
       template <class Point>
       void jacobian(const Point &x, typename Base::JacobianRangeType &ret) const
@@ -132,16 +163,33 @@ namespace Dune
         blf_.jacobian(bx,bulkJac);
         ret = bulkJac; // could decide to remove normal component - but perhaps don't have to?
       }
+
       template <class Point>
       void hessian(const Point &x, typename Base::HessianRangeType &ret) const
       {
         // TODO
         DUNE_THROW( Dune::NotImplemented, "TraceFunction::hessian not implemented" );
       }
-      private:
+
+    private:
       BLocalFunction blf_;
       SideGeometry sideGeometry_;
     };
+
+    template< class IGV, class BulkGridFunction, Dune::Fem::IntersectionSide side >
+    inline static void registerTraceGF(pybind11::module module, pybind11::class_< TraceGF<IGV, BulkGridFunction, side> > cls)
+    {
+      using pybind11::operator""_a;
+
+      cls.def( pybind11::init( [] ( const IGV &iGV, const BulkGridFunction &bgf ) {
+          return TraceGF<IGV, BulkGridFunction, side> ( iGV, bgf );
+        } ), "iGV"_a, "bgf"_a, pybind11::keep_alive< 1, 2 >(), pybind11::keep_alive< 1, 3 >() );
+
+      cls.def_property_readonly( "scalar", [] ( TraceGF<IGV, BulkGridFunction, side> &self ) { return self.scalar; } );
+
+      Dune::FemPy::registerGridFunction( module, cls );
+    }
+
 
   }  // namespace Fem
 

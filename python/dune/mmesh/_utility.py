@@ -1,79 +1,9 @@
+import logging, traceback
+logger = logging.getLogger(__name__)
+
 import io
 from dune.generator import algorithm
 from dune.fem.function import cppFunction
-
-################################################################################
-# Trace function
-################################################################################
-def trace(igridView, bulkGridFunction, name="trace", order=1, inside=True):
-    code="""
-    #include <functional>
-    template <class GV, class IGV, class BulkGF>
-    auto trace(const IGV &igv, const BulkGF &bulkgf, bool inside) {
-      using IElement = typename IGV::template Codim<0>::Entity;
-      using LocalCoordinate = typename IElement::Geometry::LocalCoordinate;
-      if (inside)
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          lbulk.bind(intersection.inside()); // lambda must be mutable so that the non const function can be called
-          return lbulk(intersection.geometryInInside().global(xLocal));
-        };
-        return ret;
-      }
-      else
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          typename BulkGF::RangeType ret(0);
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          if (intersection.neighbor())
-          {
-            lbulk.bind(intersection.outside()); // lambda must be mutable so that the non const function can be called
-            ret = lbulk(intersection.geometryInOutside().global(xLocal));
-          }
-          return ret;
-        };
-        return ret;
-      }
-    }
-    """
-    return cppFunction(igridView, name=name, order=order, fctName="trace", includes=io.StringIO(code), args=[igridView, bulkGridFunction, inside])
-################################################################################
-
-
-################################################################################
-# Skeleton function
-################################################################################
-def skeletonFunction(gridView, interfaceFunction, name="skeleton", order=1, inside=True):
-    from dune.generator.algorithm import run
-    import dune.ufl
-    code="""
-    #include <dune/python/common/typeregistry.hh>
-    #include <dune/mmesh/misc/pyskeletonfunction.hh>
-
-    template <class BulkGV, class InterfaceGridFunction>
-    auto skeletonGF(const BulkGV &bulkGV, const InterfaceGridFunction &igf) {
-      using SkeletonGFType = Dune::Fem::SkeletonGF<BulkGV,InterfaceGridFunction>;
-      pybind11::object pygf = pybind11::cast( &igf );
-      auto cls = Dune::Python::insertClass<SkeletonGFType>(pygf,"SkeletonFunction",
-                 Dune::Python::GenerateTypeName("SkeletonGF",
-                      Dune::MetaType<BulkGV>(),Dune::MetaType<InterfaceGridFunction>()),
-                 Dune::Python::IncludeFiles({"dune/mmesh/misc/pyskeletonfunction.hh"})).first;
-      Dune::FemPy::registerGridFunction( pygf, cls );
-      bool scalar = pygf.attr("scalar").template cast<bool>();
-      cls.def_property_readonly( "scalar", [scalar] ( SkeletonGFType &self) { return scalar; } );
-      return SkeletonGFType(bulkGV, igf);
-    }
-    """
-    skeleton = run("skeletonGF", io.StringIO(code), gridView, interfaceFunction)
-    return dune.ufl.GridFunction(skeleton, scalar=True)
-################################################################################
 
 
 ################################################################################

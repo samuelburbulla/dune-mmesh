@@ -39,17 +39,27 @@ namespace Dune
 
     namespace MMIFGrid
     {
-
+      //! register interface grid
       template< class Grid, class... options >
       void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Grid, options... > cls )
       {
         Dune::Python::registerHierarchicalGrid( module, cls );
+
+        cls.def_property_readonly( "bulkGrid", [] ( const Grid &grid ) {
+            return grid.getMMesh().leafGridView();
+          }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
+          R"doc(
+            Obtain bulk grid of the MMesh
+
+            Returns:  bulk grid
+          )doc" );
       }
 
     } // end namespace MMIFGrid
 
     namespace MMGrid
     {
+      //! register bulk grid
       template< int d, class... options >
       void registerHierarchicalGrid ( pybind11::module module, pybind11::class_<Dune::MovingMesh<d>, options...> cls )
       {
