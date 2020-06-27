@@ -15,23 +15,21 @@ parameter.append( { "fem.verboserank": -1,
                     "fem.adaptation.method": "callback" } )
 
 dim = 2
-file = "../grids/tip2d.msh"
+file = "../grids/horizontal2d.msh"
 gridView = adaptive( grid=mmesh((reader.gmsh, file), dim) )
 hgrid = gridView.hierarchicalGrid
 igridView = hgrid.interfaceGrid
 
 t = 0
-dt = 0.1
+dt = 0.01
 
 # Movement
 time = Constant(t, name="time")
 def speed():
-    return ufl.as_vector([1.0]+[0.0]*(dim-1))
+    return ufl.as_vector([0.0, -1.0])
 
 def movement(x):
-  return ufl.conditional((x[0] - (0.25 + 0.5 * time))**2 + (x[1] - 0.5)**2 < 1e-3, \
-    ufl.as_vector([0.5, 0.0]), \
-    ufl.as_vector([0.0, 0.0]) )
+  return ufl.as_vector([0.0, -1.0])
 
 def getShifts():
   mapper = igridView.mapper({dune.geometry.vertex: 1})
@@ -48,8 +46,8 @@ v = test[0]
 
 x = ufl.SpatialCoordinate(space.cell())
 n = ufl.FacetNormal(space.cell())
-left = ufl.conditional( x[0] < 1e-6, 1.0, 0.0 )
-right = ufl.conditional( x[0] > 1 - 1e-6, 1.0, 0.0 )
+top = ufl.conditional( x[1] < 1e-6, 1.0, 0.0 )
+bottom = ufl.conditional( x[1] > 1 - 1e-6, 1.0, 0.0 )
 
 def f(u):
     return speed() * u
@@ -64,7 +62,7 @@ def h(u, n):
     return ufl.conditional( sgn > 0, -sgn * u('+'), -sgn * u('-') )
 
 def u0(x):
-    return 1.0 - x[0]
+    return ufl.conditional( x[1] > 0.5, 1.0, 0.0 )
 
 uh_old = space.interpolate(0, name="uh_old")
 tau = Constant(dt, name="timeStep")
@@ -73,14 +71,12 @@ a = (u - uh_old[0]) / tau * v * ufl.dx
 a -= ufl.inner( f(u), ufl.grad(v) ) * ufl.dx
 a += g(u, n) * ufl.jump(v) * ufl.dS
 # a += h(u, n) * ufl.jump(v) * ufl.dS # TODO add this if h(u, n) is correct
-a += ufl.inner(f(1.0), n) * v * left * ufl.ds
-a += ufl.inner(f(u), n) * v * right * ufl.ds
+a += ufl.inner(f(u), n) * v * ufl.ds
 
 scheme = galerkin([a == 0], solver=("suitesparse","umfpack"))
-uh = space.interpolate(u0, name="uh")
+uh = space.interpolate(u0(x), name="uh")
 
-gridView.writeVTK("transport-mesh")
-gridView.writeVTK("transport-"+str(0), pointdata={"u": uh}, nonconforming=True, subsampling=max(0,space.order-1))
+gridView.writeVTK("adaptation-"+str(0), pointdata={"u": uh}, nonconforming=True, subsampling=max(0,space.order-1))
 
 for step in range(1, 11):
   print("step =", step)
