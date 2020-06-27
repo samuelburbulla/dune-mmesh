@@ -28,7 +28,9 @@ Physical Surface(1) = {1};
 Point(7) = {0.25, 0.5, 0, lcf};
 Point(8) = {0.75, 0.5, 0, lcf};
 Line(12) = {7, 8};
-Line {12} In Surface{1};
+Line(13) = {8, 3};
+Line(14) = {6, 7};
+Line {12:14} In Surface{1};
 Physical Line(2) = {12};
 
 // interface boundary

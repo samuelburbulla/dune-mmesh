@@ -66,6 +66,8 @@ def trace(bulkFunction):
         predefined[ufl.grad(trace)('-')]           = ufl.grad(trace_m)
         predefined[ufl.grad(ufl.grad(trace))('+')] = ufl.grad(ufl.grad(trace_p))
         predefined[ufl.grad(ufl.grad(trace))('-')] = ufl.grad(ufl.grad(trace_m))
+        predefined[ufl.grad(ufl.grad(ufl.grad(trace)))('+')] = ufl.grad(ufl.grad(ufl.grad(trace_p)))
+        predefined[ufl.grad(ufl.grad(ufl.grad(trace)))('-')] = ufl.grad(ufl.grad(ufl.grad(trace_m)))
         trace.predefined = predefined
         if bulkFunction.scalar:
             trace = trace[0]

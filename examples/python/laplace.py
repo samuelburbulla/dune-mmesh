@@ -3,7 +3,7 @@
 
 import io
 from dune.grid import reader
-from dune.mmesh import mmesh, trace, skeleton
+from dune.mmesh import mmesh, trace, skeleton, normals
 import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
@@ -103,3 +103,22 @@ scheme = galerkin([a==b,DirichletBC(space,0)], solver="cg",
 scheme.solve(target=uh)
 gridView.writeVTK("laplace-interface2bulk",
     pointdata={"skeleton":uh})
+
+
+################################################
+print("compute jump of grad trace times normal")
+################################################
+from dune.fem.space import dglagrange
+space = dglagrange(gridView, order=1)
+x = ufl.SpatialCoordinate(space)
+u = ufl.TrialFunction(space)
+v = ufl.TestFunction(space)
+exact = ufl.conditional(x[1]<0.5, x[1], 2*x[1]-0.5)
+uh = space.interpolate(exact, name="uh")
+gridView.writeVTK("laplace-tracenormalexact", pointdata={"uh":uh}, nonconforming=True)
+
+n = normals(igridView)
+normaljump = ufl.inner(ufl.jump(ufl.grad(trace(uh))), n)
+iexact = -1
+print("  error", integrate(igridView, ufl.dot(normaljump-iexact,normaljump-iexact), order=5))
+igridView.writeVTK("laplace-tracenormaljump", pointdata={"normaljump": normaljump, "normals": n}, nonconforming=True)
