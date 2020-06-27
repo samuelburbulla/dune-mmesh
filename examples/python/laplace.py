@@ -88,7 +88,7 @@ iuh.interpolate(0)
 ischeme.solve(target=iuh)
 print("  error", integrate(igridView, ufl.dot(iuh-iexact,iuh-iexact),order=5))
 igridView.writeVTK("laplace-bulk2interface",
-                   pointdata=[iuh, trace(uh) ]) # TODO: ufl.grad(iuh) fails for some reason...
+                   pointdata={"iuh": iuh, "grad(iuh)": ufl.grad(iuh)})
 
 
 ###############################
