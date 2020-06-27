@@ -167,8 +167,12 @@ namespace Dune
       template <class Point>
       void hessian(const Point &x, typename Base::HessianRangeType &ret) const
       {
-        // TODO
-        DUNE_THROW( Dune::NotImplemented, "TraceFunction::hessian not implemented" );
+        // again need to transfer the x (in this case on the interface) to an x in bulk
+        auto xLocal = Dune::Fem::coordinate(x);
+        auto bx     = sideGeometry_.global( xLocal );
+        typename BulkGridFunction::HessianRangeType bulkHessian;
+        blf_.hessian(bx,bulkHessian);
+        ret = bulkHessian;
       }
 
     private:

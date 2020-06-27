@@ -58,9 +58,8 @@ def trace(bulkFunction):
         if bulkFunction.scalar:
             trace_p = trace_p.toVectorCoefficient()
             trace_m = trace_m.toVectorCoefficient()
-        trace   = trace_p # just for now
+        trace = trace_p
         predefined = {}
-        # predefined[trace]                          = ufl.dx # ufl.FacetNormal(space)
         predefined[trace('+')]                     = trace_p
         predefined[trace('-')]                     = trace_m
         predefined[ufl.grad(trace)('+')]           = ufl.grad(trace_p)
