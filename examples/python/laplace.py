@@ -117,7 +117,7 @@ exact = ufl.conditional(x[1]<0.5, x[1], 2*x[1]-0.5)
 uh = space.interpolate(exact, name="uh")
 gridView.writeVTK("laplace-tracenormalexact", pointdata={"uh":uh}, nonconforming=True)
 
-n = normals(igridView)
+n = normals(igridView)('+')
 normaljump = ufl.inner(ufl.jump(ufl.grad(trace(uh))), n)
 iexact = -1
 print("  error", integrate(igridView, ufl.dot(normaljump-iexact,normaljump-iexact), order=5))

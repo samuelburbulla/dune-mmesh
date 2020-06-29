@@ -52,8 +52,7 @@ def trace(bulkFunction):
         sideStr = "Dune::Fem::IntersectionSide::" + side
         typeName += ["Dune::Fem::TraceGF< " + igrid._typeName + ", " + bulkFunction._typeName + ", " + sideStr + " >"]
     moduleName = "skeleton_"+hashlib.md5(''.join(typeName).encode('utf8')).hexdigest()
-    module = generator.load(includes, typeName, moduleName,
-                            options=[[],[]]) # options can be removed but requires fix in dune-common
+    module = generator.load(includes, typeName, moduleName)
     traces["in"]  = module.TraceGFP(igrid, bulkFunction)
     traces["out"] = module.TraceGFM(igrid, bulkFunction)
 

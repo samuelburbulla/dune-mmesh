@@ -23,7 +23,12 @@ def normals(igridView):
     }
     """
     cppFunc = cppFunction(igridView, name="normals", order=0, fctName="normals", includes=io.StringIO(code), args=[igridView])
-    return dune.ufl.GridFunction( cppFunc )
+    n_p = dune.ufl.GridFunction( cppFunc )
+    predefined = {}
+    predefined[n_p('+')]                     = n_p
+    predefined[n_p('-')]                     = -n_p
+    n_p.predefined = predefined
+    return n_p
 ################################################################################
 
 
