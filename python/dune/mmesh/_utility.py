@@ -7,6 +7,59 @@ from dune.generator import algorithm
 from dune.fem.function import cppFunction
 
 ################################################################################
+# Edge movement
+################################################################################
+def edgemovement(gridView, shifts):
+    code="""
+    #include <functional>
+    #include <dune/geometry/multilineargeometry.hh>
+    #include <dune/python/pybind11/pybind11.h>
+    #include <dune/python/pybind11/numpy.h>
+
+    template <class GV>
+    auto edgemovement(const GV &gv, const pybind11::array_t<double>& input) {
+        static constexpr int dim = GV::dimension;
+        using GlobalCoordinate = Dune::FieldVector<double, dim>;
+
+        // obtain shifts from buffer protocol
+        pybind11::buffer_info buffer = input.request();
+        double *ptr = (double *) buffer.ptr;
+        int n = buffer.shape[0];
+
+        std::vector<GlobalCoordinate> shifts( n );
+        for ( std::size_t i = 0; i < n; ++i )
+          for ( int d = 0; d < dim; ++d )
+            shifts[i][d] = ptr[dim*i+d];
+
+        const auto& igrid = gv.grid().interfaceGrid();
+        const auto& iindexSet = igrid.leafIndexSet();
+
+        auto ret = [shifts, &igrid, &iindexSet] (const auto& entity, const auto& xLocal) mutable -> auto {
+            // return a linear interpolation of the vertex shift values
+            std::vector<GlobalCoordinate> shift( dim+1 );
+            for ( std::size_t i = 0; i < entity.subEntities( dim ); ++i )
+            {
+                const auto& vertex = entity.template subEntity<dim>( i );
+                if ( vertex.impl().isInterface() )
+                {
+                    // cast to interface grid vertex to obtain index
+                    const auto ivertex = igrid.entity( vertex.impl().hostEntity() );
+                    shift[i] = shifts[ iindexSet.index( ivertex ) ];
+                }
+            }
+            const Dune::MultiLinearGeometry<double, dim, dim> interpolation(entity.type(), shift);
+            return interpolation.global(xLocal);
+        };
+        return ret;
+    }
+    """
+    cppFunc = cppFunction(gridView, name="edgemovement", order=1, fctName="edgemovement", includes=io.StringIO(code), args=[gridView, shifts])
+    from dune.fem.function import uflFunction
+    return uflFunction(gridView, "edgemovement", 1, cppFunc)
+################################################################################
+
+
+################################################################################
 # Obtain domain markers
 ################################################################################
 def domainMarker(gridView):
@@ -14,8 +67,7 @@ def domainMarker(gridView):
     #include <functional>
     template <class GV>
     auto domainMarker(const GV &gv) {
-      auto
-        ret = [] (const auto& entity, const auto& xLocal) mutable -> auto {
+      auto ret = [] (const auto& entity, const auto& xLocal) mutable -> auto {
         return entity.impl().domainMarker();
       };
       return ret;
@@ -35,6 +87,27 @@ def interfaceIndicator(igridView):
     space = finiteVolume(igridView)
     one = space.interpolate(1, name="one")
     return avg(skeleton(one))
+################################################################################
+
+
+################################################################################
+# Obtain cell volumes
+################################################################################
+def cellVolumes(gridView):
+    code="""
+    #include <functional>
+    template <class GV>
+    auto cellVolumes(const GV &gv) {
+      auto ret = [] (const auto& entity, const auto& xLocal) mutable -> auto {
+        return entity.geometry().volume();
+      };
+      return ret;
+    }
+    """
+    cppFunc = cppFunction(gridView, name="cellVolumes", order=0, fctName="cellVolumes", includes=io.StringIO(code), args=[gridView])
+    from dune.fem.space import finiteVolume
+    space = finiteVolume(gridView)
+    return space.interpolate(cppFunc, name="cellVolumes")
 ################################################################################
 
 

@@ -1,5 +1,5 @@
 from dune.grid import reader, cartesianDomain
-from dune.mmesh import mmesh
+from dune.mmesh import mmesh, skeleton, edgemovement, cellVolumes
 from dune.ufl import Constant
 import ufl
 import numpy as np
@@ -35,10 +35,13 @@ def getShifts():
   mapper = igridView.mapper({dune.geometry.vertex: 1})
   shifts = np.zeros((mapper.size, dim))
   for v in igridView.vertices:
-    shifts[ mapper.index(v) ] = ufl.as_vector(movement( v.geometry.center )) * dt
+    shifts[ mapper.index(v) ] = ufl.as_vector(movement( v.geometry.center ))
   return shifts
 
-space = dglagrange(gridView, dimRange=1, order=1)
+shifts = getShifts()
+em = edgemovement(gridView, shifts)
+
+space = dglagrange(gridView, dimRange=1, order=0)
 trial = ufl.TrialFunction(space)
 test = ufl.TestFunction(space)
 u = trial[0]
@@ -54,43 +57,55 @@ def f(u):
 
 # numerical flux
 def g(u, n):
-    return ufl.inner( ufl.conditional( ufl.inner(speed(), n('+')) > 0, f( u('+') ), f( u('-') ) ), n('+') )
+    sgn = ufl.inner(speed(), n('+'))
+    return ufl.inner( ufl.conditional( sgn > 0, f( u('+') ), f( u('-') ) ), n('+') )
 
 # geometrical flux
 def h(u, n):
-    sgn = ufl.inner(movement(x), n('+')) # TODO: use effective edge movement here
-    return ufl.conditional( sgn > 0, -sgn * u('+'), -sgn * u('-') )
+    sgn = ufl.inner(em('+'), n('+'))
+    return ufl.conditional( sgn > 0, sgn * u('+'), sgn * u('-') )
 
 def u0(x):
-    return ufl.conditional( x[1] > 0.5, 1.0, 0.0 )
+    return ufl.conditional( x[1] > 0.5, 1.0, -1.0 )
 
 uh_old = space.interpolate(0, name="uh_old")
 tau = Constant(dt, name="timeStep")
 
-a = (u - uh_old[0]) / tau * v * ufl.dx
+vol = cellVolumes(gridView)
+vol_old = cellVolumes(gridView)
+
+a = (u - uh_old[0] * vol_old / vol) / tau * v * ufl.dx
 a -= ufl.inner( f(u), ufl.grad(v) ) * ufl.dx
 a += g(u, n) * ufl.jump(v) * ufl.dS
-# a += h(u, n) * ufl.jump(v) * ufl.dS # TODO add this if h(u, n) is correct
+a -= h(u, n) * ufl.jump(v) * ufl.dS
 a += ufl.inner(f(u), n) * v * ufl.ds
 
 scheme = galerkin([a == 0], solver=("suitesparse","umfpack"))
 uh = space.interpolate(u0(x), name="uh")
 
-gridView.writeVTK("adaptation-"+str(0), pointdata={"u": uh}, nonconforming=True, subsampling=max(0,space.order-1))
+def writeVTK(step):
+    gridView.writeVTK("adaptation-"+str(step), pointdata={"u": uh, "em" : em, "vol":vol, "vol_old": vol_old}, nonconforming=True, subsampling=max(0,space.order-1))
 
-for step in range(1, 11):
+writeVTK(0)
+
+for step in range(1, 21):
   print("step =", step)
-  hgrid.ensureInterfaceMovement( getShifts() )
+
+  hgrid.ensureInterfaceMovement(shifts*dt)
   hgrid.markElements()
-  adapt([uh])
+  adapt([uh, vol, vol_old])
+  writeVTK(2*step-1)
 
-  gridView.writeVTK("adaptation-"+str(2*step-1), pointdata={"u": uh}, nonconforming=True, subsampling=max(0,space.order-1))
+  vol_old = cellVolumes(gridView)
 
-  hgrid.moveInterface( getShifts() )
+  shifts = getShifts()
+  hgrid.moveInterface(shifts*dt)
+
+  vol = cellVolumes(gridView)
+  em = edgemovement(gridView, shifts)
 
   t += dt
-  time = Constant(t, name="time")
 
   uh_old.assign(uh)
   scheme.solve(target=uh)
-  gridView.writeVTK("adaptation-"+str(2*step), pointdata={"u": uh}, nonconforming=True, subsampling=max(0,space.order-1))
+  writeVTK(2*step)
