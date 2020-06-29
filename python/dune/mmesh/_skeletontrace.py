@@ -15,20 +15,22 @@ def skeleton(interfaceFunction):
     try:
         return interfaceFunction.skeleton
     except:
-        grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
+        pass
 
-        includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
-        includes += interfaceFunction._includes
-        generator = SimpleGenerator("SkeletonGF", "Dune::Fem")
+    grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
 
-        typeName = "Dune::Fem::SkeletonGF< " + grid._typeName + ", " + interfaceFunction._typeName + " >"
-        moduleName = "skeleton_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
-        cls = generator.load(includes, typeName, moduleName)
-        skeleton = cls.SkeletonGF(grid, interfaceFunction)
-        skeleton = dune.ufl.GridFunction(skeleton)
+    includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
+    includes += interfaceFunction._includes
+    generator = SimpleGenerator("SkeletonGF", "Dune::Fem")
 
-        interfaceFunction.skeleton = skeleton
-        return skeleton
+    typeName = "Dune::Fem::SkeletonGF< " + grid._typeName + ", " + interfaceFunction._typeName + " >"
+    moduleName = "skeleton_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
+    cls = generator.load(includes, typeName, moduleName)
+    skeleton = cls.SkeletonGF(grid, interfaceFunction)
+    skeleton = dune.ufl.GridFunction(skeleton)
+
+    interfaceFunction.skeleton = skeleton
+    return skeleton
 ################################################################################
 
 
@@ -69,8 +71,6 @@ def trace(bulkFunction):
     predefined[ufl.grad(trace)('-')]           = ufl.grad(trace_m)
     predefined[ufl.grad(ufl.grad(trace))('+')] = ufl.grad(ufl.grad(trace_p))
     predefined[ufl.grad(ufl.grad(trace))('-')] = ufl.grad(ufl.grad(trace_m))
-    # predefined[ufl.grad(ufl.grad(ufl.grad(trace)))('+')] = ufl.grad(ufl.grad(ufl.grad(trace_p)))
-    # predefined[ufl.grad(ufl.grad(ufl.grad(trace)))('-')] = ufl.grad(ufl.grad(ufl.grad(trace_m)))
     trace.predefined = predefined
     if bulkFunction.scalar:
         trace = trace[0]

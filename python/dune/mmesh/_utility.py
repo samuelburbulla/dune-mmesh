@@ -26,7 +26,7 @@ def normals(igridView):
     n_p = dune.ufl.GridFunction( cppFunc )
     predefined = {}
     predefined[n_p('+')]                     = n_p
-    predefined[n_p('-')]                     = -n_p
+    predefined[n_p('-')]                     = n_p # TODO
     n_p.predefined = predefined
     return n_p
 ################################################################################
