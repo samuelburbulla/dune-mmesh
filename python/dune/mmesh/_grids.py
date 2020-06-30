@@ -26,10 +26,8 @@ try:
         import io
         import dune.ufl
         from dune.fem.function import cppFunction
-        cppFunc_p = cppFunction(igridView, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, True])
-        cppFunc_m = cppFunction(igridView, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, False])
-        n_p = dune.ufl.GridFunction( cppFunc_p )
-        n_m = dune.ufl.GridFunction( cppFunc_m )
+        n_p = cppFunction(igridView, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, True])
+        n_m = cppFunction(igridView, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, False])
         predefined = {}
         predefined[n_p('+')] = n_p
         predefined[n_p('-')] = n_m
