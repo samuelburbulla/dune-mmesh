@@ -74,7 +74,7 @@ namespace Dune
       static inline int twistInNeighbor(const GridType& grid, const LeafIntersection& intersection )
       {
         // TODO: 3d
-        return 1 - intersection.indexInOutside() % 2;
+        return 0; //1 - intersection.indexInOutside() % 2;
       }
 
       //! \brief return element geometry type of inside or outside entity
