@@ -6,32 +6,6 @@ import dune.ufl
 from dune.generator import algorithm
 from dune.fem.function import cppFunction
 
-
-################################################################################
-# Interface normals
-################################################################################
-def normals(igridView):
-    code="""
-    #include <functional>
-    template <class IGV>
-    auto normals(const IGV &igv) {
-      auto
-        ret = [&igv] (const auto& entity, const auto& xLocal) mutable -> auto {
-        return igv.grid().getMMesh().asIntersection( entity ).centerUnitOuterNormal();
-      };
-      return ret;
-    }
-    """
-    cppFunc = cppFunction(igridView, name="normals", order=0, fctName="normals", includes=io.StringIO(code), args=[igridView])
-    n_p = dune.ufl.GridFunction( cppFunc )
-    predefined = {}
-    predefined[n_p('+')]                     = n_p
-    predefined[n_p('-')]                     = n_p # TODO
-    n_p.predefined = predefined
-    return n_p
-################################################################################
-
-
 ################################################################################
 # Obtain domain markers
 ################################################################################

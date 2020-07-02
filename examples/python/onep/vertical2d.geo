@@ -19,13 +19,17 @@ Line(6) = {6, 1};
 
 Physical Line(1) = {1:6};
 
+Line(10) = {2, 5};
+
 // domain surface
-Line Loop(1) = {1:6};
+Line Loop(1) = {1,10,5,6};
+Line Loop(2) = {2,3,4,-10};
 Plane Surface(1) = {1};
-Physical Surface(1) = {1};
+Plane Surface(2) = {2};
+Physical Surface(0) = {1};
+Physical Surface(1) = {2};
 
 // interface
-Line(10) = {2, 5};
 Line {10} In Surface{1};
 Physical Line(10) = {10};
 

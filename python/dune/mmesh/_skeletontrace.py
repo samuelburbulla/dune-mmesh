@@ -11,16 +11,17 @@ from dune.generator.generator import SimpleGenerator
 ################################################################################
 # Skeleton function
 ################################################################################
-def skeleton(interfaceFunction):
+def skeleton(interfaceFunction, grid=None):
     try:
         return interfaceFunction.skeleton
     except:
         pass
 
-    grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
+    if grid == None:
+        grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
 
     includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
-    includes += interfaceFunction._includes
+    includes += interfaceFunction._includes + grid._includes
     generator = SimpleGenerator("SkeletonGF", "Dune::Fem")
 
     typeName = "Dune::Fem::SkeletonGF< " + grid._typeName + ", " + interfaceFunction._typeName + " >"
