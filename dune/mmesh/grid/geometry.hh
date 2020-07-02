@@ -46,6 +46,14 @@ namespace Dune
     enum { coorddimension = coorddim };
     enum { mydimension = mydim };
 
+    explicit MMeshGeometry()
+     : BaseType(GeometryTypes::simplex(mydim),
+       std::array<FVector, 3>( {
+         FVector( { 0.0, 0.0 } ),
+         FVector( { 1.0, 0.0 } ),
+         FVector( { 0.0, 1.0 } )
+       } ) ) {}
+
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::template HostGridEntity<0>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim),
@@ -157,6 +165,15 @@ namespace Dune
     enum { dimensionworld = GridImp::dimensionworld };
     enum { coorddimension = coorddim };
     enum { mydimension = mydim };
+
+    explicit MMeshGeometry()
+     : BaseType(GeometryTypes::simplex(mydim),
+       std::array<FVector, 4>( {
+         FVector( { 0.0, 0.0, 0.0 } ),
+         FVector( { 1.0, 0.0, 0.0 } ),
+         FVector( { 0.0, 1.0, 0.0 } ),
+         FVector( { 0.0, 0.0, 1.0 } )
+       } ) ) {}
 
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::template HostGridEntity<0>& hostEntity)

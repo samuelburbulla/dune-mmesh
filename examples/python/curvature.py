@@ -19,7 +19,7 @@ from dune.fem.scheme import galerkin
 from dune.ufl import DirichletBC
 
 igridView = hgrid.interfaceGrid
-space = lagrange(igridView, dimRange=dim, order=2)
+space = lagrange(igridView, dimRange=dim, order=1)
 u = TrialFunction(space)
 phi = TestFunction(space)
 

@@ -1,6 +1,6 @@
 import io
 from dune.grid import reader
-from dune.mmesh import mmesh, traceFunction, domainMarker, moveInterface, interfaceCurvature
+from dune.mmesh import mmesh, trace, domainMarker, moveInterface, interfaceCurvature
 from dune.ufl import Space, Constant
 import dune.create as create
 import numpy as np
@@ -81,7 +81,7 @@ for t in range(0, (int)(T / dt)):
     p = pspace.interpolate([vh[2]], name="pressure")
     gridView.writeVTK("twophase"+str(t), pointdata=[vel, p], celldata=[marker])
 
-    trace = traceFunction(igridView, vel)
+    trace = trace(igridView, vel)
     movement = space3.interpolate(trace, name="movement")
     curvature = interfaceCurvature(igridView)
     igridView.writeVTK("interface"+str(t), pointdata=[movement, curvature])

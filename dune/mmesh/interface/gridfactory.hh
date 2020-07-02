@@ -68,6 +68,12 @@ namespace Dune
      : mMesh_( mMesh )
     {}
 
+    /** compatibility constructor */
+    GridFactory ()
+    {
+      DUNE_THROW(NotImplemented, "GridFactory() for MMeshInterfaceGrid");
+    }
+
     /** \brief insert an element into the macro grid
      *
      *  \param[in]  type      GeometryType of the new element

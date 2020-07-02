@@ -1,51 +1,10 @@
+import logging, traceback
+logger = logging.getLogger(__name__)
+
 import io
+import dune.ufl
 from dune.generator import algorithm
 from dune.fem.function import cppFunction
-
-################################################################################
-# Compute trace function
-################################################################################
-def traceFunction(igridView, bulkGridFunction, name="trace", order=1, inside=True):
-    code="""
-    #include <functional>
-    template <class GV, class IGV, class BulkGF>
-    auto trace(const IGV &igv, const BulkGF &bulkgf, bool inside) {
-      using IElement = typename IGV::template Codim<0>::Entity;
-      using LocalCoordinate = typename IElement::Geometry::LocalCoordinate;
-      if (inside)
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          lbulk.bind(intersection.inside()); // lambda must be mutable so that the non const function can be called
-          return lbulk(intersection.geometryInInside().global(xLocal));
-        };
-        return ret;
-      }
-      else
-      {
-        std::function<typename BulkGF::RangeType(const IElement&,LocalCoordinate)>
-          ret = [&bulkgf, lbulk=localFunction(bulkgf)]
-          (const auto& interfaceEntity,const auto& xLocal) mutable -> auto {
-          typename BulkGF::RangeType ret(0);
-          const auto intersection =
-                bulkgf.space().gridPart().grid().asIntersection( interfaceEntity );
-          if (intersection.neighbor())
-          {
-            lbulk.bind(intersection.outside()); // lambda must be mutable so that the non const function can be called
-            ret = lbulk(intersection.geometryInOutside().global(xLocal));
-          }
-          return ret;
-        };
-        return ret;
-      }
-    }
-    """
-    return cppFunction(igridView, name=name, order=order, fctName="trace", includes=io.StringIO(code), args=[igridView, bulkGridFunction, inside])
-################################################################################
-
 
 ################################################################################
 # Obtain domain markers
@@ -70,6 +29,7 @@ def domainMarker(gridView):
 # Move interface and restore domain markers
 ################################################################################
 def moveInterface(hgrid, movedf):
+    print("'moveInterface' is just a legacy function, use adapt() instead!")
     assert hgrid.dimension == hgrid.dimensionworld and hasattr(hgrid, 'leafView'), \
         "please pass the bulk hierarchical grid as first argument of moveInterface()"
 
