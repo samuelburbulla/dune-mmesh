@@ -80,7 +80,7 @@
 
 # <codecell>
 
-import io
+import vertical
 from dune.grid import reader
 from dune.mmesh import mmesh, trace, skeleton, domainMarker
 import logging
@@ -89,7 +89,7 @@ logger.setLevel(logging.INFO)
 
 from ufl import *
 import dune.ufl
-from dune.fem import parameter, globalRefine
+from dune.fem import parameter, globalRefine, adapt
 from dune.fem.function import integrate, uflFunction
 from dune.fem.space import dglagrange, finiteVolume
 from dune.fem.scheme import galerkin
@@ -107,21 +107,22 @@ solverParameters =\
     "newton.verbose": True,
     "newton.linear.verbose": False}
 
-dim = 2
-file = "vertical2d.msh"
-
-# MMesh
-gridView = adaptive(mmesh((reader.gmsh, file), dim))
-igridView = gridView.hierarchicalGrid.interfaceGrid
-
-fvspace = finiteVolume(gridView)
-dm = fvspace.interpolate(domainMarker(gridView), name="dm")
-
 errors = []
 eocs = []
-for i in range(3):
+for i in range(4):
+
+    file = "vertical.msh"
+    vertical.create(file, h=0.5*2**-i)
+
+    dim = 2
+    gridView = mmesh((reader.gmsh, file), dim)
+    igridView = gridView.hierarchicalGrid.interfaceGrid
+
+    fvspace = finiteVolume(gridView)
+    dm = fvspace.interpolate(domainMarker(gridView), name="dm")
+
     # Bulk problem
-    order = 1
+    order = 2
     space = dglagrange(gridView, order=order)
     p = TrialFunction(space)
     phi = TestFunction(space)
@@ -142,7 +143,7 @@ for i in range(3):
 
     space_gamma = dglagrange(igridView, order=order)
     one = space_gamma.interpolate(1, name="one")
-    I = avg(skeleton(one, gridView))
+    I = avg(skeleton(one))
 
     L = q * phi * dx
     L += mu * g * phi * ds
@@ -165,7 +166,7 @@ for i in range(3):
     x_gamma = SpatialCoordinate(space_gamma)
     n_gamma = FacetNormal(space_gamma)
 
-    d = 1 # TODO d != 1 is not correct
+    d = 0.01
     K_gamma = as_matrix([[2, 0], [0, 1]])
     xi = 3./4.
     p_gammaexact = 3./4.*(cos(2.)+sin(2.))*cos(pi*x_gamma[1])
@@ -176,35 +177,34 @@ for i in range(3):
     h_gamma = MaxFacetEdgeLength(space_gamma.cell())
     mu_gamma = mu0 * lambdaMax_gamma * (order + 1) * (order + dim) / h_gamma
 
-    L_gamma = d * q_gamma * phi_gamma * dx
+    L_gamma = q_gamma * phi_gamma * dx
     L_gamma += mu_gamma * d**2 * g_gamma * phi_gamma * ds
-    L_gamma -= d**2 * g_gamma * dot(dot(grad(d * phi_gamma), K_gamma), n_gamma) * ds
+    L_gamma -= d * g_gamma * dot(dot(grad(d * phi_gamma), K_gamma), n_gamma) * ds
 
-    B_gamma = d * dot(dot(grad(d*p_gamma), K_gamma), grad(d*phi_gamma)) * dx
+    B_gamma = dot(dot(grad(d*p_gamma), K_gamma), grad(d*phi_gamma)) * dx
     B_gamma += d * mu_gamma * d * jump(p_gamma) * jump(phi_gamma) * dS
     B_gamma -= d * jump(phi_gamma) * dot(avg(dot(grad(d *  p_gamma ), K_gamma)), n_gamma('+')) * dS
     B_gamma -= d * jump( p_gamma ) * dot(avg(dot(grad(d * phi_gamma), K_gamma)), n_gamma('+')) * dS
     B_gamma += mu_gamma * d**2 * p_gamma * phi_gamma * ds
-    B_gamma -= d**2 * p_gamma * dot(dot(grad(d * phi_gamma), K_gamma), n_gamma) * ds
-    B_gamma -= d**2 * phi_gamma * dot(dot(grad(d * p_gamma), K_gamma), n_gamma) * ds
+    B_gamma -= d * p_gamma * dot(dot(grad(d * phi_gamma), K_gamma), n_gamma) * ds
+    B_gamma -= d * phi_gamma * dot(dot(grad(d * p_gamma), K_gamma), n_gamma) * ds
 
 
     ph = space.interpolate(0, name="pressure")
     ph_gamma = space_gamma.interpolate(0, name="pressure")
 
     # Coupling
-    igvNormal = igridView.normal
-    nK_gamman = dot(dot(K_gamma, igvNormal), igvNormal)
-    skeletonnK_gamman = skeleton(ph_gamma, gridView)
-    beta = 4. * nK_gamman / (2. * xi - 1)
-    skeletonbeta = 4. * skeletonnK_gamman / (2. * xi - 1)
-    skeletonp_gamma = skeleton(ph_gamma, gridView)
-    C = skeletonnK_gamman('+') * jump(p) * jump(phi) * dS
-    C += skeletonbeta * ( avg(p) - skeletonp_gamma ) * dS
+    skelK_perp = dot(dot(K_gamma, n('+')), n('+'))
+    skelBeta = 4. * skelK_perp / (2. * xi - 1)
 
-    tracep = trace(ph)
-    C_gamma = nK_gamman * jump(tracep) * dx
-    C_gamma += beta * ( avg(tracep) - p_gamma ) * dx
+    C = skelK_perp * jump(p) * jump(phi) * I*dS
+    C += skelBeta * ( avg(p) * avg(phi) - skeleton(ph_gamma)('+') * avg(phi) ) * I*dS
+
+    inormal = igridView.normal
+    K_perp = dot(dot(K_gamma, inormal), inormal)
+    beta = 4. * K_perp / (2. * xi - 1)
+
+    C_gamma = beta * ( -avg(trace(ph)) * phi_gamma + p_gamma * phi_gamma ) * dx
 
 
     # Scheme
@@ -213,28 +213,28 @@ for i in range(3):
 
     def solve():
         for i in range(100):
-          print("iteration", i)
+          print("# Iteration", i)
 
           ph_old = ph.copy()
           ph_gamma_old = ph_gamma.copy()
 
-          print("  solve bulk")
+          print("Solve bulk")
           scheme.solve(target=ph)
 
-          print("  solve interface")
+          print("Solve interface")
           scheme_gamma.solve(target=ph_gamma)
 
-          if integrate(gridView, dot(ph-ph_old, ph-ph_old), order=5) + \
-             integrate(igridView, dot(ph_gamma-ph_gamma_old, ph_gamma-ph_gamma_old), order=5) < 1e-14:
+          if integrate(gridView, dot(ph-ph_old, ph-ph_old), order=order) + \
+             integrate(igridView, dot(ph_gamma-ph_gamma_old, ph_gamma-ph_gamma_old), order=order) < 1e-14:
                 break
 
 
     print("\nEOC", i, "\n")
     solve()
 
-    errorbulk = sqrt(integrate(gridView, dot(ph-pexact, ph-pexact), order=5))
+    errorbulk = sqrt(integrate(gridView, dot(ph-pexact, ph-pexact), order=order))
     print("  error bulk", errorbulk)
-    errorinterface = sqrt(integrate(igridView, dot(ph_gamma-p_gammaexact, ph_gamma-p_gammaexact), order=5))
+    errorinterface = sqrt(integrate(igridView, dot(ph_gamma-p_gammaexact, ph_gamma-p_gammaexact), order=order))
     print("  error interface", errorinterface)
     error = errorbulk + errorinterface
     print("  error bulk + interface", error)
@@ -247,9 +247,6 @@ for i in range(3):
         nonconforming=True, subsampling=order-1)
     igridView.writeVTK("onep-interface-"+str(i), pointdata={"p": ph_gamma, "exact": p_gammaexact},
         nonconforming=True, subsampling=order-1)
-
-    # global refine
-    globalRefine(dim, dm)
 
 print(errors)
 print("EOC:", eocs)
