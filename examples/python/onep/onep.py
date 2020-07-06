@@ -87,29 +87,22 @@ import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
 
+import timeit
+import numpy as np
+from scipy.sparse import linalg
+from math import log
+
 from ufl import *
 import dune.ufl
-from dune.fem import parameter, globalRefine, adapt
-from dune.fem.function import integrate, uflFunction
+from dune.fem.function import integrate
 from dune.fem.space import dglagrange, finiteVolume
 from dune.fem.scheme import galerkin
+from dune.fem.operator import linear as linearOperator
 from dune.fem.view import adaptiveLeafGridView as adaptive
-from dune.ufl import DirichletBC
-from math import log
-parameter.append({"fem.verboserank": 0,
-                  "fem.adaptation.method": "callback"})
-solverParameters =\
-   {"newton.tolerance": 1e-8,
-    "newton.linear.tolerance": 1e-12,
-    "newton.linear.preconditioning.method": "jacobi",
-    "newton.linear.maxiterations": 10000,
-    "preconditioning.method": "jacobi",
-    "newton.verbose": True,
-    "newton.linear.verbose": False}
 
 errors = []
 eocs = []
-for i in range(4):
+for i in range(5):
 
     file = "vertical.msh"
     vertical.create(file, h=0.5*2**-i)
@@ -206,31 +199,53 @@ for i in range(4):
 
     C_gamma = beta * ( -avg(trace(ph)) * phi_gamma + p_gamma * phi_gamma ) * dx
 
-
     # Scheme
-    scheme = galerkin([B + C == L], solver='cg', parameters=solverParameters)
-    scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma], solver='cg', parameters=solverParameters)
+    scheme = galerkin([B + C == L])
+    scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma])
+
+    A = linearOperator(scheme).as_numpy
+    A_gamma = linearOperator(scheme_gamma).as_numpy
+
+    rhs = ph.copy()
+    rhs_gamma = ph_gamma.copy()
+
+    zero = ph.copy(); zero.clear()
+    zero_gamma = ph_gamma.copy(); zero_gamma.clear()
+
+    ph_old = ph.copy()
+    ph_gamma_old = ph_gamma.copy()
 
     def solve():
         for i in range(100):
-          print("# Iteration", i)
 
-          ph_old = ph.copy()
-          ph_gamma_old = ph_gamma.copy()
+            # bulk
+            scheme(zero, rhs)
+            ph_old.assign(ph)
+            ph.as_numpy[:] = linalg.spsolve(A, -rhs.as_numpy)
 
-          print("Solve bulk")
-          scheme.solve(target=ph)
+            phnp = ph_old.as_numpy[:]
+            phnp -= ph.as_numpy
+            error = np.dot(phnp, phnp)
 
-          print("Solve interface")
-          scheme_gamma.solve(target=ph_gamma)
+            # interface
+            scheme_gamma(zero_gamma, rhs_gamma)
+            ph_gamma_old.assign(ph_gamma)
+            ph_gamma.as_numpy[:] = linalg.spsolve(A_gamma, -rhs_gamma.as_numpy)
 
-          if integrate(gridView, dot(ph-ph_old, ph-ph_old), order=order) + \
-             integrate(igridView, dot(ph_gamma-ph_gamma_old, ph_gamma-ph_gamma_old), order=order) < 1e-14:
+            ph_gammanp = ph_gamma_old.as_numpy[:]
+            ph_gammanp -= ph_gamma.as_numpy
+            error_gamma = np.dot(ph_gammanp, ph_gammanp)
+
+            print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
+
+            if max(error, error_gamma) < 1e-12:
                 break
 
 
     print("\nEOC", i, "\n")
+    start = timeit.default_timer()
     solve()
+    print('solve: ', timeit.default_timer() - start)
 
     errorbulk = sqrt(integrate(gridView, dot(ph-pexact, ph-pexact), order=order))
     print("  error bulk", errorbulk)
