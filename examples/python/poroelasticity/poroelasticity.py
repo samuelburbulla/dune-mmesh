@@ -74,5 +74,5 @@ scheme = galerkin([a == b],
 solution = space.interpolate([0]*(dim+1), name="solution")
 scheme.solve(target=solution)
 
-gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]})
+gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]}, nonconforming=True)
 igridView.writeVTK('poroelasticity-interface', pointdata={"pressure": pgamma})
