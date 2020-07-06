@@ -13,6 +13,12 @@ try:
 
     # export normals to the interface elements
     def normal(igridView):
+
+        try:
+            return igridView.hierarchicalGrid.interfaceGrid.normals
+        except:
+            pass
+
         code="""
         #include <functional>
         template <class IGV>
