@@ -38,13 +38,14 @@ def skeleton(interfaceFunction, grid=None):
 ################################################################################
 # Trace function
 ################################################################################
-def trace(bulkFunction):
+def trace(bulkFunction, igrid=None):
     try:
         return bulkFunction.trace
     except:
         pass
 
-    igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
+    if igrid == None:
+      igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
 
     traces = {}
     includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
