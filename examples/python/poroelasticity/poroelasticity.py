@@ -25,10 +25,10 @@ x = SpatialCoordinate(space)
 n = FacetNormal(space)
 bc = dune.ufl.DirichletBC(space, as_vector([0]*(dim+1)))
 
-mu = 10
+mu = 1 #2.58e7
 lamb = 0.3
 alpha = 1.0
-K = 1e-3
+K = 1 # 9.8e-12
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
 sigma = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
