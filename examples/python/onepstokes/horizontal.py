@@ -1,15 +1,15 @@
 # A rectangle grid with a centered horizontal interface
-def create(file, h):
+def create(file, h, hf):
     import pygmsh
     import meshio
     import numpy
     geom = pygmsh.built_in.Geometry()
     p1 = geom.add_point([0.0, 0.0, 0.0], lcar=h)
     p2 = geom.add_point([1.0, 0.0, 0.0], lcar=h)
-    p3 = geom.add_point([0.0, 0.5, 0.0], lcar=h)
-    p4 = geom.add_point([1.0, 0.5, 0.0], lcar=h)
-    p5 = geom.add_point([0.0, 1.0, 0.0], lcar=h)
-    p6 = geom.add_point([1.0, 1.0, 0.0], lcar=h)
+    p3 = geom.add_point([0.0, 1.0, 0.0], lcar=hf)
+    p4 = geom.add_point([1.0, 1.0, 0.0], lcar=hf)
+    p5 = geom.add_point([0.0, 2.0, 0.0], lcar=h)
+    p6 = geom.add_point([1.0, 2.0, 0.0], lcar=h)
     l0 = geom.add_line(p1, p2)
     l1 = geom.add_line(p2, p4)
     lf = geom.add_line(p4, p3)
