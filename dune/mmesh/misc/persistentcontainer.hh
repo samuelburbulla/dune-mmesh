@@ -33,11 +33,11 @@ namespace Dune
     void resize ( const Value &value = Value() )
     {
       Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
-        [ & ]( auto i ){ if( i == codimension() ) resize< i >( value ); } );
+        [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
     }
 
     template< int codim >
-    inline void resize ( const Value &value )
+    void resize ( const Value &value )
     {
       std::integral_constant< bool, Capabilities::hasEntity< Grid, codim >::v > hasEntity;
       assert( codim == codimension() );
