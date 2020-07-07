@@ -200,8 +200,8 @@ for i in range(5):
     C_gamma = beta * ( -avg(trace(ph)) * phi_gamma + p_gamma * phi_gamma ) * dx
 
     # Scheme
-    scheme = galerkin([B + C == L])
-    scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma])
+    scheme = galerkin([B + C == L], solver=("suitesparse","umfpack"))
+    scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma], solver=("suitesparse","umfpack"))
 
     A = linearOperator(scheme).as_numpy
     A_gamma = linearOperator(scheme_gamma).as_numpy
@@ -219,18 +219,26 @@ for i in range(5):
         for i in range(100):
 
             # bulk
-            scheme(zero, rhs)
-            ph_old.assign(ph)
-            ph.as_numpy[:] = linalg.spsolve(A, -rhs.as_numpy)
+            if True:
+                scheme(zero, rhs)
+                ph_old.assign(ph)
+                ph.as_numpy[:] = linalg.spsolve(A, -rhs.as_numpy)
+            else:
+                ph_old.assign(ph)
+                scheme.solve(target=ph)
 
             phnp = ph_old.as_numpy[:]
             phnp -= ph.as_numpy
             error = np.dot(phnp, phnp)
 
             # interface
-            scheme_gamma(zero_gamma, rhs_gamma)
-            ph_gamma_old.assign(ph_gamma)
-            ph_gamma.as_numpy[:] = linalg.spsolve(A_gamma, -rhs_gamma.as_numpy)
+            if True:
+                scheme_gamma(zero_gamma, rhs_gamma)
+                ph_gamma_old.assign(ph_gamma)
+                ph_gamma.as_numpy[:] = linalg.spsolve(A_gamma, -rhs_gamma.as_numpy)
+            else:
+                ph_gamma_old.assign(ph_gamma)
+                scheme_gamma.solve(target=ph_gamma)
 
             ph_gammanp = ph_gamma_old.as_numpy[:]
             ph_gammanp -= ph_gamma.as_numpy

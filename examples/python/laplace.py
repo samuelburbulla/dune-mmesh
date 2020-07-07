@@ -4,6 +4,7 @@
 import io
 from dune.grid import reader
 from dune.mmesh import mmesh, trace, skeleton, normal
+from dune.fem.view import adaptiveLeafGridView as adaptive
 import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
@@ -16,8 +17,8 @@ else:
     file = "../grids/horizontal2d.msh"
 
 # MMesh
-gridView = mmesh((reader.gmsh, file), dim)
-igridView = gridView.hierarchicalGrid.interfaceGrid
+gridView  = adaptive(mmesh((reader.gmsh, file), dim))
+igridView = adaptive(gridView.hierarchicalGrid.interfaceGrid)
 
 
 import ufl
