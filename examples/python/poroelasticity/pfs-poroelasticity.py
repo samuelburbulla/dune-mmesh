@@ -25,14 +25,23 @@ n = FacetNormal(space)
 bc = dune.ufl.DirichletBC(space, as_vector([0]*(dim+1)))
 
 dm = domainMarker(gridView)
+fvspace = finiteVolume(gridView)
+dmfv = fvspace.interpolate(dm, name="dm")
 pfspace = lagrange(gridView, order=1)
-pf = pfspace.interpolate( dm, name="pf" )
+pt = TrialFunction(pfspace)
+ppt = TestFunction(pfspace)
+l = 0.1
+pfa = pt * ppt * dx + l**2 * inner( grad(pt), grad(ppt) ) * dx + 1e2*(pt-1) * ppt * dmfv*dx
+pfscheme = galerkin([pfa == 0], solver=('suitesparse', 'umfpack'))
+pf = pfspace.interpolate(dm, name="pf")
+pfscheme.solve(target=pf)
 
-mu = 1 # 2.58e7
-lamb = 0.3
+lamb = 1.5
+mu = 1
 alpha = 1.0
-K = 1 # 9.8e-12
-Kf = 1/12.
+K = 1e-3
+d = 1
+Kf = d**2/12
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
 sigma = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
@@ -44,21 +53,23 @@ uu = as_vector([test[0], test[1]])
 p = trial[2]
 pp = test[2]
 
-beta = 1e6
-k = 1e-14
-a = inner(sigma(u) - alpha*p*Identity(dim), epsilon(uu)) * ((1-pf)**2 + k) * dx
-a += inner( (K*(1-pf)+Kf*pf) * grad(p), grad(pp) ) * dx
+n = grad(pf) / sqrt(dot(grad(pf), grad(pf)))
+Kd = (K * Identity(dim)) + pf * (Kf-K)*(Identity(dim) - outer(n,n))
 
-# DirichletBC
-a += beta * inner(as_vector([0]*dim) - u, uu) * ds
-a += beta * (0 - p) * pp * ds
-a += beta * (0.1 - p) * pp * pf*dx
+a = inner(sigma(u), epsilon(uu)) * ((1-pf)**2 + 1e-5) * dx - inner(alpha*p*Identity(dim), epsilon(uu)) * dx
+a += dot( dot(Kd, grad(p)), grad(pp) ) * dx
 
-scheme = galerkin([a == 0],
+# boundary conditions
+bc = dune.ufl.DirichletBC(space, [0,0,0])
+# source
+b = (0.1 - p) * pp * dmfv*dx
+
+scheme = galerkin([a == b, bc],
     solver=('suitesparse', 'umfpack'),
     parameters = {"newton.verbose": True} )
 
 solution = space.interpolate([0]*(dim+1), name="solution")
 scheme.solve(target=solution)
 
-gridView.writeVTK('pfs-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "pf": pf})
+gridView.writeVTK('pfs-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "phasefield": pf},
+    celldata={"domainMarker": dmfv})

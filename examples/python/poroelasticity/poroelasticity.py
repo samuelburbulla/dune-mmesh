@@ -25,13 +25,14 @@ x = SpatialCoordinate(space)
 n = FacetNormal(space)
 bc = dune.ufl.DirichletBC(space, as_vector([0]*(dim+1)))
 
-mu = 1 #2.58e7
-lamb = 0.3
+lamb = 1.5
+mu = 1
 alpha = 1.0
-K = 1 # 9.8e-12
+K = 1e-3
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
-sigma = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
+sigma_eff = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
+sigma = lambda u, p: sigma_eff(u) - alpha*p*Identity(dim)
 
 trial = TrialFunction(space)
 test = TestFunction(space)
@@ -46,7 +47,7 @@ I = avg(skeleton(one))
 beta = 1e6
 normal = FacetNormal(space.cell())
 
-a = inner(sigma(u) - alpha*p*Identity(dim), epsilon(uu)) * dx
+a = inner(sigma(u, p), epsilon(uu)) * dx
 a += inner( K * grad(p), grad(pp) ) * dx
 # enforce solution to be continuous except for the interface
 a += beta * inner(jump(u), jump(uu)) * (1-I)*dS
