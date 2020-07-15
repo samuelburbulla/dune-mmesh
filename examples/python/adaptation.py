@@ -71,10 +71,9 @@ def u0(x):
 uh_old = space.interpolate(0, name="uh_old")
 tau = Constant(dt, name="timeStep")
 
-vol = cellVolumes(gridView)
-vol_old = cellVolumes(gridView)
+cellVolume = ufl.CellVolume(space)
 
-a = (u - uh_old[0] * vol_old / vol) / tau * v * ufl.dx
+a = (u - uh_old[0] / cellVolume) / tau * v * ufl.dx
 a -= ufl.inner( f(u), ufl.grad(v) ) * ufl.dx
 a += g(u, n) * ufl.jump(v) * ufl.dS
 a -= h(u, n) * ufl.jump(v) * ufl.dS
@@ -84,28 +83,28 @@ scheme = galerkin([a == 0], solver=("suitesparse","umfpack"))
 uh = space.interpolate(u0(x), name="uh")
 
 def writeVTK(step):
-    gridView.writeVTK("adaptation-"+str(step), pointdata={"u": uh, "em" : em, "vol":vol, "vol_old": vol_old}, nonconforming=True, subsampling=max(0,space.order-1))
+    gridView.writeVTK("adaptation-"+str(step), pointdata={"u": uh, "em" : em}, nonconforming=True, subsampling=max(0,space.order-1))
 
 writeVTK(0)
 
-for step in range(1, 21):
+for step in range(1, 31):
   print("step =", step)
 
   hgrid.ensureInterfaceMovement(shifts*dt)
   hgrid.markElements()
-  adapt([uh, vol, vol_old])
-  writeVTK(2*step-1)
+  adapt([uh])
 
+  # multiply cell values by (old) cell volumes
   vol_old = cellVolumes(gridView)
+  uh_old.assign(uh)
+  uh_old.as_numpy[:] *= vol_old.as_numpy[:]
 
   shifts = getShifts()
   hgrid.moveInterface(shifts*dt)
 
-  vol = cellVolumes(gridView)
   em = edgemovement(gridView, shifts)
 
-  t += dt
-
-  uh_old.assign(uh)
   scheme.solve(target=uh)
-  writeVTK(2*step)
+
+  t += dt
+  writeVTK(step)
