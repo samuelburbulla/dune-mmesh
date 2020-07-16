@@ -72,8 +72,9 @@ uh_old = space.interpolate(0, name="uh_old")
 tau = Constant(dt, name="timeStep")
 
 cellVolume = ufl.CellVolume(space)
+vol_old = cellVolumes(gridView)
 
-a = (u - uh_old[0] / cellVolume) / tau * v * ufl.dx
+a = (u - uh_old[0] * vol_old / cellVolume) / tau * v * ufl.dx
 a -= ufl.inner( f(u), ufl.grad(v) ) * ufl.dx
 a += g(u, n) * ufl.jump(v) * ufl.dS
 a -= h(u, n) * ufl.jump(v) * ufl.dS
@@ -94,10 +95,8 @@ for step in range(1, 31):
   hgrid.markElements()
   adapt([uh])
 
-  # multiply cell values by (old) cell volumes
-  vol_old = cellVolumes(gridView)
+  vol_old.assign( cellVolumes(gridView) )
   uh_old.assign(uh)
-  uh_old.as_numpy[:] *= vol_old.as_numpy[:]
 
   shifts = getShifts()
   hgrid.moveInterface(shifts*dt)
