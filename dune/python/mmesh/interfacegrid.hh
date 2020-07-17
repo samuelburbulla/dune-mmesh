@@ -89,7 +89,7 @@ namespace Dune
         )doc" );
 
         cls.def( "ensureInterfaceMovement", [] ( Grid &self, const std::vector< FieldVector >& shifts ) {
-          self.ensureInterfaceMovement( shifts );
+          return self.ensureInterfaceMovement( shifts );
         },
         R"doc(
           Ensure the non-degeneration of the mesh after movement of the interface vertices

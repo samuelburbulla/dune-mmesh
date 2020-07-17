@@ -796,9 +796,10 @@ namespace Dune
     }
 
     //! Assure the movement of interface vertices
-    void ensureInterfaceMovement( std::vector<GlobalCoordinate> shifts )
+    bool ensureInterfaceMovement( std::vector<GlobalCoordinate> shifts )
     {
       assert( shifts.size() == this->interfaceGrid().leafIndexSet().size(dimension-1) );
+      bool change = false;
 
       // check if grid is still valid
       for ( const auto& element : elements( this->leafGridView() ) )
@@ -833,6 +834,7 @@ namespace Dune
                 if ( inserted )
                 {
                   remove_.push_back( v.impl().hostEntity() );
+                  change = true;
                   if (verbose_)
                     std::cout << "Remove vertex because of negative volume: " << v.geometry().center() << std::endl;
                 }
@@ -871,6 +873,7 @@ namespace Dune
                     if ( inserted )
                     {
                       remove_.push_back( v.impl().hostEntity() );
+                      change = true;
                       if (verbose_)
                         std::cout << "Remove interface vertex because of negative volume: " << v.geometry().center() << std::endl;
                     }
@@ -935,6 +938,7 @@ namespace Dune
                   std::cout << "Insert interface intersection point: " << ip.point << std::endl;
 
                 insert_.push_back( ip );
+                change = true;
 
                 // move third vertex back to old position
                 const auto& idx = interfaceGrid().leafIndexSet().index(iThirdVertex);
@@ -949,6 +953,8 @@ namespace Dune
       for ( GlobalCoordinate& s : shifts )
         s *= -1.0;
       moveInterface( shifts );
+
+      return change;
     }
 
     //! Callback for the grid adaptation process with restrict/prolong
