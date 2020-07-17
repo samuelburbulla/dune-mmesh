@@ -22,7 +22,6 @@ gridView = mmesh((reader.gmsh, file), dim)
 space = lagrange(gridView, dimRange=dim+1, order=1)
 x = SpatialCoordinate(space)
 n = FacetNormal(space)
-bc = dune.ufl.DirichletBC(space, as_vector([0]*(dim+1)))
 
 dm = domainMarker(gridView)
 fvspace = finiteVolume(gridView)
