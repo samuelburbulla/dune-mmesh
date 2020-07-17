@@ -62,7 +62,8 @@ a += dot( dot(Kd, grad(p)), grad(pp) ) * dx
 # boundary conditions
 bc = dune.ufl.DirichletBC(space, [0,0,0])
 # source
-b = (0.1 - p) * pp * dmfv*dx
+p0 = 0.1
+b = (p0 - p) * pp * dmfv*dx
 
 scheme = galerkin([a == b, bc],
     solver=('suitesparse', 'umfpack'),
@@ -71,5 +72,9 @@ scheme = galerkin([a == b, bc],
 solution = space.interpolate([0]*(dim+1), name="solution")
 scheme.solve(target=solution)
 
-gridView.writeVTK('pfs-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "phasefield": pf},
+c = 5
+E = mu * (3*lamb + 2*mu) / (lamb + mu)
+sigma = 0 # TODO
+w = conditional(abs(x[0]-50)<5, 2 * (1 - sigma**2) * p0 / E * sqrt(c**2 - (x[0]-50)**2), 0)
+gridView.writeVTK('pfs-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "phasefield": pf, "w": w},
     celldata={"domainMarker": dmfv})
