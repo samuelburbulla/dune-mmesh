@@ -26,6 +26,11 @@ Testing
 *.toc
 *.synctex.gz
 
+# python clutter
+__pycache__
+.ipynb_checkpoints
+*.tmp.msh
+
 # always consider files containing source code regardless of their name
 !*.cc
 !*.hh
