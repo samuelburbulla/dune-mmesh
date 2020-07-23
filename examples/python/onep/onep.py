@@ -82,7 +82,7 @@
 
 import vertical
 from dune.grid import reader
-from dune.mmesh import mmesh, trace, skeleton, domainMarker
+from dune.mmesh import mmesh, trace, skeleton, domainMarker, monolithicSolve
 import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
@@ -102,9 +102,9 @@ from dune.fem.view import adaptiveLeafGridView as adaptive
 
 errors = []
 eocs = []
-for i in range(5):
+for i in range(1):
 
-    file = "vertical.msh"
+    file = "vertical.tmp.msh"
     vertical.create(file, h=0.5*2**-i)
 
     dim = 2
@@ -203,6 +203,13 @@ for i in range(5):
     scheme = galerkin([B + C == L], solver=("suitesparse","umfpack"))
     scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma], solver=("suitesparse","umfpack"))
 
+    # Monolithic solve
+    start = timeit.default_timer()
+    monolithicSolve( schemes=(scheme, scheme_gamma), targets=(ph, ph_gamma), tol=1e-14 )
+    print('mono solve: ', timeit.default_timer() - start)
+    monoph = ph.copy()
+    monoph_gamma = ph_gamma.copy()
+
     A = linearOperator(scheme).as_numpy
     A_gamma = linearOperator(scheme_gamma).as_numpy
 
@@ -244,16 +251,22 @@ for i in range(5):
             ph_gammanp -= ph_gamma.as_numpy
             error_gamma = np.dot(ph_gammanp, ph_gammanp)
 
-            print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
+            # print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
 
             if max(error, error_gamma) < 1e-12:
                 break
-
 
     print("\nEOC", i, "\n")
     start = timeit.default_timer()
     solve()
     print('solve: ', timeit.default_timer() - start)
+
+
+    monoerrorbulk = sqrt(integrate(gridView, dot(ph-monoph, ph-monoph), order=order))
+    print(" --- mono error bulk", monoerrorbulk)
+    monoerrorinterface = sqrt(integrate(igridView, dot(ph_gamma-monoph_gamma, ph_gamma-monoph_gamma), order=order))
+    print(" --- mono error interface", monoerrorinterface)
+
 
     errorbulk = sqrt(integrate(gridView, dot(ph-pexact, ph-pexact), order=order))
     print("  error bulk", errorbulk)
@@ -266,9 +279,9 @@ for i in range(5):
         eocs += [ log( errors[i-1] / errors[i] ) / log(2) ]
 
 
-    gridView.writeVTK("onep-bulk-"+str(i), pointdata={"p": ph, "exact": pexact},
+    gridView.writeVTK("onep-bulk-"+str(i), pointdata={"p": ph, "monoph": monoph, "exact": pexact},
         nonconforming=True, subsampling=order-1)
-    igridView.writeVTK("onep-interface-"+str(i), pointdata={"p": ph_gamma, "exact": p_gammaexact},
+    igridView.writeVTK("onep-interface-"+str(i), pointdata={"p": ph_gamma, "monoph_gamma": monoph_gamma, "exact": p_gammaexact},
         nonconforming=True, subsampling=order-1)
 
 print(errors)
