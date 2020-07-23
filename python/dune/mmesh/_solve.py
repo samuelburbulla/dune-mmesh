@@ -2,19 +2,20 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 import numpy as np
-from scipy.sparse import linalg, lil_matrix
+from scipy.sparse import linalg, csc_matrix
 
 import dune.ufl
-from dune.fem.operator import galerkin as galerkinOperator
+from dune.fem.operator import linear as linearOperator
 
-def monolithicSolve(schemes, targets, **kwargs):
+def monolithicSolve(schemes, targets, solver=linalg.gmres, preconditioner=linalg.spilu, **kwargs):
     """solve bulk and interface scheme coupled monolithically
 
     Args:
         schemes: pair of schemes
-        targets: pair of discrete functions that should be solved for and that are used in the coupling forms
+        targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
+        solver: iterative solver to solve coupled system (default: linalg.gmres)
+        preconditioner: preconditioner applied to diagonal blocks (default: linalg.spilu)
         kwargs:  additional arguments passed to the solver
-        # TODO add possibility to choose solver
     Returns:
         int: return value of solver
     """
@@ -24,56 +25,53 @@ def monolithicSolve(schemes, targets, **kwargs):
     (scheme, ischeme) = schemes
     (ph, ih) = targets
 
-    A = scheme
-    iA = ischeme
-
-    rhs = ph.copy(); rhs.clear()
-    irhs = ih.copy(); irhs.clear()
+    rhs = ph.copy()
+    irhs = ih.copy()
 
     zero = ph.copy()
     zero.clear()
     izero = ih.copy()
     izero.clear()
 
-    n = len(ph.as_numpy)
-    m = len(ih.as_numpy)
-
-    Ax = ph.space.interpolate(0, name="Ax")
-    iAx = ih.space.interpolate(0, name="iAx")
-
     scheme(zero, rhs)
     ischeme(izero, irhs)
     rhscon = np.concatenate((-rhs.as_numpy, -irhs.as_numpy))
 
-    def M(x_coeff):
+    n = len(ph.as_numpy)
+    m = len(ih.as_numpy)
+
+    Ax = ph.copy()
+    iAx = ih.copy()
+
+    def matrixEvaluation(x_coeff):
         ph.as_numpy[:] = x_coeff[:n]
         ih.as_numpy[:] = x_coeff[n:]
-        A(ph, Ax)
+
+        scheme(ph, Ax)
         Ax.as_numpy[:] -= rhs.as_numpy
-        iA(ih, iAx)
+
+        ischeme(ih, iAx)
         iAx.as_numpy[:] -= irhs.as_numpy
+
         return np.concatenate((Ax.as_numpy, iAx.as_numpy))
 
-    Mat = lil_matrix((n+m, n+m))
-    for i in range(n+m):
-        xv = np.zeros(n+m)
-        xv[i] = 1
-        Mat[i] = M(xv)
-    Mat.transpose()
-    Matc = Mat.tocsc()
-    Mat = Mat.tocsr()
+    Mat = linalg.LinearOperator((n+m,n+m), matrixEvaluation)
 
-    ILU = linalg.spilu(Matc)
-    M_x = lambda x: ILU.solve(x)
-    M = linalg.LinearOperator((n+m,n+m), M_x)
+    # Preconditioner
+    precA = preconditioner( csc_matrix(linearOperator(scheme).as_numpy) )
+    preciA = preconditioner( csc_matrix(linearOperator(ischeme).as_numpy) )
+    a = np.zeros(n)
+    ia = np.zeros(m)
+    def precEvaluation(x_coeff):
+        a = precA.solve( x_coeff[:n] )
+        ia = preciA.solve( x_coeff[n:] )
+        return np.concatenate((a, ia))
 
-    r = linalg.gmres(Mat, rhscon, M=M, **kwargs)
-    print(r[1])
+    prec = linalg.LinearOperator((n+m,n+m), precEvaluation)
 
-    if r[1] == 0:
-      r = r[0]
+    r, info = solver(Mat, rhscon, M=prec, **kwargs)
 
-      ph.as_numpy[:] = r[:n]
-      ih.as_numpy[:] = r[n:]
+    ph.as_numpy[:] = r[:n]
+    ih.as_numpy[:] = r[n:]
 
-    return r[1]
+    return info
