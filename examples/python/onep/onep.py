@@ -82,10 +82,7 @@
 
 import vertical
 from dune.grid import reader
-from dune.mmesh import mmesh, trace, skeleton, domainMarker
-import logging
-logger = logging.getLogger('dune')
-logger.setLevel(logging.INFO)
+from dune.mmesh import mmesh, trace, skeleton, domainMarker, monolithicSolve
 
 import timeit
 import numpy as np
@@ -102,9 +99,11 @@ from dune.fem.view import adaptiveLeafGridView as adaptive
 
 errors = []
 eocs = []
-for i in range(5):
+i0 = 0
+repeat = 5
+for i in range(i0, i0+repeat):
 
-    file = "vertical.msh"
+    file = "vertical.tmp.msh"
     vertical.create(file, h=0.5*2**-i)
 
     dim = 2
@@ -203,6 +202,15 @@ for i in range(5):
     scheme = galerkin([B + C == L], solver=("suitesparse","umfpack"))
     scheme_gamma = galerkin([B_gamma + C_gamma == L_gamma], solver=("suitesparse","umfpack"))
 
+    # Monolithic solve
+    start = timeit.default_timer()
+    monolithicSolve( schemes=(scheme, scheme_gamma), targets=(ph, ph_gamma), tol=1e-12 )
+    monosolve = timeit.default_timer() - start
+    monoph = ph.copy()
+    monoph_gamma = ph_gamma.copy()
+    ph.clear()
+    ph_gamma.clear()
+
     A = linearOperator(scheme).as_numpy
     A_gamma = linearOperator(scheme_gamma).as_numpy
 
@@ -215,8 +223,9 @@ for i in range(5):
     ph_old = ph.copy()
     ph_gamma_old = ph_gamma.copy()
 
-    def solve():
-        for i in range(100):
+    def solve(verbose=False):
+        converged = False
+        for i in range(1000):
 
             # bulk
             if True:
@@ -244,16 +253,30 @@ for i in range(5):
             ph_gammanp -= ph_gamma.as_numpy
             error_gamma = np.dot(ph_gammanp, ph_gammanp)
 
-            print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
+            if verbose:
+                print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
 
             if max(error, error_gamma) < 1e-12:
+                converged = True
                 break
 
+        if not converged:
+            print("solve() did not converge!")
 
     print("\nEOC", i, "\n")
+    print('mono solve: ', monosolve)
     start = timeit.default_timer()
     solve()
-    print('solve: ', timeit.default_timer() - start)
+    solvetime = timeit.default_timer() - start
+    print('solve: ', solvetime)
+    print("SPEEDUP: mono is", "{:.2f}".format(solvetime / monosolve), "x faster")
+
+
+    monoerrorbulk = sqrt(integrate(gridView, dot(ph-monoph, ph-monoph), order=order))
+    print(" --- error between monolithic and iterative ", monoerrorbulk)
+    monoerrorinterface = sqrt(integrate(igridView, dot(ph_gamma-monoph_gamma, ph_gamma-monoph_gamma), order=order))
+    print(" --- error between monolithic and iterative interface", monoerrorinterface)
+
 
     errorbulk = sqrt(integrate(gridView, dot(ph-pexact, ph-pexact), order=order))
     print("  error bulk", errorbulk)
@@ -262,13 +285,13 @@ for i in range(5):
     error = errorbulk + errorinterface
     print("  error bulk + interface", error)
     errors += [error]
-    if i > 0:
+    if i > i0:
         eocs += [ log( errors[i-1] / errors[i] ) / log(2) ]
 
 
-    gridView.writeVTK("onep-bulk-"+str(i), pointdata={"p": ph, "exact": pexact},
+    gridView.writeVTK("onep-bulk-"+str(i), pointdata={"p": ph, "monoph": monoph, "exact": pexact},
         nonconforming=True, subsampling=order-1)
-    igridView.writeVTK("onep-interface-"+str(i), pointdata={"p": ph_gamma, "exact": p_gammaexact},
+    igridView.writeVTK("onep-interface-"+str(i), pointdata={"p": ph_gamma, "monoph_gamma": monoph_gamma, "exact": p_gammaexact},
         nonconforming=True, subsampling=order-1)
 
 print(errors)
