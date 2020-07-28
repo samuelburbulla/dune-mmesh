@@ -22,17 +22,16 @@ space = dglagrange(gridView, dimRange=dim+1, order=1)
 x = SpatialCoordinate(space)
 n = FacetNormal(space)
 
-E = 1 #15.96e9
+E = 15.96e9
 nu = 0.2
-
 lamb = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
+
 alpha = 0.79
-K = 1 #2e-11
+K = 2e-11
 aperture = 1
 K_gamma = 83.3
-# f = 2e-3
-p0 = 0.1
+f = 2e-3
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
 sigma_eff = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
@@ -48,7 +47,7 @@ pp = test[2]
 space_gamma = dglagrange(igridView, order=0)
 one = space_gamma.interpolate(1, name="one")
 I = avg(skeleton(one))
-beta = 1e3
+beta = dune.ufl.Constant(1e-3, name="beta")
 normal = FacetNormal(space.cell())
 
 a = inner(sigma(u, p), epsilon(uu)) * dx
@@ -68,6 +67,9 @@ a -= dot(dot(epsilon(uu), n), u) * ds
 a += beta * (0 - p) * pp * ds
 a -= inner(K*grad(p), n) * pp * ds
 a -= inner(K*grad(pp), n) * p * ds
+
+# NeumannBC
+a += f * pp * ds
 
 ispace = lagrange(igridView, order=1)
 pgamma = ispace.interpolate(0, name="pgamma")
@@ -109,10 +111,7 @@ a_gamma -= (bp_p - p_gamma) * pp_gamma * dx
 a_gamma -= -0.5 * eta * ( - K_gamma * inner( grad(bp_m), inormal ) * pp_gamma ) * dx
 a_gamma -= (bp_m - p_gamma) * pp_gamma * dx
 
-# a_gamma += aperture * f * pp_gamma * dx
-
-bc = dune.ufl.DirichletBC( ispace, p0 )
-scheme_gamma = galerkin([a_gamma == 0, bc], solver=('suitesparse', 'umfpack'))
+scheme_gamma = galerkin([a_gamma == 0], solver=('suitesparse', 'umfpack'))
 
 
 solution_old = solution.copy()
@@ -121,7 +120,9 @@ for i in range(100):
     solution_old.assign(solution)
     solution_gamma_old.assign(pgamma)
 
+    print("solve bulk")
     scheme.solve(target=solution)
+    print("solve interface")
     scheme_gamma.solve(target=pgamma)
 
     sol = solution_old.as_numpy[:]
@@ -137,9 +138,6 @@ for i in range(100):
     if max(error, error_gamma) < 1e-12:
         break
 
-c = 5
-w = conditional(abs(x[0]-50)<5, 2 * p0 / E * sqrt(c**2 - (x[0]-50)**2), 0)
-
-gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "w": w},
+gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]},
     nonconforming=True, subsampling=space.order-1)
 igridView.writeVTK('poroelasticity-interface', pointdata={"pressure": pgamma})

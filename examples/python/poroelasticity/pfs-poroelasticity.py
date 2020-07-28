@@ -4,7 +4,7 @@ logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
 
 from dune.grid import reader
-from dune.mmesh import mmesh, skeleton, domainMarker
+from dune.mmesh import mmesh, skeleton, interfaceIndicator
 
 from dune.fem.space import *
 from dune.fem.scheme import galerkin
@@ -12,38 +12,55 @@ from dune.fem.scheme import galerkin
 from ufl import *
 import dune.ufl
 
+import numpy as np
+
 from dune.fem import parameter
 parameter.append({"fem.verboserank": 0})
+solverParameters =\
+   {"newton.tolerance": 1e-6,
+    "newton.linear.tolerance": 1e-12,
+    "newton.linear.preconditioning.method": "jacobi",
+    "newton.linear.preconditioning.iterations": 1,
+    "newton.linear.preconditioning.relaxation": 1.2,
+    "newton.linear.maxiterations": 10000,
+    "newton.verbose": True,
+    "newton.linear.verbose": False}
 
 dim = 2
-file = "middlefull" + str(dim) + "d.msh"
+file = "middle" + str(dim) + "d.msh"
 gridView = mmesh((reader.gmsh, file), dim)
+igridView = gridView.hierarchicalGrid.interfaceGrid
+I = interfaceIndicator(igridView)
 
-space = lagrange(gridView, dimRange=dim+1, order=1)
-x = SpatialCoordinate(space)
-n = FacetNormal(space)
-
-dm = domainMarker(gridView)
-fvspace = finiteVolume(gridView)
-dmfv = fvspace.interpolate(dm, name="dm")
 pfspace = lagrange(gridView, order=1)
 pt = TrialFunction(pfspace)
 ppt = TestFunction(pfspace)
-l = 0.1
-pfa = pt * ppt * dx + l**2 * inner( grad(pt), grad(ppt) ) * dx + 1e2*(pt-1) * ppt * dmfv*dx
+l = 1
+pfa = pt * ppt * dx
+pfa += l**2 * inner( grad(pt), grad(ppt) ) * dx
+pfa += 200*avg( (pt - 1) * ppt ) * I*dS
 pfscheme = galerkin([pfa == 0], solver=('suitesparse', 'umfpack'))
-pf = pfspace.interpolate(dm, name="pf")
+pf = pfspace.interpolate(0, name="pf")
 pfscheme.solve(target=pf)
 
-lamb = 1.5
-mu = 1
-alpha = 1.0
-K = 1e-3
+E = 15.96e9
+nu = 0.2
+lamb = E*nu/((1+nu)*(1-2*nu))
+mu = E/(2*(1+nu))
+M = 12.5e9
+
+alpha = 0.79
 d = 1
-Kf = d**2/12
+eta = 1e-3
+K = 2e-14 / eta
+Kf = d**2/12 / eta
+exp = 50
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
 sigma = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
+
+space = lagrange(gridView, dimRange=dim+1, order=1)
+normal = FacetNormal(space.cell())
 
 trial = TrialFunction(space)
 test = TestFunction(space)
@@ -52,28 +69,43 @@ uu = as_vector([test[0], test[1]])
 p = trial[2]
 pp = test[2]
 
-n = grad(pf) / sqrt(dot(grad(pf), grad(pf)))
-Kd = (K * Identity(dim)) + pf * (Kf-K)*(Identity(dim) - outer(n,n))
+uh = space.interpolate([0]*(dim+1), name="u")
+uh_old = uh.copy()
 
-a = inner(sigma(u), epsilon(uu)) * ((1-pf)**2 + 1e-5) * dx - inner(alpha*p*Identity(dim), epsilon(uu)) * dx
-a += dot( dot(Kd, grad(p)), grad(pp) ) * dx
+n = grad(pf) / sqrt(dot(grad(pf), grad(pf)))
+Kd = (K * Identity(dim)) + pf**exp * Kf*(Identity(dim) - outer(n,n))
+
+dt = 0.5
+tau = dune.ufl.Constant(dt, name="dt")
+k = 1e-5
+
+storage = lambda s: s[2] / M + alpha * div(as_vector([s[0], s[1]]))
+
+a = inner(sigma(u), epsilon(uu)) * ((1-pf)**2 + k) * dx - inner(alpha*p*Identity(dim), epsilon(uu)) * dx
+a += (storage(trial) - storage(uh_old)) * pp * dx
+a += tau*dot( dot(Kd, grad(p)), grad(pp) ) * dx
 
 # boundary conditions
 bc = dune.ufl.DirichletBC(space, [0,0,0])
-# source
-p0 = 0.1
-b = (p0 - p) * pp * dmfv*dx
 
-scheme = galerkin([a == b, bc],
-    solver=('suitesparse', 'umfpack'),
-    parameters = {"newton.verbose": True} )
+# interior NeumannBC
+f = dune.ufl.Constant(0.002, name="f")
+b = 2*avg( f * pp ) * I*dS
 
-solution = space.interpolate([0]*(dim+1), name="solution")
-scheme.solve(target=solution)
+scheme = galerkin([a == b, bc], solver=('suitesparse', 'umfpack'), parameters=solverParameters)
 
-c = 5
-E = mu * (3*lamb + 2*mu) / (lamb + mu)
-sigma = 0 # TODO
-w = conditional(abs(x[0]-50)<5, 2 * (1 - sigma**2) * p0 / E * sqrt(c**2 - (x[0]-50)**2), 0)
-gridView.writeVTK('pfs-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2], "phasefield": pf, "w": w},
-    celldata={"domainMarker": dmfv})
+for step in range(100):
+    print("step", step)
+
+    uh_old.assign(uh)
+    scheme.solve(target=uh)
+
+    gridView.writeVTK(
+        'pfs-poroelasticity-'+str(step),
+        pointdata={
+            "displacement": [uh[0], uh[1], 0],
+            "pressure": uh[2],
+            "phasefield": pf,
+            "n": [n[0], n[1], 0]
+        }
+    )
