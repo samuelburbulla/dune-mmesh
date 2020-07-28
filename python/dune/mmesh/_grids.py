@@ -38,7 +38,6 @@ try:
         predefined[n_p('+')] = n_p
         predefined[n_p('-')] = n_m
         n_p.predefined = predefined
-        igridView.hierarchicalGrid.interfaceGrid.normals = n_p
         return n_p
 
 
