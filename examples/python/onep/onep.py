@@ -82,7 +82,7 @@
 
 import vertical
 from dune.grid import reader
-from dune.mmesh import mmesh, trace, skeleton, domainMarker, monolithicSolve
+from dune.mmesh import mmesh, trace, skeleton, domainMarker, monolithicSolve, normal
 
 import timeit
 import numpy as np
@@ -192,7 +192,7 @@ for i in range(i0, i0+repeat):
     C = skelK_perp * jump(p) * jump(phi) * I*dS
     C += skelBeta * ( avg(p) * avg(phi) - skeleton(ph_gamma)('+') * avg(phi) ) * I*dS
 
-    inormal = igridView.normal
+    inormal = normal( igridView )
     K_perp = dot(dot(K_gamma, inormal), inormal)
     beta = 4. * K_perp / (2. * xi - 1)
 
