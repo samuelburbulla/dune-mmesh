@@ -7,12 +7,16 @@ from scipy.sparse import linalg, csc_matrix
 import dune.ufl
 from dune.fem.operator import linear as linearOperator
 
-def monolithicNewton(schemes, targets, iter=10000, f_rtol=1e-8, verbose=False, **kwargs):
-    """solve bulk and interface scheme coupled monolithically using scipy's newton krylov method
+def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, eps=1e-8, verbose=False, **kwargs):
+    """solve bulk and interface scheme coupled monolithically using a newton method
 
     Args:
         schemes: pair of schemes
         targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
+        iter:    maximum number of iterations
+        f_tol:   absolute tolerance in maximum norm
+        eps:     step size for numerical differentiation
+        verbose: print residuum for each iteration
         kwargs:  additional arguments passed to the newton_krylov call
     """
     assert len(schemes) == 2
@@ -21,15 +25,17 @@ def monolithicNewton(schemes, targets, iter=10000, f_rtol=1e-8, verbose=False, *
     (scheme, ischeme) = schemes
     (ph, ih) = targets
 
-    jac = linearOperator(scheme)
-    ijac = linearOperator(ischeme)
-
     n = len(ph.as_numpy)
     m = len(ih.as_numpy)
 
+    if m == 0:
+        if verbose:
+            print("second scheme is empty, forward to scheme.solve()", flush=True)
+        scheme.solve(target=ph)
+        return
+
     Ax = ph.copy()
     iAx = ih.copy()
-
     def F(x):
         ph.as_numpy[:] = x[:n]
         ih.as_numpy[:] = x[n:]
@@ -40,8 +46,17 @@ def monolithicNewton(schemes, targets, iter=10000, f_rtol=1e-8, verbose=False, *
     x = np.concatenate((ph.as_numpy, ih.as_numpy))
     f = F(x)
     for i in range(iter):
-        jacp = linalg.spsolve(jac.as_numpy, f[:n])
-        ijacp = linalg.spsolve(ijac.as_numpy, f[n:])
+        jac = np.zeros((n+m,n+m))
+        for k in range(n+m):
+            xk = x.copy()
+            xk[k] += eps
+            dFk = F(xk) - f
+            dFk /= eps
+            jac[k] = dFk
+
+        jac = np.linalg.solve(jac.T, f)
+        jacp = jac[:n]
+        ijacp = jac[n:]
 
         x[:n] -= jacp
         x[n:] -= ijacp
@@ -50,7 +65,7 @@ def monolithicNewton(schemes, targets, iter=10000, f_rtol=1e-8, verbose=False, *
         if verbose:
             print("i:", i, "  res =", np.sqrt(np.dot(f, f)))
 
-        if np.dot(f, f) < f_rtol**2:
+        if np.max(np.abs(f)) < f_tol:
             break
 
     ph.as_numpy[:] = x[:n]
