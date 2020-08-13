@@ -7,7 +7,7 @@ from scipy.sparse import linalg, csc_matrix
 import dune.ufl
 from dune.fem.operator import linear as linearOperator
 
-def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, eps=1e-8, verbose=False, **kwargs):
+def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False, **kwargs):
     """solve bulk and interface scheme coupled monolithically using a newton method
 
     Args:
@@ -15,7 +15,7 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, eps=1e-8, verbose=F
         targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
         iter:    maximum number of iterations
         f_tol:   absolute tolerance in maximum norm
-        eps:     step size for numerical differentiation
+        rdiff:   step size for numerical differentiation
         verbose: print residuum for each iteration
         kwargs:  additional arguments passed to the newton_krylov call
     """
@@ -44,17 +44,34 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, eps=1e-8, verbose=F
         return np.concatenate((Ax.as_numpy, iAx.as_numpy))
 
     x = np.concatenate((ph.as_numpy, ih.as_numpy))
+
+    from scipy.sparse import coo_matrix
+
+
     f = F(x)
     for i in range(iter):
-        jac = np.zeros((n+m,n+m))
+        row = []
+        col = []
+        data = []
+        nonzero = 0
+
         for k in range(n+m):
             xk = x.copy()
-            xk[k] += eps
+            xk[k] += 1e-6
             dFk = F(xk) - f
-            dFk /= eps
-            jac[k] = dFk
+            dFk /= 1e-6
 
-        jac = np.linalg.solve(jac.T, f)
+            for l in range(n+m):
+                if abs(dFk[l]) > 1e-12:
+                    nonzero += 1
+                    row += [l]
+                    col += [k]
+                    data += [dFk[l]]
+
+        jac = coo_matrix((data, (row, col)), shape=(m+n,m+n))
+        print("nonzero", nonzero, "of", (n+m)**2, "entries")
+
+        jac = linalg.spsolve(jac.tocsc(), f)
         jacp = jac[:n]
         ijacp = jac[n:]
 
