@@ -1,10 +1,10 @@
-## @example poroelasticity.py
+## @example dfc-poroelasticity.py
 import logging
 logger = logging.getLogger('dune')
 logger.setLevel(logging.INFO)
 
 from dune.grid import reader
-from dune.mmesh import mmesh, skeleton, trace, normal
+from dune.mmesh import mmesh, skeleton, trace, normal, interfaceIndicator
 
 from dune.fem.space import *
 from dune.fem.scheme import galerkin
@@ -22,16 +22,18 @@ space = dglagrange(gridView, dimRange=dim+1, order=1)
 x = SpatialCoordinate(space)
 n = FacetNormal(space)
 
-E = 15.96e9
-nu = 0.2
+E = 67e6
+nu = 0.3
 lamb = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
 
-alpha = 0.79
-K = 2e-11
-aperture = 1
-K_gamma = 83.3
-f = 2e-3
+eta = 1e-3
+alpha = 1
+K = 9.8e-12 / eta
+aperture = 1e-3
+q = 1e-3
+d = dune.ufl.Constant(aperture, name="d")
+K_gamma = d**2 / (12 * eta)
 
 epsilon = lambda u: 0.5*(nabla_grad(u) + nabla_grad(u).T)
 sigma_eff = lambda u: lamb*nabla_div(u)*Identity(dim) + 2*mu*epsilon(u)
@@ -44,11 +46,8 @@ uu = as_vector([test[0], test[1]])
 p = trial[2]
 pp = test[2]
 
-space_gamma = dglagrange(igridView, order=0)
-one = space_gamma.interpolate(1, name="one")
-I = avg(skeleton(one))
-beta = dune.ufl.Constant(1e-3, name="beta")
-normal = FacetNormal(space.cell())
+I = interfaceIndicator(igridView)
+beta = dune.ufl.Constant(1e3, name="beta")
 
 a = inner(sigma(u, p), epsilon(uu)) * dx
 a += inner( K * grad(p), grad(pp) ) * dx
@@ -68,32 +67,27 @@ a += beta * (0 - p) * pp * ds
 a -= inner(K*grad(p), n) * pp * ds
 a -= inner(K*grad(pp), n) * p * ds
 
-# NeumannBC
-a += f * pp * ds
-
 ispace = lagrange(igridView, order=1)
 pgamma = ispace.interpolate(0, name="pgamma")
-eta = aperture / K_gamma    # actually: normal component of K_gamma
+zeta = aperture / K
 
 pg = skeleton( pgamma )('+')
 b = 0
-# normal stress is -p
-b += -pg * inner(uu('+'), normal('+')) * I*dS
-b += -pg * inner(uu('-'), normal('-')) * I*dS
-# p_bulk = p_gamma
-b -= -0.5 * eta * ( - K_gamma * inner( grad(p)('+'), normal('+') ) * pp('+') ) * I*dS
-b -= (p('+') - pg) * pp('+') * I*dS
-b -= -0.5 * eta * ( - K_gamma * inner( grad(p)('-'), normal('+') ) * pp('-') ) * I*dS
-b -= (p('-') - pg) * pp('-') * I*dS
 
-# b += beta * (pg - p('+')) * pp('+') * I*dS
+# normal stress is -p
+b += -pg * inner(uu('+'), n('+')) * I*dS
+b += -pg * inner(uu('-'), n('-')) * I*dS
+
+# p_bulk = p_gamma
+b += beta * (pg - p('+')) * pp('+') * I*dS
 # b -= pg * inner(K*grad(pp('+')), n('+')) * I*dS
-# b += inner(K*grad(p('+')), n('+')) * pp('+') * I*dS
-# b += inner(K*grad(pp('+')), n('+')) * p('+') * I*dS
-# b += beta * (pg - p('-')) * pp('-') * I*dS
+b += inner(K*grad(p('+')), n('+')) * pp('+') * I*dS
+b += inner(K*grad(pp('+')), n('+')) * p('+') * I*dS
+b += beta * (pg - p('-')) * pp('-') * I*dS
 # b -= pg * inner(K*grad(pp('-')), n('-')) * I*dS
-# b += inner(K*grad(p('-')), n('-')) * pp('-') * I*dS
-# b += inner(K*grad(pp('-')), n('-')) * p('-') * I*dS
+b += inner(K*grad(p('-')), n('-')) * pp('-') * I*dS
+b += inner(K*grad(pp('-')), n('-')) * p('-') * I*dS
+
 
 scheme = galerkin([a == b], solver=('suitesparse', 'umfpack'))
 solution = space.interpolate([0]*(dim+1), name="solution")
@@ -101,42 +95,28 @@ solution = space.interpolate([0]*(dim+1), name="solution")
 p_gamma = TrialFunction(ispace)
 pp_gamma = TestFunction(ispace)
 
-inormal = igridView.normal
+inormal = normal(igridView)
 bp_p = trace(solution)[2]('+')
 bp_m = trace(solution)[2]('-')
 
-a_gamma = inner( aperture * K_gamma * grad(p_gamma), grad(pp_gamma) ) * dx
-a_gamma -= -0.5 * eta * ( - K_gamma * inner( grad(bp_p), inormal ) * pp_gamma ) * dx
-a_gamma -= (bp_p - p_gamma) * pp_gamma * dx
-a_gamma -= -0.5 * eta * ( - K_gamma * inner( grad(bp_m), inormal ) * pp_gamma ) * dx
+n_gamma = FacetNormal(ispace)
+
+a_gamma = inner( d * K_gamma * grad(p_gamma), grad(pp_gamma) ) * dx
+
+# coupling
+a_gamma -= -0.5 * zeta * ( - K_gamma * inner( grad(bp_p), inormal ) * pp_gamma ) * dx
+a_gamma -= beta * (bp_p - p_gamma) * pp_gamma * dx
+a_gamma -= -0.5 * zeta * ( - K_gamma * inner( grad(bp_m), inormal ) * pp_gamma ) * dx
 a_gamma -= (bp_m - p_gamma) * pp_gamma * dx
 
-scheme_gamma = galerkin([a_gamma == 0], solver=('suitesparse', 'umfpack'))
+# source
+f = dune.ufl.Constant(q, name="f")
+b_gamma = f * pp_gamma * d * dx
 
+scheme_gamma = galerkin([a_gamma == b_gamma], solver=('suitesparse', 'umfpack'))
 
-solution_old = solution.copy()
-solution_gamma_old = pgamma.copy()
-for i in range(100):
-    solution_old.assign(solution)
-    solution_gamma_old.assign(pgamma)
-
-    print("solve bulk")
-    scheme.solve(target=solution)
-    print("solve interface")
-    scheme_gamma.solve(target=pgamma)
-
-    sol = solution_old.as_numpy[:]
-    sol -= solution.as_numpy
-    error = np.dot(sol, sol)
-
-    sol_gamma = solution_gamma_old.as_numpy[:]
-    sol_gamma -= pgamma.as_numpy
-    error_gamma = np.dot(sol_gamma, sol_gamma)
-
-    print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
-
-    if max(error, error_gamma) < 1e-12:
-        break
+from dune.mmesh import monolithicNewton
+monolithicNewton(schemes=(scheme, scheme_gamma), targets=(solution, pgamma))
 
 gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]},
     nonconforming=True, subsampling=space.order-1)

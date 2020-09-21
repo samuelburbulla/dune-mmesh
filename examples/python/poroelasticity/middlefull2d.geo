@@ -4,9 +4,9 @@ d = 1.0;
 
 // domain corners
 Point(1) = {0,   0, 0, lc};
-Point(2) = {80,  0, 0, lc};
-Point(3) = {80, 80, 0, lc};
-Point(4) = {0,  80, 0, lc};
+Point(2) = {100,  0, 0, lc};
+Point(3) = {100, 100, 0, lc};
+Point(4) = {0,  100, 0, lc};
 
 // domain outline
 Line(1) = {1, 2};
@@ -17,10 +17,10 @@ Line(4) = {4, 1};
 Physical Line(1) = {1:4};
 
 // fracture
-Point(7)  = {36, 40-0.5*d, 0, lcf};
-Point(8)  = {44, 40-0.5*d, 0, lcf};
-Point(9)  = {36, 40+0.5*d, 0, lcf};
-Point(10) = {44, 40+0.5*d, 0, lcf};
+Point(7)  = {45, 50-0.5*d, 0, lcf};
+Point(8)  = {55, 50-0.5*d, 0, lcf};
+Point(9)  = {45, 50+0.5*d, 0, lcf};
+Point(10) = {55, 50+0.5*d, 0, lcf};
 Line(10) = {7, 8};
 Line(11) = {8, 10};
 Line(12) = {10, 9};
