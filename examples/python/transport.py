@@ -35,8 +35,7 @@ uh_old = space.interpolate(0, name="uh_old")
 
 a = (u - uh_old[0]) / tau * v * ufl.dx
 a -= ufl.inner( f(u), ufl.grad(v) ) * ufl.dx
-a += g(u) * v('+') * ufl.dS
-a -= g(u) * v('-') * ufl.dS
+a += g(u) * ufl.jump(v) * ufl.dS
 a += ufl.inner(f(u), n) * v * ufl.ds
 
 scheme = galerkin([a==0], solver=("suitesparse","umfpack"))

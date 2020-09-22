@@ -252,7 +252,7 @@ namespace Dune
     //! where iteration started.
     LocalGeometry geometryInInside () const
     {
-      return LocalGeometry( refIndex_ );
+      return LocalGeometry( indexInInside() );
     }
 
     //! intersection of codimension 1 of this neighbor with element where iteration started.

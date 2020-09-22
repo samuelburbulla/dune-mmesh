@@ -204,13 +204,18 @@ namespace Dune
     subEntity (unsigned int i) const
     {
       assert( i < subEntities( cc ) );
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE,
-      // but the mapping should do the right thing here
       auto& edgeIdx = hostEntity_.second;
+
+      int idx = 0;
+      if (i == 0)
+        idx = (edgeIdx > 0) ? 0 : 1;
+      else // (i == 1)
+        idx = (edgeIdx < 2) ? 2 : 1;
+
       return MMeshEntity<cc, dim, GridImp> (
         mMesh_,
         typename GridImp::template HostGridEntity<dim> (
-          hostEntity_.first->vertex( (edgeIdx+1+i)%(dim+1) )
+          hostEntity_.first->vertex( idx )
         )
       );
     }

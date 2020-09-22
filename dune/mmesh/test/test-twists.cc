@@ -17,6 +17,7 @@ using namespace Dune;
 template< class GridView >
 void checkTwists(const GridView& gridView)
 {
+  using Grid = typename GridView::Grid;
   static constexpr int dim = GridView::dimension;
 
   for ( const auto& e : elements(gridView) )
@@ -50,14 +51,13 @@ void checkTwists(const GridView& gridView)
         std::cout << x << std::endl;
 
         auto refx = geoIn.corner( refIn.subEntity( nIn, 1, c, dim ) );
+        std::cout << refx << std::endl;
         if( (x - refx).two_norm() > 1e-12 )
           DUNE_THROW(InvalidStateException, "refElem inside is different");
       }
 
-      int tin = MMeshTwist::twistInSelf(is);
+      int tin = Fem::TwistUtility<Grid>::twistInSelf(gridView.grid(), is);
       std::cout << "Twist: " << tin << std::endl;
-
-      std::cout << std::endl;
 
       std::cout << "Outside" << std::endl;
       const auto& facetOut = eOut.template subEntity<1>(nOut).geometry();
@@ -76,7 +76,7 @@ void checkTwists(const GridView& gridView)
           DUNE_THROW(InvalidStateException, "refElem outside is different");
       }
 
-      int tout = MMeshTwist::twistInNeighbor(is);
+      int tout = Fem::TwistUtility<Grid>::twistInNeighbor(gridView.grid(), is);
       std::cout << "Twist: " << tout << std::endl;
 
       const auto& igeo = is.geometry();
@@ -84,6 +84,8 @@ void checkTwists(const GridView& gridView)
       int t0 = (tin < 0) ? -(tin+1) : tin;
 
       auto x0 = geoIn.corner( refIn.subEntity( nIn, 1, 0, dim ) );
+      std::cout << x0 << std::endl;
+      std::cout << igeo.corner(t0) << std::endl;
       if( (x0 - igeo.corner(t0)).two_norm() > 1e-12 )
         DUNE_THROW(InvalidStateException, "twist in false");
 
@@ -108,6 +110,8 @@ void checkTwists(const GridView& gridView)
         if( (c1 - igeo.corner(t1)).two_norm() > 1e-12 )
           DUNE_THROW(InvalidStateException, "twist sign out false");
       }
+
+      std::cout << std::endl;
     }
   }
 }
@@ -132,8 +136,10 @@ int main(int argc, char *argv[])
     const auto& gridView = grid.leafGridView();
     checkTwists(gridView);
 
+    std::cout << std::endl << " = Check interface grid =" << std::endl << std::endl;
+
     const auto& igridView = grid.interfaceGrid().leafGridView();
-    // checkTwists(igridView);
+    checkTwists(igridView);
 
     return EXIT_SUCCESS;
   }

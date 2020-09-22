@@ -100,11 +100,7 @@ namespace Dune
 
     //! Constructor from host geometry with codim 1
     MMeshGeometry(const typename GridImp::template HostGridEntity<1>& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 2>( {
-           makeFieldVector( hostEntity.first->vertex( (hostEntity.second+1)%3 )->point() ),
-           makeFieldVector( hostEntity.first->vertex( (hostEntity.second+2)%3 )->point() )
-       } ) )
+     : BaseType( GeometryTypes::simplex(mydim), getVertices(hostEntity) )
     {
         circumcenter_ = this->corner(0);
         circumcenter_ += this->corner(1);
@@ -129,6 +125,19 @@ namespace Dune
     }
 
   private:
+    static inline std::array<FVector, 2> getVertices ( const typename GridImp::template HostGridEntity<1>& hostEntity )
+    {
+      std::array<FVector, 2> vertices( {
+        makeFieldVector( hostEntity.first->vertex( (hostEntity.second+1)%3 )->point() ),
+        makeFieldVector( hostEntity.first->vertex( (hostEntity.second+2)%3 )->point() )
+      } );
+
+      if (hostEntity.second == 1)
+        std::swap( vertices[0], vertices[1] );
+
+      return vertices;
+    }
+
     static inline std::array<FVector, 2> getLocalVertices_ ( int i, int j, bool inside )
     {
       static const std::array<FVector, 3> local = {
@@ -137,12 +146,14 @@ namespace Dune
         FVector( { 0.0, 1.0 } )
       };
 
-      if ( inside )
-        return { local[ (i+1)%3 ], local[ (i+2)%3 ] };
+      int k = inside ? i : j;
 
-      // return flipped edge seen from outside
-      else
-        return { local[ (j+2)%3 ], local[ (j+1)%3 ] };
+      std::array<FVector, 2> v ( { local[ (k+1)%3 ], local[ (k+2)%3 ] } );
+
+      if (k == 1)
+        std::swap(v[0], v[1]);
+
+      return v;
     }
 
     FVector circumcenter_;
@@ -282,17 +293,17 @@ namespace Dune
         for ( int i = 0; i < 3; ++i )
           vertices[i] = makeFieldVector( cell->vertex( (facetIdx + i + 1) % 4 )->point() );
 
-        // if ( facetIdx == 1 )
-        // {
-        //   std::swap( vertices[1], vertices[2] );
-        //   std::swap( vertices[0], vertices[1] );
-        // }
-        //
-        // if ( facetIdx == 2 )
-        // {
-        //   std::swap( vertices[0], vertices[1] );
-        //   std::swap( vertices[1], vertices[2] );
-        // }
+        if ( facetIdx == 1 )
+        {
+          std::swap( vertices[1], vertices[2] );
+          std::swap( vertices[0], vertices[1] );
+        }
+
+        if ( facetIdx == 2 )
+        {
+          std::swap( vertices[0], vertices[1] );
+          std::swap( vertices[1], vertices[2] );
+        }
 
        return vertices;
      }
@@ -324,17 +335,17 @@ namespace Dune
         int k = inside ? i : j;
         std::array<FVector, 3> v = { local[ (k+1)%4 ], local[ (k+2)%4 ], local[ (k+3)%4 ] };
 
-        // if ( k == 1 )
-        // {
-        //   std::swap( v[1], v[2] );
-        //   std::swap( v[0], v[1] );
-        // }
-        //
-        // if ( k == 2 )
-        // {
-        //   std::swap( v[0], v[1] );
-        //   std::swap( v[1], v[2] );
-        // }
+        if ( k == 1 )
+        {
+          std::swap( v[1], v[2] );
+          std::swap( v[0], v[1] );
+        }
+
+        if ( k == 2 )
+        {
+          std::swap( v[0], v[1] );
+          std::swap( v[1], v[2] );
+        }
 
         return v;
      }

@@ -15,7 +15,7 @@ namespace Dune
     template< class Intersection >
     int computeTwist(const Intersection& intersection, const bool outside = true)
     {
-      static constexpr int dimension = Intersection::dimensionworld;
+      static constexpr int dimension = Intersection::mydimension+1;
 
       typedef typename Intersection::Entity Entity;
       typedef typename Entity::Geometry Geometry;
@@ -30,7 +30,8 @@ namespace Dune
 
       const int n = outside ? intersection.indexInOutside() : intersection.indexInInside();
       const auto geo = outside ? entityOut.geometry() : entityIn.geometry();
-      const auto lgeo = outside ? intersection.geometryInOutside() : intersection.geometryInInside();
+
+      const auto igeo = intersection.geometry();
 
       const auto x0 = geo.corner( ref.subEntity( n, 1, 0, dimension ) );
       const auto x1 = geo.corner( ref.subEntity( n, 1, 1, dimension ) );
@@ -38,16 +39,16 @@ namespace Dune
       int numCorners = dimension;
       for( int i = 0; i < numCorners; ++i )
       {
-        if( (geo.global( lgeo.corner(i) ) - x0).two_norm() <= tolerance )
+        if( (igeo.corner(i) - x0).two_norm() <= tolerance )
         {
-          if( (geo.global( lgeo.corner((i+1)%numCorners) ) - x1).two_norm() <= tolerance )
+          if( (igeo.corner((i+1)%numCorners) - x1).two_norm() <= tolerance )
             return i;
           else
             return -i-1;
         }
       }
 
-      DUNE_THROW(InvalidStateException, "Twist not found.");
+      DUNE_THROW(InvalidStateException, "Twist not found: " << x0 << "   " << x1 );
       return 0;
     }
   }
@@ -57,11 +58,7 @@ namespace Dune
     template< class LeafIntersection >
     static inline int twistInSelf(const LeafIntersection& intersection)
     {
-      static constexpr int dim = LeafIntersection::dimensionworld;
-      if constexpr (dim == 2)
-        return intersection.indexInInside() % dim;
-      else
-        return 0;
+      return 0;
     }
 
     template< class LeafIntersection >
@@ -69,7 +66,7 @@ namespace Dune
     {
       static constexpr int dim = LeafIntersection::dimensionworld;
       if constexpr (dim == 2)
-        return 1 - intersection.indexInOutside() % 2;
+        return intersection.indexInInside() % 2 == intersection.indexInOutside() % 2;
       else
         return _MMeshTwistImpl::computeTwist(intersection, true);
     }

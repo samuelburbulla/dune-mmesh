@@ -83,8 +83,8 @@ namespace Dune
      : BaseType( GeometryTypes::simplex(1),
                  std::array<FVector, 2>(
                   {
-                    FVector ( { (i+1)%3 == 1 ? 1.0 : 0.0, (i+1)%3 == 2 ? 1.0 : 0.0 } ), // TODO is this correct?
-                    FVector ( { (i+2)%3 == 1 ? 1.0 : 0.0, (i+2)%3 == 2 ? 1.0 : 0.0 } )
+                    FVector ( { i==2 ? 1.0 : 0.0, 0.0 } ),
+                    FVector ( { i==0 ? 1.0 : 0.0, i>0 ? 1.0 : 0.0 } )
                   } ) )
     {}
 

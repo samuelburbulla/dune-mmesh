@@ -217,7 +217,10 @@ namespace Dune
       const auto& p1 = face->vertex( face->cw ( edgeIdx ) )->point();
       const auto& p2 = face->vertex( face->ccw( edgeIdx ) )->point();
 
-      return NormalVector ( { p1.y() - p2.y(), - p1.x() + p2.x() } );
+      if (edgeIdx == 1)
+        return NormalVector ( { - p1.y() + p2.y(), p1.x() - p2.x() } );
+      else
+        return NormalVector ( { p1.y() - p2.y(), - p1.x() + p2.x() } );
     }
 
     template< int d = dim >
