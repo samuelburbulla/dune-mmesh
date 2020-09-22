@@ -22,7 +22,7 @@ I = interfaceIndicator(igridView)
 pfspace = lagrange(gridView, order=1)
 pt = TrialFunction(pfspace)
 ppt = TestFunction(pfspace)
-l = 1
+l = 3
 pfa = pt * ppt * dx
 pfa += l**2 * inner( grad(pt), grad(ppt) ) * dx
 pfa += 200*avg( (pt - 1) * ppt ) * I*dS

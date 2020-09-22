@@ -47,7 +47,7 @@ p = trial[2]
 pp = test[2]
 
 I = interfaceIndicator(igridView)
-beta = dune.ufl.Constant(1e3, name="beta")
+beta = dune.ufl.Constant(1e-6, name="beta")
 
 a = inner(sigma(u, p), epsilon(uu)) * dx
 a += inner( K * grad(p), grad(pp) ) * dx
@@ -88,7 +88,6 @@ b += beta * (pg - p('-')) * pp('-') * I*dS
 b += inner(K*grad(p('-')), n('-')) * pp('-') * I*dS
 b += inner(K*grad(pp('-')), n('-')) * p('-') * I*dS
 
-
 scheme = galerkin([a == b], solver=('suitesparse', 'umfpack'))
 solution = space.interpolate([0]*(dim+1), name="solution")
 
@@ -116,8 +115,8 @@ b_gamma = f * pp_gamma * d * dx
 scheme_gamma = galerkin([a_gamma == b_gamma], solver=('suitesparse', 'umfpack'))
 
 from dune.mmesh import monolithicNewton
-monolithicNewton(schemes=(scheme, scheme_gamma), targets=(solution, pgamma))
+monolithicNewton(schemes=(scheme, scheme_gamma), targets=(solution, pgamma), verbose=True)
 
-gridView.writeVTK('poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]},
+gridView.writeVTK('dfc-poroelasticity', pointdata={"displacement": [solution[0], solution[1], 0], "pressure": solution[2]},
     nonconforming=True, subsampling=space.order-1)
-igridView.writeVTK('poroelasticity-interface', pointdata={"pressure": pgamma})
+igridView.writeVTK('dfc-poroelasticity-interface', pointdata={"pressure": pgamma})
