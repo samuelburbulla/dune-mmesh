@@ -582,20 +582,24 @@ namespace Dune
     //! Geometry of this entity in bounded father entity ( assumption: this \subset father )
     LocalGeometry geometryInFather() const
     {
-      static_assert( dim == 2 );
-      assert( father_ != nullptr );
+      if constexpr( dim != 2 )
+        DUNE_THROW(NotImplemented, "geometryInFather() for dim != 2");
+      else
+      {
+        assert( father_ != nullptr );
 
-      auto thisPoints = this->vertex_;
+        auto thisPoints = this->vertex_;
 
-      if( isLeaf_ )
+        if( isLeaf_ )
+          for ( int i = 0; i < 3; ++i )
+            thisPoints[i] = geometry().corner(i);
+
+        std::array< GlobalCoordinate, 3 > local;
         for ( int i = 0; i < 3; ++i )
-          thisPoints[i] = geometry().corner(i);
+          local[i] = father_->impl().geometry().local( thisPoints[i] );
 
-      std::array< GlobalCoordinate, 3 > local;
-      for ( int i = 0; i < 3; ++i )
-        local[i] = father_->impl().geometry().local( thisPoints[i] );
-
-      return LocalGeometry( local );
+        return LocalGeometry( local );
+      }
     }
 
     //! Return the number of subEntities of codimension cc
