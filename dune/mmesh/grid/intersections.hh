@@ -9,6 +9,7 @@
 #include <dune/mmesh/grid/entity.hh>
 #include <dune/mmesh/grid/leafiterator.hh>
 #include <dune/mmesh/grid/pointfieldvector.hh>
+#include <dune/mmesh/misc/twistutility.hh>
 
 // local includes
 
@@ -49,6 +50,8 @@ namespace Dune
     typedef typename GridImp::template HostGridEntity<1> HostLeafIntersection;
 
   public:
+    enum {dimension=GridImp::dimension};
+    enum {dimensionworld=GridImp::dimensionworld};
     typedef typename GridImp::template Codim<1>::Geometry Geometry;
     typedef typename GridImp::template Codim<1>::LocalGeometry LocalGeometry;
     typedef typename GridImp::template Codim<1>::LocalGeometry::Implementation LocalGeometryImpl;

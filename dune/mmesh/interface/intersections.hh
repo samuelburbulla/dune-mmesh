@@ -9,6 +9,7 @@
 #include <dune/mmesh/grid/entity.hh>
 #include <dune/mmesh/grid/leafiterator.hh>
 #include <dune/mmesh/grid/pointfieldvector.hh>
+#include <dune/mmesh/misc/twistutility.hh>
 
 // local includes
 
@@ -38,9 +39,9 @@ namespace Dune
 
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
-    enum {dimension=GridImp::dimension};
+    enum {dim=GridImp::dimension};
 
-    enum {dimensionworld=GridImp::dimensionworld};
+    enum {dimworld=GridImp::dimensionworld};
 
     // The type used to store coordinates
     typedef typename GridImp::ctype ctype;
@@ -49,9 +50,11 @@ namespace Dune
     typedef typename GridImp::template MMeshInterfaceEntity<1> HostLeafIntersection;
 
     using LocalIndexMap = std::unordered_map< std::size_t, std::size_t >;
-    typedef typename GridImp::MMeshType::template Codim<dimensionworld>::Entity MMeshVertex;
+    typedef typename GridImp::MMeshType::template Codim<dimworld>::Entity MMeshVertex;
 
   public:
+    enum {dimension=GridImp::dimension};
+    enum {dimensionworld=GridImp::dimensionworld};
     typedef typename GridImp::template Codim<1>::Geometry Geometry;
     typedef typename GridImp::template Codim<1>::LocalGeometry LocalGeometry;
     typedef typename GridImp::template Codim<0>::Entity Entity;

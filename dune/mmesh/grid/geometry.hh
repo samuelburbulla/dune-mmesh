@@ -273,14 +273,26 @@ namespace Dune
      template< int codim, typename Enable = std::enable_if_t< codim == 1 > >
      static inline std::array<FVector, 3> getVertices ( const typename GridImp::template HostGridEntity<1>& hostEntity )
      {
-       std::array<FVector, 3> vertices;
+        std::array<FVector, 3> vertices;
 
-       const auto& cell     = hostEntity.first;
-       const auto& facetIdx = hostEntity.second;
+        const auto& cell     = hostEntity.first;
+        const auto& facetIdx = hostEntity.second;
 
-       // use the CGAL index convention to obtain the vertices
-       for ( int i = 0; i < 3; ++i )
-         vertices[i] = makeFieldVector( cell->vertex( (facetIdx + i + 1) % 4 )->point() );
+        // use the CGAL index convention to obtain the vertices
+        for ( int i = 0; i < 3; ++i )
+          vertices[i] = makeFieldVector( cell->vertex( (facetIdx + i + 1) % 4 )->point() );
+
+        // if ( facetIdx == 1 )
+        // {
+        //   std::swap( vertices[1], vertices[2] );
+        //   std::swap( vertices[0], vertices[1] );
+        // }
+        //
+        // if ( facetIdx == 2 )
+        // {
+        //   std::swap( vertices[0], vertices[1] );
+        //   std::swap( vertices[1], vertices[2] );
+        // }
 
        return vertices;
      }
@@ -309,33 +321,22 @@ namespace Dune
           FVector( { 0.0, 0.0, 1.0 } )
         };
 
-        if ( inside )
-          return { local[ (i+1)%4 ], local[ (i+2)%4 ], local[ (i+3)%4 ] };
+        int k = inside ? i : j;
+        std::array<FVector, 3> v = { local[ (k+1)%4 ], local[ (k+2)%4 ], local[ (k+3)%4 ] };
 
-        // geometryInOutside()
-        else
-        {
-          std::array<FVector, 3> v = { local[ (j+1)%4 ], local[ (j+2)%4 ], local[ (j+3)%4 ] };
+        // if ( k == 1 )
+        // {
+        //   std::swap( v[1], v[2] );
+        //   std::swap( v[0], v[1] );
+        // }
+        //
+        // if ( k == 2 )
+        // {
+        //   std::swap( v[0], v[1] );
+        //   std::swap( v[1], v[2] );
+        // }
 
-          // swap orientation if facets have same orientation seen from outside
-          if ( i % 2 == j % 2 )
-            std::swap( v[0], v[2] );
-
-          // search the correct corner(0) vertex
-          const auto& outGeo = intersection.outside().geometry();
-          const auto& isv0 = intersection.geometry().corner(0);
-          std::size_t k;
-          for (k = 0; k < 2; ++k )
-          {
-            if ( (outGeo.global(v[0]) - isv0).two_norm() < 1e-8 )
-              break;
-            std::swap(v[0], v[1]);
-            std::swap(v[1], v[2]);
-          }
-
-          assert( (outGeo.global(v[0]) - isv0).two_norm() < 1e-8 );
-          return v;
-        }
+        return v;
      }
 
     FVector circumcenter_;

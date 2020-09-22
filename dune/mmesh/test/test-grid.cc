@@ -9,6 +9,7 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/test/gridcheck.hh>
+#include <dune/grid/test/checktwists.hh>
 
 #include <dune/mmesh/mmesh.hh>
 

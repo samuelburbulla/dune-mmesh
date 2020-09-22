@@ -450,12 +450,18 @@ namespace Dune
     IdType subId (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e, int i, int codim) const
     {
       assert( 0 <= codim && codim <= dimension );
-      switch( codim )
-      {
-        case 0: return id<0>( e.impl().template subEntity<0>( i ) );
-        case dimension: return id<dimension>( e.impl().template subEntity<dimension>( i ) );
-      };
-      DUNE_THROW( NotImplemented, "InterfaceGrid: subId of codim != 0 or codim != dimension" );
+
+      if( codim == 0 )
+        return id<0>( e.impl().template subEntity<0>( i ) );
+
+      if( codim == 1 )
+        return id<1>( e.impl().template subEntity<1>( i ) );
+
+      if constexpr (dimension == 2)
+        if( codim == 2 )
+          return id<2>( e.impl().template subEntity<2>( i ) );
+
+      DUNE_THROW( NotImplemented, "InterfaceGrid: subId of codim != 0 or codim != 1 or codim != 2" );
       return IdType();
     }
 

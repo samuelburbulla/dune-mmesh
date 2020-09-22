@@ -51,8 +51,10 @@
 // Further includes below!
 
 
+
 namespace Dune
 {
+
   // Type of wrapper triangulation
   template< int dim >
   class TriangulationWrapper;
