@@ -63,7 +63,7 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callba
         print("not converged", flush=True)
 
 
-def monolithicNewtonKrylov(schemes, targets, **kwargs):
+def monolithicNewtonKrylov(schemes, targets, f_tol=1e-8, inner_maxiter=2000, method='gmres', **kwargs):
     """solve bulk and interface scheme coupled monolithically using scipy's newton krylov method
 
     Args:
@@ -90,9 +90,13 @@ def monolithicNewtonKrylov(schemes, targets, **kwargs):
         return np.concatenate((Ax.as_numpy, iAx.as_numpy))
 
     x = np.concatenate((ph.as_numpy, ih.as_numpy))
-
     from scipy.optimize import newton_krylov
-    r = newton_krylov(F, x, **kwargs)
+    r = newton_krylov(F, x,
+        f_tol=f_tol,
+        inner_maxiter=inner_maxiter,
+        method=method,
+        **kwargs
+        )
 
     ph.as_numpy[:] = r[:n]
     ih.as_numpy[:] = r[n:]
@@ -152,7 +156,7 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False):
             dFk /= 1e-6
 
             for l in range(n+m):
-                if abs(dFk[l]) > 1e-12:
+                if abs(dFk[l]) > 1e-30:
                     nonzero += 1
                     row += [l]
                     col += [k]
