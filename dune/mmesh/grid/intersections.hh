@@ -181,7 +181,7 @@ namespace Dune
 
     //! local number of codim 1 entity in self where intersection is contained in
     int indexInInside () const {
-      return MMeshImpl::cgalFacetToDuneFacet( hostIntersection_ );
+      return MMeshImpl::cgalFacetToDuneFacet<dim, HostLeafIntersection>( hostIntersection_ );
     }
 
     //! local number of codim 1 entity in neighbor where intersection is contained
@@ -189,7 +189,7 @@ namespace Dune
       const auto& neighbor = hostIntersection_.first->neighbor( hostIntersection_.second );
       const auto& second = mMesh_->getHostGrid().mirror_index( hostIntersection_.first, hostIntersection_.second );
       HostLeafIntersection facetFromOutside ( { neighbor, second } );
-      return MMeshImpl::cgalFacetToDuneFacet( facetFromOutside );
+      return MMeshImpl::cgalFacetToDuneFacet<dim, HostLeafIntersection>( facetFromOutside );
     }
 
     //! return outer normal

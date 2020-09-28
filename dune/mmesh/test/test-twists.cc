@@ -11,6 +11,8 @@
 #include <dune/grid/test/gridcheck.hh>
 
 #include <dune/mmesh/mmesh.hh>
+#include <dune/alugrid/grid.hh>
+#include <dune/fem/quadrature/caching/twistutility.hh>
 
 using namespace Dune;
 
@@ -43,71 +45,59 @@ void checkTwists(const GridView& gridView)
       for ( int c = 0; c < dim; ++c )
         std::cout << facetIn.corner(c) << std::endl;
 
-      std::cout << "In Inside" << std::endl;
-      auto lgeoIn = is.geometryInInside();
-      for ( int c = 0; c < dim; ++c )
-      {
-        auto x = geoIn.global( lgeoIn.corner(c) );
-        std::cout << x << std::endl;
+      int tin = Fem::TwistUtility<Grid>::twistInSelf(gridView.grid(), is);
+      std::cout << "Twist in: " << tin << std::endl;
 
-        auto refx = geoIn.corner( refIn.subEntity( nIn, 1, c, dim ) );
-        std::cout << refx << std::endl;
-        if( (x - refx).two_norm() > 1e-12 )
-          DUNE_THROW(InvalidStateException, "refElem inside is different");
+      const auto& isgeo = is.geometry();
+
+      auto twistToIdx = [](int t, int c = 0){ return ((t < 0) ? 4+t-c : t+c)%dim; };
+
+      auto x0 = isgeo.corner(twistToIdx(tin));
+      auto y0 = geoIn.corner( refIn.subEntity( nIn, 1, 0, dim ) );
+      std::cout << x0 << "   -   " << y0 << std::endl;
+      if( (x0 - y0).two_norm() > 1e-12 )
+        DUNE_THROW(InvalidStateException, "twist in false");
+
+      auto z0 = geoIn.global( is.geometryInInside().corner(0) );
+      std::cout << x0 << "   -   " << z0 << std::endl;
+      if( (x0 - z0).two_norm() > 1e-12 )
+        DUNE_THROW(InvalidStateException, "geoInInside false");
+
+      if constexpr (dim == 3)
+      {
+        auto x1 = isgeo.corner(twistToIdx(tin, 1));
+        auto y1 = geoIn.corner( refIn.subEntity( nIn, 1, 1, dim ) );
+        std::cout << x1 << "   -   " << y1 <<std::endl;
+        if( (x1 - y1).two_norm() > 1e-12 )
+          DUNE_THROW(InvalidStateException, "twist sign in false");
       }
 
-      int tin = Fem::TwistUtility<Grid>::twistInSelf(gridView.grid(), is);
-      std::cout << "Twist: " << tin << std::endl;
 
-      std::cout << "Outside" << std::endl;
+      std::cout << std::endl << "Outside" << std::endl;
       const auto& facetOut = eOut.template subEntity<1>(nOut).geometry();
       for ( int c = 0; c < dim; ++c )
         std::cout << facetOut.corner(c) << std::endl;
 
-      std::cout << "In Outside" << std::endl;
-      auto lgeoOut = is.geometryInOutside();
-      for ( int c = 0; c < dim; ++c )
-      {
-        auto x = geoOut.global( lgeoOut.corner(c) );
-        std::cout << x << std::endl;
-
-        auto refx = geoOut.corner( refOut.subEntity( nOut, 1, c, dim ) );
-        if( (x - refx).two_norm() > 1e-12 )
-          DUNE_THROW(InvalidStateException, "refElem outside is different");
-      }
-
       int tout = Fem::TwistUtility<Grid>::twistInNeighbor(gridView.grid(), is);
-      std::cout << "Twist: " << tout << std::endl;
+      std::cout << "Twist out: " << tout << std::endl;
 
-      const auto& igeo = is.geometry();
-
-      int t0 = (tin < 0) ? -(tin+1) : tin;
-
-      auto x0 = geoIn.corner( refIn.subEntity( nIn, 1, 0, dim ) );
-      std::cout << x0 << std::endl;
-      std::cout << igeo.corner(t0) << std::endl;
-      if( (x0 - igeo.corner(t0)).two_norm() > 1e-12 )
-        DUNE_THROW(InvalidStateException, "twist in false");
-
-      if constexpr (dim == 3)
-      {
-        int t1 = ((tin < 0) ? -(tin+1)+(dim-1) : (tin+1))%dim;
-        auto x1 = geoIn.corner( refIn.subEntity( nIn, 1, 1, dim ) );
-        if( (x1 - igeo.corner(t1)).two_norm() > 1e-12 )
-          DUNE_THROW(InvalidStateException, "twist sign in false");
-      }
-
-      t0 = (tout < 0) ? -(tout+1) : tout;
-
-      auto c0 = geoOut.corner( refOut.subEntity( nOut, 1, 0, dim ) );
-      if( (c0 - igeo.corner(t0)).two_norm() > 1e-12 )
+      auto c0 = isgeo.corner(twistToIdx(tout));
+      auto d0 = geoOut.corner( refOut.subEntity( nOut, 1, 0, dim ) );
+      std::cout << c0 << "   -   " << d0 << std::endl;
+      if( (c0 - d0).two_norm() > 1e-12 )
         DUNE_THROW(InvalidStateException, "twist out false");
 
+      auto e0 = geoOut.global( is.geometryInOutside().corner(0) );
+      std::cout << c0 << "   -   " << e0 << std::endl;
+      if( (c0 - e0).two_norm() > 1e-12 )
+        DUNE_THROW(InvalidStateException, "geoInOutside false");
+
       if constexpr (dim == 3)
       {
-        int t1 = ((tout < 0) ? -(tout+1)+(dim-1) : (tout+1))%dim;
-        auto c1 = geoOut.corner( refOut.subEntity( nOut, 1, 1, dim ) );
-        if( (c1 - igeo.corner(t1)).two_norm() > 1e-12 )
+        auto c1 = isgeo.corner(twistToIdx(tout, 1));
+        auto d1 = geoOut.corner( refOut.subEntity( nOut, 1, 1, dim ) );
+        std::cout << c1 << "   -   " << d1 << std::endl;
+        if( (c1 - d1).two_norm() > 1e-12 )
           DUNE_THROW(InvalidStateException, "twist sign out false");
       }
 
@@ -120,20 +110,21 @@ void checkTwists(const GridView& gridView)
  */
 int main(int argc, char *argv[])
 {
+  MPIHelper::instance( argc, argv );
+
   try {
     std::cout << "-- Reference element check --" << std::endl;
+    static constexpr int dim = GRIDDIM;
 
     // Create Grid
     // ------------
-    static constexpr int dim = GRIDDIM;
-    using Grid = Dune::MovingMesh<dim>;
 
+    using Grid = Dune::MovingMesh<dim>;
     using GridFactory = Dune::GmshGridFactory< Grid >;
     GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/plane3d.msh" );
-
     Grid& grid = *gridFactory.grid();
-
     const auto& gridView = grid.leafGridView();
+
     checkTwists(gridView);
 
     std::cout << std::endl << " = Check interface grid =" << std::endl << std::endl;

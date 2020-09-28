@@ -61,7 +61,7 @@ namespace Dune
 
     //! Return list of indices sorted by id
     template < typename HostEntity, int dim >
-    auto computeCGALIndices( const HostEntity& hostEntity )
+    static inline auto computeCGALIndices( const HostEntity& hostEntity )
     {
       std::array< std::size_t, dim+1 > ids, indices;
       for ( std::size_t i = 0; i < dim+1; ++i )
@@ -76,7 +76,7 @@ namespace Dune
 
     // for a given dune facet index compute corresponding CGAL .second value
     template< std::size_t dim >
-    std::size_t duneFacetToCgalSecond ( const std::size_t duneFacet, const std::array< std::size_t, dim+1 >& cgalIndex )
+    static inline std::size_t duneFacetToCgalSecond ( const std::size_t duneFacet, const std::array< std::size_t, dim+1 >& cgalIndex )
     {
       std::size_t sum = 0;
       for ( int k = 0; k < dim; ++k )
@@ -87,12 +87,11 @@ namespace Dune
     }
 
     // for a given CGAL .second value compute corresponding dune facet index
-    template< typename HostFacet >
-    std::size_t cgalFacetToDuneFacet ( const HostFacet& facet )
+    template< std::size_t dim, typename HostFacet >
+    static inline std::size_t cgalFacetToDuneFacet ( const HostFacet& facet )
     {
       const auto& c = facet.first;
       const auto& i = facet.second;
-      static const int dim = c->dimension();
       const auto& cgalIndex = facet.first->info().cgalIndex;
 
       // invert cgalIndex
@@ -106,6 +105,32 @@ namespace Dune
 
       static const int thr = (dim == 2) ? 1 : 3;
       return sum - thr;
+    }
+
+    template< std::size_t dim, typename HostEdge >
+    static inline std::size_t cgalEdgeToDuneEdge( const HostEdge& cgalEdge )
+    {
+      const auto& c = cgalEdge.first;
+      const auto& i = cgalEdge.second;
+      const auto& j = cgalEdge.third;
+
+      const auto& cgalIndex = c->info().cgalIndex;
+
+      // invert cgalIndex
+      auto duneIndex = cgalIndex;
+      for ( int k = 0; k < dim+1; ++k )
+        duneIndex[ cgalIndex[k] ] = k;
+
+      auto i0 = duneIndex[ i ];
+      auto j0 = duneIndex[ j ];
+
+      if ( i0 > j0 )
+        std::swap(i0, j0);
+
+      if (j0 != 3)
+        return i0+j0-1;
+      else
+        return 3+i0;
     }
 
   }

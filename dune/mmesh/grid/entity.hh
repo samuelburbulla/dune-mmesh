@@ -205,7 +205,7 @@ namespace Dune
     {
       assert( i < subEntities( cc ) );
       const auto& cell = hostEntity_.first;
-      auto facetIdx = MMeshImpl::cgalFacetToDuneFacet( hostEntity_ );
+      auto facetIdx = MMeshImpl::cgalFacetToDuneFacet<dim, HostGridEntity>( hostEntity_ );
       const auto i0 = cgalIndex( MMeshImpl::ref<dim>().subEntity(facetIdx, 1, i, dim) );
 
       return MMeshEntity<cc, dim, GridImp> (
@@ -224,7 +224,7 @@ namespace Dune
       assert( i < subEntities( cc ) );
       const auto& cell = hostEntity_.first;
 
-      int edgeIdx = 0; // TODO: compute DUNE edge index from .second and .third
+      auto edgeIdx = MMeshImpl::cgalEdgeToDuneEdge<3, HostGridEntity>( hostEntity_ );
 
       const auto i0 = cgalIndex( MMeshImpl::ref<dim>().subEntity(edgeIdx, 2, i, 3) );
 
