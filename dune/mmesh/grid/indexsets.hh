@@ -61,7 +61,11 @@ namespace Dune
     std::enable_if_t< codim == 1, IndexType >
     index (const Entity< codim, dim, GridImp, MMeshEntity>& e) const
     {
-      return codimIndexMap_[0].at( grid_->globalIdSet().id( e ) );
+      try {
+        return codimIndexMap_[0].at( grid_->globalIdSet().id( e ) );
+      } catch (...) {
+        DUNE_THROW(InvalidStateException, "Id of codim 1 entity not found.");
+      }
     }
 
     //! get index of an codim 2 entity
@@ -69,7 +73,11 @@ namespace Dune
     std::enable_if_t< codim == 2 && dim == 3, IndexType >
     index (const Entity< codim, dim, GridImp, MMeshEntity>& e) const
     {
-      return codimIndexMap_[1].at( grid_->globalIdSet().id( e ) );
+      try {
+        return codimIndexMap_[1].at( grid_->globalIdSet().id( e ) );
+      } catch (...) {
+        DUNE_THROW(InvalidStateException, "Id of codim 2 entity not found.");
+      }
     }
 
     //! get subIndex of subEntity i with given codim of an entity
@@ -98,7 +106,7 @@ namespace Dune
       if ( codim == 0 )
           return index( e );
       if ( codim == dim )
-          return hostEntity->vertex( i )->info().index;
+          return e.impl().template subEntity<dim>( i ).impl().hostEntity()->info().index;
       else if ( codim == 1 )
           return codimIndexMap_[0].at( grid_->globalIdSet().id( e.impl().template subEntity<1>( i ) ) );
       else if ( codim == 2 )
@@ -405,6 +413,10 @@ namespace Dune
           vh->info().id = nextVertexId_++;
           vh->info().idWasSet = true;
         }
+
+      // Compute mapping DUNE vertex index to CGAL vertex index
+      for ( auto fh = hostgrid.finite_faces_begin(); fh != hostgrid.finite_faces_end(); ++fh)
+        fh->info().cgalIndex = MMeshImpl::computeCGALIndices<decltype(fh), 2>( fh );
     }
 
     //! update id set in 3d
@@ -422,6 +434,10 @@ namespace Dune
           vh->info().id = nextVertexId_++;
           vh->info().idWasSet = true;
         }
+
+      // Compute mapping DUNE vertex index to CGAL vertex index
+      for ( auto ch = hostgrid.finite_cells_begin(); ch != hostgrid.finite_cells_end(); ++ch)
+        ch->info().cgalIndex = MMeshImpl::computeCGALIndices<decltype(ch), 3>( ch );
     }
 
     //! advanced method to set the id of a vertex manually

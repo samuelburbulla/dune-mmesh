@@ -20,37 +20,23 @@ using namespace Dune;
  */
 int main(int argc, char *argv[])
 {
-  try {
-    std::cout << "-- Grid check --" << std::endl;
+  std::cout << "-- Grid check --" << std::endl;
 
-    // Create Grid
-    // ------------
-    static constexpr int dim = GRIDDIM;
-    using Grid = Dune::MovingMesh<dim>;
+  // Create Grid
+  // ------------
+  static constexpr int dim = GRIDDIM;
+  using Grid = Dune::MovingMesh<dim>;
 
-    using GridFactory = Dune::GmshGridFactory< Grid >;
-    GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/plane3d.msh" );
+  using GridFactory = Dune::GmshGridFactory< Grid >;
+  GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/plane3d.msh" );
 
-    Grid& grid = *gridFactory.grid();
+  Grid& grid = *gridFactory.grid();
 
-    // Call gridcheck from dune-grid
-    gridcheck( grid );
+  // Call gridcheck from dune-grid
+  gridcheck( grid );
 
-    // Call grid check for interface grid
-    gridcheck( grid.interfaceGrid() );
+  // Call grid check for interface grid
+  gridcheck( grid.interfaceGrid() );
 
-    return EXIT_SUCCESS;
-  }
-  catch (Dune::Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-    return EXIT_FAILURE;
-  }
-  catch (CGAL::Failure_exception &e){
-    std::cerr << "CGAL reported error: " << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-  catch(...) {
-    std::cerr << "Unknown exception thrown!" << std::endl;
-    return EXIT_FAILURE;
-  }
+  return EXIT_SUCCESS;
 }

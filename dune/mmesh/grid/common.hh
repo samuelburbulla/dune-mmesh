@@ -32,6 +32,84 @@ namespace Dune
       return hash;
     }
   };
+
+  namespace MMeshImpl
+  {
+
+    template < int dim >
+    class sort_indices
+    {
+      public:
+        sort_indices(std::array< std::size_t, dim > ids)
+         : ids_(ids) {}
+
+        bool operator()(std::size_t i, std::size_t j) const
+        {
+          return ids_[i] < ids_[j];
+        }
+
+        private:
+          std::array< std::size_t, dim > ids_;
+    };
+
+    //! return reference element
+    template< int dim, typename ctype = double >
+    static inline auto& ref()
+    {
+      return ReferenceElements<ctype, dim>::simplex();
+    }
+
+    //! Return list of indices sorted by id
+    template < typename HostEntity, int dim >
+    auto computeCGALIndices( const HostEntity& hostEntity )
+    {
+      std::array< std::size_t, dim+1 > ids, indices;
+      for ( std::size_t i = 0; i < dim+1; ++i )
+      {
+        ids[i] = hostEntity->vertex( i )->info().id;
+        indices[i] = i;
+      }
+      std::sort(indices.begin(), indices.end(), sort_indices<dim+1>(ids));
+
+      return indices;
+    }
+
+    // for a given dune facet index compute corresponding CGAL .second value
+    template< std::size_t dim >
+    std::size_t duneFacetToCgalSecond ( const std::size_t duneFacet, const std::array< std::size_t, dim+1 >& cgalIndex )
+    {
+      std::size_t sum = 0;
+      for ( int k = 0; k < dim; ++k )
+        sum += cgalIndex[ ref<dim>().subEntity(duneFacet, 1, k, dim) ];
+
+      static constexpr int max = (dim == 2) ? 3 : 6;
+      return max - sum;
+    }
+
+    // for a given CGAL .second value compute corresponding dune facet index
+    template< typename HostFacet >
+    std::size_t cgalFacetToDuneFacet ( const HostFacet& facet )
+    {
+      const auto& c = facet.first;
+      const auto& i = facet.second;
+      static const int dim = c->dimension();
+      const auto& cgalIndex = facet.first->info().cgalIndex;
+
+      // invert cgalIndex
+      auto duneIndex = cgalIndex;
+      for ( int k = 0; k < dim+1; ++k )
+        duneIndex[ cgalIndex[k] ] = k;
+
+      std::size_t sum = 0;
+      for ( int k = 0; k < dim; ++k )
+        sum += duneIndex[ (i+k+1)%(dim+1) ];
+
+      static const int thr = (dim == 2) ? 1 : 3;
+      return sum - thr;
+    }
+
+  }
+
 }
 
 #endif

@@ -159,12 +159,7 @@ namespace Dune
     //! where iteration started.
     LocalGeometry geometryInInside () const
     {
-      LocalGeometryImpl impl(
-          hostIntersection_.second,
-          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second),
-          *this,
-          true
-      );
+      LocalGeometryImpl impl( indexInInside() );
       return LocalGeometry( impl );
     }
 
@@ -173,12 +168,7 @@ namespace Dune
     LocalGeometry geometryInOutside () const
     {
       assert( neighbor() );
-      LocalGeometryImpl impl(
-          hostIntersection_.second,
-          mMesh_->getHostGrid().mirror_index(hostIntersection_.first, hostIntersection_.second),
-          *this,
-          false
-      );
+      LocalGeometryImpl impl( indexInOutside() );
       return LocalGeometry( impl );
     }
 
@@ -191,14 +181,15 @@ namespace Dune
 
     //! local number of codim 1 entity in self where intersection is contained in
     int indexInInside () const {
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE,
-      return dim-hostIntersection_.second;
+      return MMeshImpl::cgalFacetToDuneFacet( hostIntersection_ );
     }
 
     //! local number of codim 1 entity in neighbor where intersection is contained
     int indexInOutside () const {
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE,
-      return dim-(mMesh_->getHostGrid().mirror_index( hostIntersection_.first, hostIntersection_.second ));
+      const auto& neighbor = hostIntersection_.first->neighbor( hostIntersection_.second );
+      const auto& second = mMesh_->getHostGrid().mirror_index( hostIntersection_.first, hostIntersection_.second );
+      HostLeafIntersection facetFromOutside ( { neighbor, second } );
+      return MMeshImpl::cgalFacetToDuneFacet( facetFromOutside );
     }
 
     //! return outer normal

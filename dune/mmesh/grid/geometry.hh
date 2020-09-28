@@ -56,12 +56,7 @@ namespace Dune
 
     //! Constructor from host geometry with codim 0
     MMeshGeometry(const typename GridImp::template HostGridEntity<0>& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 3>( {
-           makeFieldVector( hostEntity->vertex(0)->point() ),
-           makeFieldVector( hostEntity->vertex(1)->point() ),
-           makeFieldVector( hostEntity->vertex(2)->point() )
-         } ) )
+     : BaseType( GeometryTypes::simplex(mydim), getVertices(hostEntity) )
     {
         // obtain circumcenter by CGAL
         circumcenter_ = makeFieldVector(
@@ -80,20 +75,15 @@ namespace Dune
     }
 
     //! Constructor from host geometry with codim 0
-    MMeshGeometry(const typename GridImp::HostGridType::Face& face)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 3>( {
-           makeFieldVector( face.vertex(0)->point() ),
-           makeFieldVector( face.vertex(1)->point() ),
-           makeFieldVector( face.vertex(2)->point() )
-         } ) )
+    MMeshGeometry(const typename GridImp::HostGridType::Face& hostEntity)
+     : BaseType( GeometryTypes::simplex(mydim), getVertices(*hostEntity) )
     {
         // obtain circumcenter by CGAL
         circumcenter_ = makeFieldVector(
             CGAL::circumcenter(
-                face.vertex(0)->point(),
-                face.vertex(1)->point(),
-                face.vertex(2)->point()
+                hostEntity.vertex(0)->point(),
+                hostEntity.vertex(1)->point(),
+                hostEntity.vertex(2)->point()
             )
         );
     }
@@ -108,8 +98,8 @@ namespace Dune
     }
 
     //! Constructor of local intersection geometry
-    MMeshGeometry( int idxInInside, int idxInOutside, const Intersection& intersection, bool inside )
-     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( idxInInside, idxInOutside, inside ) )
+    MMeshGeometry( int idx )
+     : BaseType( GeometryTypes::simplex(mydim), getLocalVertices_( idx ) )
     {}
 
     //! Constructor from host geometry with codim 2
@@ -125,20 +115,33 @@ namespace Dune
     }
 
   private:
-    static inline std::array<FVector, 2> getVertices ( const typename GridImp::template HostGridEntity<1>& hostEntity )
+    static inline std::array<FVector, 3> getVertices ( const typename GridImp::template HostGridEntity<0>& hostEntity )
     {
-      std::array<FVector, 2> vertices( {
-        makeFieldVector( hostEntity.first->vertex( (hostEntity.second+1)%3 )->point() ),
-        makeFieldVector( hostEntity.first->vertex( (hostEntity.second+2)%3 )->point() )
-      } );
+      const auto& cgalIdx = hostEntity->info().cgalIndex;
 
-      if (hostEntity.second == 1)
-        std::swap( vertices[0], vertices[1] );
+      std::array<FVector, 3> vertices ( {
+        makeFieldVector( hostEntity->vertex(cgalIdx[0])->point() ),
+        makeFieldVector( hostEntity->vertex(cgalIdx[1])->point() ),
+        makeFieldVector( hostEntity->vertex(cgalIdx[2])->point() )
+      } );
 
       return vertices;
     }
 
-    static inline std::array<FVector, 2> getLocalVertices_ ( int i, int j, bool inside )
+    static inline std::array<FVector, 2> getVertices ( const typename GridImp::template HostGridEntity<1>& hostEntity )
+    {
+      const auto& cgalIdx = hostEntity.first->info().cgalIndex;
+
+      auto facetIdx = MMeshImpl::cgalFacetToDuneFacet( hostEntity );
+
+      std::array<FVector, 2> vertices;
+      for ( int k = 0; k < 2; ++k )
+        vertices[k] = makeFieldVector( hostEntity.first->vertex( cgalIdx[ MMeshImpl::ref<2>().subEntity(facetIdx, 1, k, 2) ] )->point() );
+
+      return vertices;
+    }
+
+    static inline std::array<FVector, 2> getLocalVertices_ ( int k )
     {
       static const std::array<FVector, 3> local = {
         FVector( { 0.0, 0.0 } ),
@@ -146,14 +149,7 @@ namespace Dune
         FVector( { 0.0, 1.0 } )
       };
 
-      int k = inside ? i : j;
-
-      std::array<FVector, 2> v ( { local[ (k+1)%3 ], local[ (k+2)%3 ] } );
-
-      if (k == 1)
-        std::swap(v[0], v[1]);
-
-      return v;
+      return { local[ k==2 ? 1 : 0 ], local[ k==0 ? 1 : 2 ] };
     }
 
     FVector circumcenter_;

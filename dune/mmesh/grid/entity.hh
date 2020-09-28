@@ -204,18 +204,14 @@ namespace Dune
     subEntity (unsigned int i) const
     {
       assert( i < subEntities( cc ) );
-      auto& edgeIdx = hostEntity_.second;
-
-      int idx = 0;
-      if (i == 0)
-        idx = (edgeIdx > 0) ? 0 : 1;
-      else // (i == 1)
-        idx = (edgeIdx < 2) ? 2 : 1;
+      const auto& cell = hostEntity_.first;
+      auto facetIdx = MMeshImpl::cgalFacetToDuneFacet( hostEntity_ );
+      const auto i0 = cgalIndex( MMeshImpl::ref<dim>().subEntity(facetIdx, 1, i, dim) );
 
       return MMeshEntity<cc, dim, GridImp> (
         mMesh_,
         typename GridImp::template HostGridEntity<dim> (
-          hostEntity_.first->vertex( idx )
+          cell->vertex( i0 )
         )
       );
     }
@@ -226,13 +222,16 @@ namespace Dune
     subEntity (unsigned int i) const
     {
       assert( i < subEntities( cc ) );
-      auto& v0Idx = hostEntity_.second;
-      auto& v1Idx = hostEntity_.third;
-      // return the two vertices but do not care about any ordering here
+      const auto& cell = hostEntity_.first;
+
+      int edgeIdx = 0; // TODO: compute DUNE edge index from .second and .third
+
+      const auto i0 = cgalIndex( MMeshImpl::ref<dim>().subEntity(edgeIdx, 2, i, 3) );
+
       return MMeshEntity<cc, dim, GridImp> (
         mMesh_,
         typename GridImp::template HostGridEntity<dim> (
-          hostEntity_.first->vertex( (i==0) ? v0Idx : v1Idx )
+          cell->vertex( i0 )
         )
       );
     }
@@ -361,6 +360,14 @@ namespace Dune
     }
 
   private:
+
+    //! return the cgal vertex index for given dune vertex index
+    const auto& cgalIndex ( const std::size_t& i ) const
+    {
+      static_assert( codim != dim );
+      return hostEntity_.first->info().cgalIndex[i];
+    }
+
     //! the host entity of this entity
     HostGridEntity hostEntity_;
 
@@ -399,6 +406,9 @@ namespace Dune
 
     // type of global coordinate
     typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
+    // ctype
+    typedef typename GridImp::ctype ctype;
 
     //! The Iterator over intersections on the leaf level
     typedef MMeshLeafIntersectionIterator<GridImp> LeafIntersectionIterator;
@@ -610,18 +620,7 @@ namespace Dune
     //! Return the number of subEntities of codimension cc
     unsigned int subEntities (unsigned int cc) const
     {
-      // we have a simplex grid
-      int n = dim+1;
-      int k = dim-cc+1;
-
-      // binomial: n over k
-      int binomial=1;
-      for (int i=n-k+1; i<=n; i++)
-        binomial *= i;
-      for (long i=2; i<=k; i++)
-        binomial /= i;
-
-      return binomial;
+      return MMeshImpl::ref<dim>().size(cc);
     }
 
     /** \brief Provide access to sub entity i of given codimension. Entities
@@ -638,8 +637,10 @@ namespace Dune
     std::enable_if_t< cc == dim, typename GridImp::template Codim<cc>::Entity >
     subEntity (unsigned int i) const {
       assert( i < subEntities( cc ) );
-      if (hostEntity_ != HostGridEntity()) {
-        return MMeshEntity<cc, dim, GridImp>( mMesh_, hostEntity_->vertex( i ) );
+      if (hostEntity_ != HostGridEntity())
+      {
+        const auto i0 = cgalIndex( i );
+        return MMeshEntity<cc, dim, GridImp>( mMesh_, hostEntity_->vertex( i0 ) );
       }
       else {
         auto vh = mMesh_->getHostGrid().infinite_vertex();
@@ -652,18 +653,19 @@ namespace Dune
     std::enable_if_t< cc == 1, typename GridImp::template Codim<cc>::Entity >
     subEntity (unsigned int i) const {
       assert( i < subEntities( cc ) );
-      // remark: the i-th edge in CGAL corresponds to the (dim-i)-th edge in DUNE
-      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<1> ( hostEntity_, dim-i ) );
+      auto second = MMeshImpl::duneFacetToCgalSecond<dim>( i, cgalIndex() );
+      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<1> ( hostEntity_, second ) );
     }
 
     template <int cc>
     std::enable_if_t< cc == 2 && dim == 3, typename GridImp::template Codim<cc>::Entity >
     subEntity (unsigned int i) const {
       assert( i < subEntities( cc ) );
-      // permutate i to match the DUNE edge numbering
-      static constexpr std::array<unsigned int, 6> perm = {{ 0, 4, 1, 3, 5, 2 }};
-      i = perm[i];
-      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<2> ( hostEntity_, i%4, (i+1)%4+(i>3)) );
+
+      const auto i0 = cgalIndex( MMeshImpl::ref<dim>().subEntity(i, 2, 0, 3) );
+      const auto i1 = cgalIndex( MMeshImpl::ref<dim>().subEntity(i, 2, 1, 3) );
+
+      return MMeshEntity<cc, dim, GridImp> ( mMesh_, typename GridImp::template HostGridEntity<2> ( hostEntity_, i0, i1 ) );
     }
 
     //! First leaf intersection
@@ -771,6 +773,19 @@ namespace Dune
     }
 
   private:
+
+    //! return the cgal vertex index for given dune vertex index
+    const auto& cgalIndex ( const std::size_t& i ) const
+    {
+      return hostEntity_->info().cgalIndex[i];
+    }
+
+    //! return the cgal vertex index array
+    const auto& cgalIndex () const
+    {
+      return hostEntity_->info().cgalIndex;
+    }
+
     //! the host entity of this entity
     HostGridEntity hostEntity_;
 
