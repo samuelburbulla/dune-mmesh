@@ -8,11 +8,7 @@
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
 
-#include <dune/grid/test/gridcheck.hh>
-
 #include <dune/mmesh/mmesh.hh>
-#include <dune/alugrid/grid.hh>
-#include <dune/fem/quadrature/caching/twistutility.hh>
 
 using namespace Dune;
 
@@ -45,14 +41,9 @@ void checkTwists(const GridView& gridView)
       for ( int c = 0; c < dim; ++c )
         std::cout << facetIn.corner(c) << std::endl;
 
-      int tin = Fem::TwistUtility<Grid>::twistInSelf(gridView.grid(), is);
-      std::cout << "Twist in: " << tin << std::endl;
-
       const auto& isgeo = is.geometry();
 
-      auto twistToIdx = [](int t, int c = 0){ return ((t < 0) ? 4+t-c : t+c)%dim; };
-
-      auto x0 = isgeo.corner(twistToIdx(tin));
+      auto x0 = isgeo.corner( 0 );
       auto y0 = geoIn.corner( refIn.subEntity( nIn, 1, 0, dim ) );
       std::cout << x0 << "   -   " << y0 << std::endl;
       if( (x0 - y0).two_norm() > 1e-12 )
@@ -65,7 +56,7 @@ void checkTwists(const GridView& gridView)
 
       if constexpr (dim == 3)
       {
-        auto x1 = isgeo.corner(twistToIdx(tin, 1));
+        auto x1 = isgeo.corner( 1 );
         auto y1 = geoIn.corner( refIn.subEntity( nIn, 1, 1, dim ) );
         std::cout << x1 << "   -   " << y1 <<std::endl;
         if( (x1 - y1).two_norm() > 1e-12 )
@@ -78,10 +69,7 @@ void checkTwists(const GridView& gridView)
       for ( int c = 0; c < dim; ++c )
         std::cout << facetOut.corner(c) << std::endl;
 
-      int tout = Fem::TwistUtility<Grid>::twistInNeighbor(gridView.grid(), is);
-      std::cout << "Twist out: " << tout << std::endl;
-
-      auto c0 = isgeo.corner(twistToIdx(tout));
+      auto c0 = isgeo.corner( 0 );
       auto d0 = geoOut.corner( refOut.subEntity( nOut, 1, 0, dim ) );
       std::cout << c0 << "   -   " << d0 << std::endl;
       if( (c0 - d0).two_norm() > 1e-12 )
@@ -94,7 +82,7 @@ void checkTwists(const GridView& gridView)
 
       if constexpr (dim == 3)
       {
-        auto c1 = isgeo.corner(twistToIdx(tout, 1));
+        auto c1 = isgeo.corner( 1 );
         auto d1 = geoOut.corner( refOut.subEntity( nOut, 1, 1, dim ) );
         std::cout << c1 << "   -   " << d1 << std::endl;
         if( (c1 - d1).two_norm() > 1e-12 )

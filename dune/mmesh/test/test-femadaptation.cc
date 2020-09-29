@@ -258,6 +258,4 @@ catch( const Dune::Exception &exception )
   std::cerr << "Error: " << exception << std::endl;
   return 1;
 }
-#else
-  std::cout << "Skip test because dune-fem was not found!" << std::endl;
 #endif
