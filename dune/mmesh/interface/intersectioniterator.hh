@@ -53,17 +53,19 @@ namespace Dune
       , nbIdx_( 0 )
     {
       const auto& indexSet = grid_->leafIndexSet();
+      const auto& cgalIndex = MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dimension>( hostEntity );
 
       for( int d = 0; d < dimension+1; ++d )
       {
         std::array< std::size_t, dimension > ids;
-        try {
-          for( int i = 0; i < dimension; ++i )
-            ids[i] = indexSet.vertexIndexMap().at(
-              hostEntity_.first->vertex((hostEntity_.second+i+( (i == 1 && d == 2) ? d+2 : d+1 ))%(dimensionworld+1))->info().index
-            );
-        } catch (std::exception &e) {
-          DUNE_THROW(InvalidStateException, e.what());
+        if constexpr (dimension == 1)
+        {
+          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d] )->info().index );
+        }
+        else // dim == 2
+        {
+          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==2 ? 1 : 0] )->info().index );
+          ids[1] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==0 ? 1 : 2] )->info().index );
         }
 
         try {

@@ -9,6 +9,7 @@
 
 // Dune includes
 #include <dune/grid/common/grid.hh>
+#include <dune/mmesh/interface/common.hh>
 #include <dune/mmesh/interface/incidentiterator.hh>
 
 // CGAL includes
@@ -292,6 +293,8 @@ namespace Dune
     // equivalent entity in the host grid
     typedef typename GridImp::template MMeshInterfaceEntity<0> MMeshInterfaceEntity;
 
+    typedef typename GridImp::template MMeshInterfaceEntity<dim> MMeshInterfaceVertex;
+
     typedef typename GridImp::template Codim<0>::Geometry Geometry;
 
     typedef typename GridImp::template Codim<0>::LocalGeometry LocalGeometry;
@@ -414,7 +417,6 @@ namespace Dune
 
     LocalGeometry geometryInFather() const {
       DUNE_THROW( InvalidStateException, "MMesh entities do no implement a geometry in father!" );
-      // return LocalGeometry( std::array<Vertex, 3>() ); // dummy
     }
 
     //! returns true if this entity is new after adaptation
@@ -501,8 +503,10 @@ namespace Dune
     std::enable_if_t< cc == dim, typename GridImp::template Codim<cc>::Entity >
     subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
+
+      auto cgalIndex = MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dim>( hostEntity_ );
       return MMeshInterfaceGridEntity<cc, dim, GridImp>(
-        grid_, hostEntity_.first->vertex( (hostEntity_.second+i+1)%(dim+2) )
+        grid_, hostEntity_.first->vertex( cgalIndex[i] )
       );
     }
 
@@ -513,13 +517,15 @@ namespace Dune
     std::enable_if_t< cc == 1 && dim == 2, typename GridImp::template Codim<cc>::Entity >
     subEntity (std::size_t i) const {
       assert( i < subEntities( cc ) );
-      const int j = hostEntity_.second;
-      i = (3-i)%3; // DUNE mapping
-      const int v1 = (j+i+1)%4;
-      const int v2 = (i==2) ? ((j+i+3)%4) : ((j+i+2)%4);
+
+      auto cgalIndex = MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dim>( hostEntity_ );
+      auto cell = hostEntity_.first;
+
+      int v1 = cgalIndex[i==2 ? 1 : 0];
+      int v2 = cgalIndex[i==0 ? 1 : 2];
 
       return MMeshInterfaceGridEntity<cc, dim, GridImp>(
-        grid_, CGAL::Triple<decltype(hostEntity_.first), int, int>( hostEntity_.first, v1, v2 )
+        grid_, CGAL::Triple<decltype(cell), int, int>( cell, v1, v2 )
       );
     }
 

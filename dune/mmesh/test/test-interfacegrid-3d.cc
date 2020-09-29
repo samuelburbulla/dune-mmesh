@@ -136,20 +136,20 @@ int main(int argc, char *argv[])
         std::cout << "- Check first element -" << std::endl;
 
         // check element
-        checkProperty( "geometry center", geo.center(), { 0.83333333333333337, 0.5, 0.50000000000000011 } );
+        checkProperty( "geometry center", geo.center(), { 0.83333333333333337, 0.5, 0.5 } );
         checkProperty( "geometry volume", geo.volume(), 0.25 );
         checkProperty( "element index", indexSet.index( e ), 0ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 2 ), 0ul },
-            { indexSet.subIndex( e, 1, 2 ), 1ul },
+          { { indexSet.subIndex( e, 0, 2 ), 1ul },
+            { indexSet.subIndex( e, 1, 2 ), 0ul },
             { indexSet.subIndex( e, 2, 2 ), 2ul } }
         );
 
         checkProperties( "vertex positions",
-          { { e.subEntity<2>( 0 ).geometry().center(), { 1.0, 0.5, 1.0 } },
-            { e.subEntity<2>( 1 ).geometry().center(), { 1.0, 0.5, 0.0 } },
+          { { e.subEntity<2>( 0 ).geometry().center(), { 1.0, 0.5, 0.0 } },
+            { e.subEntity<2>( 1 ).geometry().center(), { 1.0, 0.5, 1.0 } },
             { e.subEntity<2>( 2 ).geometry().center(), { 0.5, 0.5, 0.5 } } }
         );
 
@@ -169,14 +169,14 @@ int main(int argc, char *argv[])
 
         checkProperties( "intersection centers",
           { { is0.geometry().center(), {  1.0, 0.5,  0.5 } },
-            { is1.geometry().center(), { 0.75, 0.5, 0.75 } },
-            { is2.geometry().center(), { 0.75, 0.5, 0.25 } } }
+            { is1.geometry().center(), { 0.75, 0.5, 0.25 } },
+            { is2.geometry().center(), { 0.75, 0.5, 0.75 } } }
         );
 
         checkProperties( "intersection normals",
           { { is0.centerUnitOuterNormal(), { 1.0, 0.0, 0.0 } },
-            { is1.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0,  1.0 / std::sqrt(2) } },
-            { is2.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0, -1.0 / std::sqrt(2) } } }
+            { is1.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0, -1.0 / std::sqrt(2) } },
+            { is2.centerUnitOuterNormal(), { -1.0 / std::sqrt(2), 0.0,  1.0 / std::sqrt(2) } } }
         );
 
         checkProperties( "index in inside",
@@ -189,8 +189,8 @@ int main(int argc, char *argv[])
         const auto& neighborB = is2.impl().outside();
 
         checkProperties( "neighbors centers",
-          { { neighborA.geometry().center(), { 0.5, 0.5, 0.83333333333333337 } },
-            { neighborB.geometry().center(), { 0.50000000000000011, 0.5, 0.16666666666666666 } } }
+          { { neighborA.geometry().center(), { 0.5, 0.5, 0.16666666666666666 } },
+            { neighborB.geometry().center(), { 0.50000000000000011, 0.5, 0.83333333333333337 } } }
         );
 
         // check global vertex indices obtained by intersection subentities
@@ -204,8 +204,8 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal3 = vertexMapper.subIndex(e, vIdxLocal3, 2);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 0u },
-            { vIdxGlobal2, 1u },
+          { { vIdxGlobal1, 1u },
+            { vIdxGlobal2, 0u },
             { vIdxGlobal3, 2u } }
         );
       }

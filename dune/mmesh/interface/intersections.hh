@@ -49,6 +49,8 @@ namespace Dune
     typedef typename GridImp::template MMeshInterfaceEntity<0> MMeshInterfaceEntity;
     typedef typename GridImp::template MMeshInterfaceEntity<1> HostLeafIntersection;
 
+    typedef typename GridImp::MMeshType::template Codim<0>::Entity MMeshEntity;
+
     using LocalIndexMap = std::unordered_map< std::size_t, std::size_t >;
     typedef typename GridImp::MMeshType::template Codim<dimworld>::Entity MMeshVertex;
 
@@ -70,19 +72,20 @@ namespace Dune
       : grid_(grid),
         interfaceEntity_(hostEntity),
         index_(index),
-        refIndex_(dimension==2 ? (3-index)%3 : index), // DUNE mapping
         nbIdx_(nbIdx)
     {
       const auto& indexSet = grid_->leafIndexSet();
 
       std::array< std::size_t, dimension > ids;
-      try {
-        for( int i = 0; i < dimension; ++i )
-          ids[i] = indexSet.vertexIndexMap().at(
-            interfaceEntity_.first->vertex((interfaceEntity_.second+i+( (i == 1 && refIndex_ == 2) ? refIndex_+2 : refIndex_+1 ))%(dimensionworld+1))->info().index
-          );
-      } catch (std::exception &e) {
-        DUNE_THROW(InvalidStateException, e.what());
+
+      if constexpr (dim == 1)
+      {
+        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_] )->info().index );
+      }
+      else // dim == 2
+      {
+        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().index );
+        ids[1] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().index );
       }
       std::sort(ids.begin(), ids.end());
       try {
@@ -121,14 +124,9 @@ namespace Dune
 
       const auto& vertexIndexMap = grid_->leafIndexSet().vertexIndexMap();
 
-      std::size_t myLastVertexIndex;
-      try {
-        myLastVertexIndex = vertexIndexMap.at(
-          interfaceEntity_.first->vertex((interfaceEntity_.second+((refIndex_ == 0) ? refIndex_+dimensionworld : refIndex_))%(dimensionworld+1))->info().index
-        );
-      } catch (std::exception &e) {
-        DUNE_THROW(InvalidStateException, e.what());
-      }
+      std::size_t myLastVertexIndex = vertexIndexMap.at(
+        interfaceEntity_.first->vertex(cgalIndex_[dim-index_])->info().index
+      );
 
       // get the i-th index map entry
       auto it = localIndexMap_.begin();
@@ -146,19 +144,21 @@ namespace Dune
       }
 
       // obtain neighbor by searching in incident elements of intersection vertex
-      const auto& vertex0 = interfaceEntity_.first->vertex((interfaceEntity_.second+refIndex_+1)%(dimensionworld+1));
+      std::size_t v0idx = index_;
+      if constexpr (dim == 2)
+        if (index_ == 1)
+          v0idx = 0;
+
+      const auto& vertex0 = interfaceEntity_.first->vertex( cgalIndex_[v0idx] );
 
       std::array< std::size_t, dimensionworld > vIdx;
-      try {
-        vIdx[0] = vertexIndexMap.at( vertex0->info().index );
-      } catch (std::exception &e) {
-        DUNE_THROW(InvalidStateException, e.what());
-      }
+      vIdx[0] = vertexIndexMap.at( vertex0->info().index );
       vIdx[1] = it->first;
 
-      if ( dimensionworld == 3 )
+      if constexpr ( dimensionworld == 3 )
         try {
-          vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex((interfaceEntity_.second+((refIndex_ < 2) ? refIndex_+2 : 1))%(dimensionworld+1))->info().index );
+          std::size_t v1idx = (index_ == 1) ? 2 : 1;
+          vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex( cgalIndex_[v1idx] )->info().index );
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
@@ -214,11 +214,15 @@ namespace Dune
       const auto& edgeIdx = interfaceEntity_.second;
 
       std::vector< std::size_t > vertices;
-      vertices.push_back( face->vertex( (edgeIdx+refIndex_+1)%(dimensionworld+1) )->info().id );
 
-      if( dimension == 2 )
+      if constexpr ( dimension == 1 )
       {
-        vertices.push_back( face->vertex( (edgeIdx+((refIndex_ < 2) ? refIndex_+2 : 1))%(dimensionworld+1) )->info().id );
+        vertices.push_back( face->vertex( cgalIndex_[index_] )->info().id );
+      }
+      else // dimension == 2
+      {
+        vertices.push_back( face->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().id );
+        vertices.push_back( face->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().id );
         std::sort(vertices.begin(), vertices.end());
       }
 
@@ -269,15 +273,16 @@ namespace Dune
     typename std::enable_if_t< d == 1, Geometry >
     geometry () const
     {
-      return Geometry( interfaceEntity_.first->vertex( (interfaceEntity_.second+refIndex_+1)%(dimensionworld+1) ) );
+      return Geometry( interfaceEntity_.first->vertex( cgalIndex_[index_] ) );
     }
 
     template< int d = dimension >
     typename std::enable_if_t< d == 2, Geometry >
     geometry () const
     {
-      int vIdx0 = (interfaceEntity_.second+refIndex_+1)%(dimensionworld+1);
-      int vIdx1 = (interfaceEntity_.second+((refIndex_ < 2) ? refIndex_+2 : 1))%(dimensionworld+1);
+      int vIdx0 = cgalIndex_[index_==2 ? 1 : 0];
+      int vIdx1 = cgalIndex_[index_==0 ? 1 : 2];
+
       return Geometry( {{ interfaceEntity_.first, vIdx0, vIdx1 }} );
     }
 
@@ -313,8 +318,8 @@ namespace Dune
       auto face = interfaceEntity_.first;
       const auto& edgeIdx = interfaceEntity_.second;
 
-      const auto& p1 = face->vertex( (edgeIdx+refIndex_+1)%(dimensionworld+1) )->point();
-      const auto& p2 = face->vertex( (edgeIdx-refIndex_+2)%(dimensionworld+1) )->point();
+      const auto& p1 = face->vertex( cgalIndex_[ index_ ] )->point();
+      const auto& p2 = face->vertex( cgalIndex_[1-index_] )->point();
 
       NormalVector n ( { p1.x() - p2.x(), p1.y() - p2.y() } );
       n /= n.two_norm();
@@ -326,10 +331,14 @@ namespace Dune
     integrationOuterNormal (const FieldVector<ctype, dimension-1>& local) const
     {
       const auto& cell = interfaceEntity_.first;
-      const auto& j = interfaceEntity_.second;
-      auto a = makeFieldVector( cell->vertex( (j+refIndex_+1)%(dimensionworld+1) )->point() );
-      auto b = makeFieldVector( cell->vertex( (j+((refIndex_ == 2) ? refIndex_+3 : refIndex_+2))%(dimensionworld+1) )->point() );
-      auto v = makeFieldVector( cell->vertex( (j+((refIndex_ == 0) ? refIndex_+3 : refIndex_))%(dimensionworld+1) )->point() );
+
+      int vIdx0 = cgalIndex_[index_==2 ? 1 : 0];
+      int vIdx1 = cgalIndex_[index_==0 ? 1 : 2];
+      int vIdxLast = cgalIndex_[2-index_];
+
+      auto a = makeFieldVector( cell->vertex( vIdx0 )->point() );
+      auto b = makeFieldVector( cell->vertex( vIdx1 )->point() );
+      auto v = makeFieldVector( cell->vertex( vIdxLast )->point() );
 
       // return vector that is orthogonal to edge a-b and triangle a-b-v
       NormalVector ab = b - a;
@@ -373,9 +382,9 @@ namespace Dune
     const GridImp* grid_;
     MMeshInterfaceEntity interfaceEntity_;
     std::size_t index_;
-    std::size_t refIndex_;
     std::size_t nbIdx_;
     LocalIndexMap localIndexMap_;
+    std::array< std::size_t, dim+1 > cgalIndex_ = MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dim>( interfaceEntity_ );
   };
 
 }  // namespace Dune

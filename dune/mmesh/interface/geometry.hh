@@ -47,11 +47,7 @@ namespace Dune
 
     //! Constructor from host geometry with codim 0
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 2>( {
-           makeFieldVector( hostEntity.first->vertex( (hostEntity.second+1)%3 )->point() ),
-           makeFieldVector( hostEntity.first->vertex( (hostEntity.second+2)%3 )->point() )
-       } ) )
+     : BaseType( GeometryTypes::simplex(mydim), getVertices(hostEntity) )
     {
         circumcenter_ = this->corner(0);
         circumcenter_ += this->corner(1);
@@ -95,6 +91,18 @@ namespace Dune
     }
 
   private:
+    static inline std::array<FVector, 2> getVertices ( const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity )
+    {
+      const auto& cgalIdx = MMeshInterfaceImpl::computeCGALIndices<typename GridImp::template MMeshInterfaceEntity<0>, 1> ( hostEntity );
+
+      std::array<FVector, 2> vertices ( {
+        makeFieldVector( hostEntity.first->vertex( cgalIdx[0] )->point() ),
+        makeFieldVector( hostEntity.first->vertex( cgalIdx[1] )->point() )
+      } );
+
+      return vertices;
+    }
+
     FVector circumcenter_;
   };
 
@@ -177,35 +185,38 @@ namespace Dune
 
   private:
 
-     template< int codim, typename Enable = std::enable_if_t< codim == 0 > >
-     static inline std::array<FVector, 3> getVertices ( const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity )
-     {
-       std::array<FVector, 3> vertices;
+    template< int codim, typename Enable = std::enable_if_t< codim == 0 > >
+    static inline std::array<FVector, 3> getVertices ( const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity )
+    {
+      const auto& cgalIdx = MMeshInterfaceImpl::computeCGALIndices<typename GridImp::template MMeshInterfaceEntity<0>, 2> ( hostEntity );
 
-       const auto& cell     = hostEntity.first;
-       const auto& facetIdx = hostEntity.second;
+      std::array<FVector, 3> vertices;
 
-       // use the CGAL index convention to obtain the vertices
-       for ( int i = 0; i < 3; ++i )
-         vertices[i] = makeFieldVector( cell->vertex( (facetIdx + i + 1) % 4 )->point() );
+      const auto& cell = hostEntity.first;
 
-       return vertices;
-     }
+      // use the CGAL index convention to obtain the vertices
+      for ( int i = 0; i < 3; ++i )
+       vertices[i] = makeFieldVector( cell->vertex( cgalIdx[i] )->point() );
 
-     template< int codim, typename Enable = std::enable_if_t< codim == 1 > >
-     static inline std::array<FVector, 2> getVertices ( const typename GridImp::template MMeshInterfaceEntity<1>& hostEntity )
-     {
-       std::array<FVector, 2> vertices;
+      return vertices;
+    }
 
-       const auto& cell       = hostEntity.first;
-       const auto& vertexIdx1 = hostEntity.second;
-       const auto& vertexIdx2 = hostEntity.third;
+    template< int codim, typename Enable = std::enable_if_t< codim == 1 > >
+    static inline std::array<FVector, 2> getVertices ( const typename GridImp::template MMeshInterfaceEntity<1>& hostEntity )
+    {
+      const auto& cell = hostEntity.first;
+      const auto& i = hostEntity.second;
+      const auto& j = hostEntity.third;
 
-       vertices[0] = makeFieldVector( cell->vertex( vertexIdx1 )->point() );
-       vertices[1] = makeFieldVector( cell->vertex( vertexIdx2 )->point() );
+      std::array<FVector, 2> vertices;
+      vertices[0] = makeFieldVector( cell->vertex( i )->point() );
+      vertices[1] = makeFieldVector( cell->vertex( j )->point() );
 
-       return vertices;
-     }
+      if ( cell->vertex( i )->info().id > cell->vertex( j )->info().id )
+        std::swap( vertices[0], vertices[1] );
+
+      return vertices;
+    }
 
     FVector circumcenter_;
   };

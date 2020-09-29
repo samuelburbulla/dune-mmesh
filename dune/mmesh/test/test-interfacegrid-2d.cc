@@ -144,13 +144,13 @@ int main(int argc, char *argv[])
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 1 ), 0ul },
-            { indexSet.subIndex( e, 1, 1 ), 1ul } }
+          { { indexSet.subIndex( e, 0, 1 ), 1ul },
+            { indexSet.subIndex( e, 1, 1 ), 0ul } }
         );
 
         checkProperties( "vertex positions",
-          { { e.subEntity<1>( 0 ).geometry().center(), { 0.25000000000103079, 0.5 } },
-            { e.subEntity<1>( 1 ).geometry().center(), { 0.5,  0.5 } } }
+          { { e.subEntity<1>( 0 ).geometry().center(), { 0.5, 0.5 } },
+            { e.subEntity<1>( 1 ).geometry().center(), { 0.25000000000103079,  0.5 } } }
         );
 
         // check intersections
@@ -167,20 +167,23 @@ int main(int argc, char *argv[])
         );
 
         checkProperties( "intersection normals",
-          { { is0.centerUnitOuterNormal(), { -1.0, 0.0 } },
-            { is1.centerUnitOuterNormal(), {  1.0, 0.0 } } }
+          { { is0.centerUnitOuterNormal(), {  1.0, 0.0 } },
+            { is1.centerUnitOuterNormal(), {  1.0, 0.0 } },
+            { is2.centerUnitOuterNormal(), { -1.0, 0.0 } } }
         );
 
-        checkProperty( "index in inside", is1.indexInInside(), 1 );
-        // checkProperty( "index in outside", is1.indexInOuside(), 0 );
+        checkProperty( "index in inside", is1.indexInInside(), 0 );
+        checkProperty( "index in outside", is1.indexInOutside(), 0 );
 
-        // const auto& neighborA = is1.impl().outside();
-        // const auto& neighborB = is2.impl().outside();
+        const auto& neighborA = is0.impl().outside();
+        const auto& neighborB = is1.impl().outside();
+        const auto& neighborC = is2.impl().outside();
 
-        // checkProperties( "neighbors centers",
-        //   { { neighborA.geometry().center(), { 0.625,  0.5 } },
-        //    { neighborB.geometry().center(), { 0.5625, 0.5625 } } }
-        // );
+        checkProperties( "neighbors centers",
+          { { neighborA.geometry().center(), { 0.625,  0.5 } },
+            { neighborB.geometry().center(), { 0.5625, 0.5625 } },
+            { neighborC.geometry().center(), { 0.125, 0.5 } } }
+        );
 
         // check global vertex indices obtained by intersection subentities
         const auto refElement = Dune::ReferenceElements<double, 1>::general(geo.type());
@@ -191,8 +194,8 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal2 = vertexMapper.subIndex(e, vIdxLocal2, 1);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 0u },
-            { vIdxGlobal2, 1u } }
+          { { vIdxGlobal1, 1u },
+            { vIdxGlobal2, 0u } }
         );
 
         // try to obtain mmesh intersection
