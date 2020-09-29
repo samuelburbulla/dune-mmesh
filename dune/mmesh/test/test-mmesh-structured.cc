@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     // Create MMesh
     // ------------
-    const unsigned int dim = 3;
+    const unsigned int dim = GRIDDIM;
     using Grid = MovingMesh< dim >;
     const unsigned int dimworld = Grid::dimension;
     using FieldType = Grid::FieldType;

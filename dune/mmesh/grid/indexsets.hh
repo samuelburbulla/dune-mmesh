@@ -415,7 +415,7 @@ namespace Dune
         }
 
       // Compute mapping DUNE vertex index to CGAL vertex index
-      for ( auto fh = hostgrid.finite_faces_begin(); fh != hostgrid.finite_faces_end(); ++fh)
+      for ( auto fh = hostgrid.all_faces_begin(); fh != hostgrid.all_faces_end(); ++fh)
         fh->info().cgalIndex = MMeshImpl::computeCGALIndices<decltype(fh), 2>( fh );
     }
 
@@ -436,7 +436,7 @@ namespace Dune
         }
 
       // Compute mapping DUNE vertex index to CGAL vertex index
-      for ( auto ch = hostgrid.finite_cells_begin(); ch != hostgrid.finite_cells_end(); ++ch)
+      for ( auto ch = hostgrid.all_cells_begin(); ch != hostgrid.all_cells_end(); ++ch)
         ch->info().cgalIndex = MMeshImpl::computeCGALIndices<decltype(ch), 3>( ch );
     }
 
