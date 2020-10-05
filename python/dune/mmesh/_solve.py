@@ -7,7 +7,102 @@ from scipy.sparse import linalg, csc_matrix
 import dune.ufl
 from dune.fem.operator import linear as linearOperator
 
-def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False, **kwargs):
+def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callback=None):
+    """solve bulk and interface scheme coupled iteratively
+
+    Args:
+        schemes: pair of schemes
+        targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
+        iter:    maximum number of iterations
+        f_tol:   absolute tolerance in maximum norm
+        verbose: print residuum for each iteration
+        kwargs:  additional arguments passed to the newton_krylov call
+    """
+    assert len(schemes) == 2
+    assert len(targets) == 2
+
+    (scheme, scheme_gamma) = schemes
+    (ph, ph_gamma) = targets
+
+    ph_old = ph.copy()
+    ph_gamma_old = ph_gamma.copy()
+
+    converged = False
+    for i in range(iter):
+
+        if verbose:
+            print("solve bulk", flush=True)
+
+        ph_old.assign(ph)
+        scheme.solve(target=ph)
+
+        if callback != None:
+            callback()
+
+        phnp = ph_old.as_numpy[:]
+        phnp -= ph.as_numpy
+        error = np.dot(phnp, phnp)
+        if verbose:
+            print("solve interface", flush=True)
+
+        ph_gamma_old.assign(ph_gamma)
+        scheme_gamma.solve(target=ph_gamma)
+
+        ph_gammanp = ph_gamma_old.as_numpy[:]
+        ph_gammanp -= ph_gamma.as_numpy
+        error_gamma = np.dot(ph_gammanp, ph_gammanp)
+
+        if verbose:
+            print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
+
+        if max(error, error_gamma) < f_tol:
+            converged = True
+            break
+
+    if not converged:
+        print("not converged", flush=True)
+
+
+def monolithicNewtonKrylov(schemes, targets, f_tol=1e-8, inner_maxiter=2000, method='gmres', **kwargs):
+    """solve bulk and interface scheme coupled monolithically using scipy's newton krylov method
+
+    Args:
+        schemes: pair of schemes
+        targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
+        kwargs:  additional arguments passed to the newton_krylov call
+    """
+    assert len(schemes) == 2
+    assert len(targets) == 2
+
+    (scheme, ischeme) = schemes
+    (ph, ih) = targets
+
+    n = len(ph.as_numpy)
+    m = len(ih.as_numpy)
+
+    Ax = ph.copy()
+    iAx = ih.copy()
+    def F(x):
+        ph.as_numpy[:] = x[:n]
+        ih.as_numpy[:] = x[n:]
+        scheme(ph, Ax)
+        ischeme(ih, iAx)
+        return np.concatenate((Ax.as_numpy, iAx.as_numpy))
+
+    x = np.concatenate((ph.as_numpy, ih.as_numpy))
+    from scipy.optimize import newton_krylov
+    r = newton_krylov(F, x,
+        f_tol=f_tol,
+        inner_maxiter=inner_maxiter,
+        method=method,
+        **kwargs
+        )
+
+    ph.as_numpy[:] = r[:n]
+    ih.as_numpy[:] = r[n:]
+
+
+def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False):
     """solve bulk and interface scheme coupled monolithically using a newton method
 
     Args:
@@ -17,7 +112,6 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False, **kw
         f_tol:   absolute tolerance in maximum norm
         rdiff:   step size for numerical differentiation
         verbose: print residuum for each iteration
-        kwargs:  additional arguments passed to the newton_krylov call
     """
     assert len(schemes) == 2
     assert len(targets) == 2
@@ -62,14 +156,15 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False, **kw
             dFk /= 1e-6
 
             for l in range(n+m):
-                if abs(dFk[l]) > 1e-12:
+                if abs(dFk[l]) > 1e-30:
                     nonzero += 1
                     row += [l]
                     col += [k]
                     data += [dFk[l]]
 
         jac = coo_matrix((data, (row, col)), shape=(m+n,m+n))
-        print("nonzero", nonzero, "of", (n+m)**2, "entries")
+        if verbose:
+            print("nonzero", nonzero, "of", (n+m)**2, "entries")
 
         jac = linalg.spsolve(jac.tocsc(), f)
         jacp = jac[:n]

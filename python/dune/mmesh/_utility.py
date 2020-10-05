@@ -80,13 +80,16 @@ def domainMarker(gridView):
 ################################################################################
 # Obtain interface indicator
 ################################################################################
-def interfaceIndicator(igridView):
+def interfaceIndicator(igridView, restrict=True):
     from ufl import avg
     from dune.mmesh import skeleton
     from dune.fem.space import finiteVolume
     space = finiteVolume(igridView)
     one = space.interpolate(1, name="one")
-    return avg(skeleton(one))
+    if restrict:
+        return avg(skeleton(one))
+    else:
+        return skeleton(one)
 ################################################################################
 
 
