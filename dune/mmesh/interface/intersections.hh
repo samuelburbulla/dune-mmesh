@@ -72,7 +72,8 @@ namespace Dune
       : grid_(grid),
         interfaceEntity_(hostEntity),
         index_(index),
-        nbIdx_(nbIdx)
+        nbIdx_(nbIdx),
+        cgalIndex_( MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dim>( interfaceEntity_ ) )
     {
       const auto& indexSet = grid_->leafIndexSet();
 
@@ -384,7 +385,7 @@ namespace Dune
     std::size_t index_;
     std::size_t nbIdx_;
     LocalIndexMap localIndexMap_;
-    std::array< std::size_t, dim+1 > cgalIndex_ = MMeshInterfaceImpl::computeCGALIndices<MMeshInterfaceEntity, dim>( interfaceEntity_ );
+    std::array< std::size_t, dim+1 > cgalIndex_;
   };
 
 }  // namespace Dune
