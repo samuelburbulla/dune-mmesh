@@ -5,3 +5,5 @@ add_python_targets(mmesh
   _solve
   _utility
 )
+
+dune_add_pybind11_module(NAME _mmesh)

@@ -3,8 +3,8 @@ set(HEADERS
   common.hh
   connectedcomponent.hh
   cutsettriangulation.hh
-  dgfparser.hh
   declaration.hh
+  dgfparser.hh
   entity.hh
   entityseed.hh
   explicitgridfactory.hh
@@ -23,8 +23,9 @@ set(HEADERS
   mmesh.hh
   multiid.hh
   pointfieldvector.hh
+  polygoncutting.hh
   rangegenerators.hh
-  structeredgridfactory.hh
+  structuredgridfactory.hh
   )
 
 install(FILES ${HEADERS}

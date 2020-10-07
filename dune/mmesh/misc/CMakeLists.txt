@@ -1,5 +1,5 @@
 set(HEADERS
-  boundaryprovider.hh
+  boundaryidprovider.hh
   capabilities.hh
   persistentcontainer.hh
   pyskeletontrace.hh

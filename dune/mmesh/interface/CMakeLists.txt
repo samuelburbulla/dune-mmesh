@@ -2,6 +2,7 @@ set(HEADERS
   cachingentity.hh
   common.hh
   connectedcomponent.hh
+  curvatureoperator.hh
   dgfparser.hh
   entity.hh
   entityseed.hh
@@ -9,8 +10,8 @@ set(HEADERS
   grid.hh
   gridfactory.hh
   hierarchiciterator.hh
-  indexsets.hh
   incidentiterator.hh
+  indexsets.hh
   intersectioniterator.hh
   intersections.hh
   leafiterator.hh
