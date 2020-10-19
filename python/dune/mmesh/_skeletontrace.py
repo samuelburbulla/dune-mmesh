@@ -3,8 +3,6 @@ logger = logging.getLogger(__name__)
 
 import hashlib
 
-import ufl
-import dune.ufl
 from dune.generator.generator import SimpleGenerator
 
 
@@ -28,6 +26,8 @@ def skeleton(interfaceFunction, grid=None):
     moduleName = "skeleton_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
     cls = generator.load(includes, typeName, moduleName)
     skeleton = cls.SkeletonGF(grid, interfaceFunction)
+
+    import dune.ufl
     skeleton = dune.ufl.GridFunction(skeleton)
 
     interfaceFunction.skeleton = skeleton
@@ -60,6 +60,7 @@ def trace(bulkFunction, igrid=None):
     traces["in"]  = module.TraceGFP(igrid, bulkFunction)
     traces["out"] = module.TraceGFM(igrid, bulkFunction)
 
+    import dune.ufl
     trace_p = dune.ufl.GridFunction(traces["in"])
     trace_m = dune.ufl.GridFunction(traces["out"])
     if bulkFunction.scalar:

@@ -2,10 +2,6 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 import numpy as np
-from scipy.sparse import linalg, csc_matrix
-
-import dune.ufl
-from dune.fem.operator import linear as linearOperator
 
 def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, factor=1.0, verbose=False, callback=None):
     """solve bulk and interface scheme coupled iteratively
@@ -58,7 +54,6 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, factor=1.0, verbose=F
 
     if not converged:
         print("not converged", flush=True)
-
 
 def monolithicNewtonKrylov(schemes, targets, f_tol=1e-8, inner_maxiter=2000, method='gmres', **kwargs):
     """solve bulk and interface scheme coupled monolithically using scipy's newton krylov method
@@ -136,8 +131,7 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False):
 
     x = np.concatenate((ph.as_numpy, ih.as_numpy))
 
-    from scipy.sparse import coo_matrix
-
+    from scipy.sparse import coo_matrix, linalg
 
     f = F(x)
     for i in range(iter):
@@ -181,7 +175,7 @@ def monolithicNewton(schemes, targets, iter=100, f_tol=1e-8, verbose=False):
     ih.as_numpy[:] = x[n:]
 
 
-def monolithicSolve(schemes, targets, solver=linalg.gmres, preconditioner=linalg.spilu, **kwargs):
+def monolithicSolve(schemes, targets, solver=None, preconditioner=None, **kwargs):
     """solve bulk and interface scheme coupled monolithically
 
     Args:
@@ -195,6 +189,12 @@ def monolithicSolve(schemes, targets, solver=linalg.gmres, preconditioner=linalg
     """
     assert len(schemes) == 2
     assert len(targets) == 2
+
+    from scipy.sparse import linalg, csc_matrix
+    if solver == None:
+        solver = linalg.gmres
+    if preconditioner == None:
+        preconditioner = linalg.spilu
 
     (scheme, ischeme) = schemes
     (ph, ih) = targets
@@ -230,6 +230,8 @@ def monolithicSolve(schemes, targets, solver=linalg.gmres, preconditioner=linalg
         return np.concatenate((Ax.as_numpy, iAx.as_numpy))
 
     Mat = linalg.LinearOperator((n+m,n+m), matrixEvaluation)
+
+    from dune.fem.operator import linear as linearOperator
 
     # Preconditioner
     precA = preconditioner( csc_matrix(linearOperator(scheme).as_numpy) )

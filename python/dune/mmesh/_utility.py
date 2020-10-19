@@ -2,9 +2,7 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 import io
-import dune.ufl
 from dune.generator import algorithm
-from dune.fem.function import cppFunction
 
 ################################################################################
 # Edge movement
@@ -53,6 +51,7 @@ def edgemovement(gridView, shifts):
         return ret;
     }
     """
+    from dune.fem.function import cppFunction
     cppFunc = cppFunction(gridView, name="edgemovement", order=1, fctName="edgemovement", includes=io.StringIO(code), args=[gridView, shifts])
     from dune.fem.function import uflFunction
     return uflFunction(gridView, "edgemovement", 1, cppFunc)
@@ -98,6 +97,7 @@ def interfaceedgemovement(igridView, shifts):
         return ret;
     }
     """
+    from dune.fem.function import cppFunction
     cppFunc = cppFunction(igridView, name="interfaceedgemovement", order=1, fctName="interfaceedgemovement", includes=io.StringIO(code), args=[igridView, shifts])
     from dune.fem.function import uflFunction
     return uflFunction(igridView, "interfaceedgemovement", 1, cppFunc)
@@ -118,6 +118,7 @@ def domainMarker(gridView):
       return ret;
     }
     """
+    from dune.fem.function import cppFunction
     return cppFunction(gridView, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[gridView])
 ################################################################################
 
@@ -152,6 +153,7 @@ def cellVolumes(gridView):
       return ret;
     }
     """
+    from dune.fem.function import cppFunction
     cppFunc = cppFunction(gridView, name="cellVolumes", order=0, fctName="cellVolumes", includes=io.StringIO(code), args=[gridView])
     from dune.fem.space import finiteVolume
     space = finiteVolume(gridView)
@@ -336,6 +338,7 @@ def interfaceCurvature(igrid, atVertex=True):
         }
     }
     """
+    from dune.fem.function import cppFunction
     cppFunc = cppFunction(igrid, name="curvature", order=(1 if atVertex else 0), fctName="curvature", includes=io.StringIO(code), args=[igrid, atVertex])
 
     if atVertex:
