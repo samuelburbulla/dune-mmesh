@@ -7,7 +7,7 @@ from scipy.sparse import linalg, csc_matrix
 import dune.ufl
 from dune.fem.operator import linear as linearOperator
 
-def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callback=None):
+def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, factor=1.0, verbose=False, callback=None):
     """solve bulk and interface scheme coupled iteratively
 
     Args:
@@ -15,6 +15,7 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callba
         targets: pair of discrete functions that should be solved for AND that are used in the coupling forms
         iter:    maximum number of iterations
         f_tol:   absolute tolerance in maximum norm
+        factor:  modify iteration update by formula factor*new + (1-factor)*old
         verbose: print residuum for each iteration
         kwargs:  additional arguments passed to the newton_krylov call
     """
@@ -29,12 +30,9 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callba
 
     converged = False
     for i in range(iter):
-
-        if verbose:
-            print("solve bulk", flush=True)
-
         ph_old.assign(ph)
         scheme.solve(target=ph)
+        ph.as_numpy[:] = factor*ph.as_numpy + (1-factor)*ph_old.as_numpy
 
         if callback != None:
             callback()
@@ -42,11 +40,10 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, verbose=False, callba
         phnp = ph_old.as_numpy[:]
         phnp -= ph.as_numpy
         error = np.dot(phnp, phnp)
-        if verbose:
-            print("solve interface", flush=True)
 
         ph_gamma_old.assign(ph_gamma)
         scheme_gamma.solve(target=ph_gamma)
+        ph_gamma.as_numpy[:] = factor*ph_gamma.as_numpy + (1-factor)*ph_gamma_old.as_numpy
 
         ph_gammanp = ph_gamma_old.as_numpy[:]
         ph_gammanp -= ph_gamma.as_numpy

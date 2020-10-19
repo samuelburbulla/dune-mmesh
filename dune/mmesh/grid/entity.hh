@@ -764,7 +764,7 @@ namespace Dune
       {
         typename IdType::VT idlist( dim+1 );
         for( std::size_t i = 0; i < this->subEntities(dim); ++i )
-          idlist[i] = this->template subEntity<dim>(i).impl().hostEntity()->info().id;
+          idlist[i] = hostEntity_->vertex(i)->info().id;
         std::sort( idlist.begin(), idlist.end() );
         id_ = IdType( idlist );
       }

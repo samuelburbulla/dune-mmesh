@@ -58,6 +58,51 @@ def edgemovement(gridView, shifts):
     return uflFunction(gridView, "edgemovement", 1, cppFunc)
 ################################################################################
 
+def interfaceedgemovement(igridView, shifts):
+    code="""
+    #include <functional>
+    #include <dune/geometry/multilineargeometry.hh>
+    #include <dune/python/pybind11/pybind11.h>
+    #include <dune/python/pybind11/numpy.h>
+
+    template <class GV>
+    auto interfaceedgemovement(const GV &gv, const pybind11::array_t<double>& input) {
+        static constexpr int dim = GV::dimension;
+        static constexpr int dimw = GV::dimensionworld;
+        using GlobalCoordinate = Dune::FieldVector<double, dimw>;
+
+        // obtain shifts from buffer protocol
+        pybind11::buffer_info buffer = input.request();
+        double *ptr = (double *) buffer.ptr;
+        int n = buffer.shape[0];
+
+        std::vector<GlobalCoordinate> shifts( n );
+        for ( std::size_t i = 0; i < n; ++i )
+          for ( int d = 0; d < dimw; ++d )
+            shifts[i][d] = ptr[dimw*i+d];
+
+        const auto& igrid = gv.grid();
+        const auto& iindexSet = igrid.leafIndexSet();
+
+        auto ret = [shifts, &igrid, &iindexSet] (const auto& entity, const auto& xLocal) mutable -> auto {
+            // return a linear interpolation of the vertex shift values
+            std::vector<GlobalCoordinate> shift( dim+1 );
+            for ( std::size_t i = 0; i < entity.subEntities( dim ); ++i )
+            {
+                const auto& vertex = entity.template subEntity<dim>( i );
+                shift[i] = shifts[ iindexSet.index( vertex ) ];
+            }
+            const Dune::MultiLinearGeometry<double, dim, dimw> interpolation(entity.type(), shift);
+            return interpolation.global(xLocal);
+        };
+        return ret;
+    }
+    """
+    cppFunc = cppFunction(igridView, name="interfaceedgemovement", order=1, fctName="interfaceedgemovement", includes=io.StringIO(code), args=[igridView, shifts])
+    from dune.fem.function import uflFunction
+    return uflFunction(igridView, "interfaceedgemovement", 1, cppFunc)
+################################################################################
+
 
 ################################################################################
 # Obtain domain markers
