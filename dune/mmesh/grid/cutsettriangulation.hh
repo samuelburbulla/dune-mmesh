@@ -10,6 +10,7 @@
  */
 
 #include <dune/mmesh/grid/polygoncutting.hh>
+#include <dune/mmesh/grid/pointfieldvector.hh>
 
 namespace Dune
 {
@@ -32,14 +33,14 @@ namespace Dune
       {
         static_assert( dim == 2 );
 
-        const auto& geo1 = first.geometry();
-        const auto& geo2 = second.geometry();
+        const auto& en1 = first.impl().hostEntity();
+        const auto& geo2 = second.geometry(); // this is the caching entity
 
         std::array<GlobalCoordinate, 3> firstPoints, secondPoints;
 
         for ( int i = 0; i < 3; ++i )
         {
-          firstPoints[i] = geo1.corner(i);
+          firstPoints[i] = makeFieldVector( en1->vertex(i)->point() );
           secondPoints[i] = geo2.corner(i);
         }
 
