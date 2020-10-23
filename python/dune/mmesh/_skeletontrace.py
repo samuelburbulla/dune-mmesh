@@ -60,6 +60,7 @@ def trace(bulkFunction, igrid=None):
     traces["in"]  = module.TraceGFP(igrid, bulkFunction)
     traces["out"] = module.TraceGFM(igrid, bulkFunction)
 
+    import ufl
     import dune.ufl
     trace_p = dune.ufl.GridFunction(traces["in"])
     trace_m = dune.ufl.GridFunction(traces["out"])
