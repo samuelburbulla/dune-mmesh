@@ -83,8 +83,9 @@ namespace Dune
     explicit MMeshCachingEntity(const GridImp* mMesh, const HostGridEntity& hostEntity)
       : BaseType(mMesh, hostEntity, mMesh->globalIdSet().id( mMesh->entity( hostEntity ) ))
     {
+      const auto geo = mMesh->entity( hostEntity ).geometry();
       for( int i = 0; i < dim+1; ++i )
-        this->vertex_[i] = makeFieldVector( hostEntity->vertex(i)->point() );
+        this->vertex_[i] = geo.corner(i);
     }
 
     //! returns true if host entities are equal

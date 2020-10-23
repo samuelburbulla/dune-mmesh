@@ -27,32 +27,40 @@ namespace Dune
 
       using EntityImpl = typename Entity::Implementation;
       using EntityList = std::vector< Entity >;
+      using CachingEntity = MMeshCachingEntity< 0, dim, const typename EntityImpl::Grid >;
 
     public:
-      CutSetTriangulation(const Entity& first, const Entity& second)
+      CutSetTriangulation(const CachingEntity& caching, const Entity& element)
       {
         static_assert( dim == 2 );
 
-        const auto& en1 = first.impl().hostEntity();
-        const auto& geo2 = second.geometry(); // this is the caching entity
+        const auto& cgeo = caching.geometry();
+        const auto& host = element.impl().hostEntity();
 
-        std::array<GlobalCoordinate, 3> firstPoints, secondPoints;
+        std::array<GlobalCoordinate, 3> c, e;
 
         for ( int i = 0; i < 3; ++i )
         {
-          firstPoints[i] = makeFieldVector( en1->vertex(i)->point() );
-          secondPoints[i] = geo2.corner(i);
+          c[i] = cgeo.corner(i);
+          // obtain vertices in ccw order
+          e[i] = makeFieldVector( host->vertex(i)->point() );
         }
 
+        // check orientation of caching entity
+        int o = (c[1][1]-c[0][1])*(c[2][0]-c[1][0])-(c[1][0]-c[0][0])*(c[2][1]-c[1][1]);
+        if (o > 0) // clock wise
+          std::swap(c[1], c[2]);
+
         using PC = Dune::PolygonCutting<ctype, GlobalCoordinate>;
-        auto points = PC::sutherlandHodgman(firstPoints, secondPoints);
+        auto points = PC::sutherlandHodgman(c, e);
 
         if (points.size() < 3)
           return;
 
+        // we know the intersection polygon of two triangles is convex
         for (int i = 1; i < points.size()-1; ++i)
         {
-          EntityImpl entity ( &first.impl().grid(), { points[0], points[i], points[i+1] } );
+          EntityImpl entity ( &element.impl().grid(), { points[0], points[i], points[i+1] } );
           if ( entity.geometry().volume() > 1e-8 )
             triangles_.emplace_back( entity );
         }

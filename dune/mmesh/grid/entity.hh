@@ -431,6 +431,9 @@ namespace Dune
     // ctype
     typedef typename GridImp::ctype ctype;
 
+    // Grid
+    typedef GridImp Grid;
+
     //! The Iterator over intersections on the leaf level
     typedef MMeshLeafIntersectionIterator<GridImp> LeafIntersectionIterator;
 
