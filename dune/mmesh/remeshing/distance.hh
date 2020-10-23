@@ -146,6 +146,6 @@ public:
     const Grid* grid_;
 };
 
-} // end namespace Dumux
+} // end namespace Dune
 
 #endif

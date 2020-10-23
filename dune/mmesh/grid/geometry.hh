@@ -14,9 +14,6 @@
 #include <dune/grid/common/geometry.hh>
 #include <dune/geometry/affinegeometry.hh>
 
-// CGAL includes
-#include <CGAL/Kernel/global_functions.h>
-
 // local includes
 #include <dune/mmesh/grid/pointfieldvector.hh>
 
@@ -74,20 +71,6 @@ namespace Dune
       // this is only for cachingEntity where we do not use circumcenters
     }
 
-    //! Constructor from host geometry with codim 0
-    MMeshGeometry(const typename GridImp::HostGridType::Face& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim), getVertices(*hostEntity) )
-    {
-        // obtain circumcenter by CGAL
-        circumcenter_ = makeFieldVector(
-            CGAL::circumcenter(
-                hostEntity.vertex(0)->point(),
-                hostEntity.vertex(1)->point(),
-                hostEntity.vertex(2)->point()
-            )
-        );
-    }
-
     //! Constructor from host geometry with codim 1
     MMeshGeometry(const typename GridImp::template HostGridEntity<1>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices(hostEntity) )
@@ -115,7 +98,7 @@ namespace Dune
     }
 
   private:
-    static inline std::array<FVector, 3> getVertices ( const typename GridImp::template HostGridEntity<0>& hostEntity )
+    static inline std::array<FVector, 3> getVertices ( const typename GridImp::template HostGridEntity<0> hostEntity )
     {
       const auto& cgalIdx = hostEntity->info().cgalIndex;
 
@@ -201,21 +184,6 @@ namespace Dune
      : BaseType( GeometryTypes::simplex(mydim), points )
     {
       // this is only for cachingEntity where we do not use circumcenters
-    }
-
-    //! Constructor from host geometry with codim 0
-    MMeshGeometry(const typename GridImp::HostGridType::Cell& cell)
-     : BaseType( GeometryTypes::simplex(mydim), getVertices<0>(*cell) )
-    {
-        // obtain circumcenter by CGAL
-        circumcenter_ = makeFieldVector(
-            CGAL::circumcenter(
-                cell.vertex(0)->point(),
-                cell.vertex(1)->point(),
-                cell.vertex(2)->point(),
-                cell.vertex(3)->point()
-            )
-        );
     }
 
     //! Constructor from host geometry with codim 1

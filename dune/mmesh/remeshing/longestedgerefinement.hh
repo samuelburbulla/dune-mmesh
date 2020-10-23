@@ -171,6 +171,6 @@ public:
     }
 };
 
-} // end namespace Dumux
+} // end namespace Dune
 
 #endif

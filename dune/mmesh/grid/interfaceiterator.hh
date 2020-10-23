@@ -3,9 +3,6 @@
 #ifndef DUNE_GRID_MMESHINTERFACEITERATOR_HH
 #define DUNE_GRID_MMESHINTERFACEITERATOR_HH
 
-// CGAL includes
-#include <CGAL/circulator.h>
-
 /** \file
  * \brief The MMeshInterfaceIterator class
  */

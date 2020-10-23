@@ -18,7 +18,7 @@
 #include <dune/grid/common/boundarysegment.hh>
 
 // MMesh includes
-#include <dune/mmesh/mmesh.hh>
+#include <dune/mmesh/grid/mmesh.hh>
 #include <dune/mmesh/grid/common.hh>
 
 namespace Dune

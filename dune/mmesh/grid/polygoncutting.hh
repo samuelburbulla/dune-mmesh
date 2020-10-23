@@ -5,22 +5,11 @@
 #include <algorithm>
 
 // CGAL includes
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Cartesian_converter.h>
-#include <CGAL/number_utils.h>
-#include <CGAL/intersections.h>
 #include <CGAL/Point_2.h>
 #include <CGAL/Triangle_2.h>
 #include <CGAL/Polygon_2.h>
-#include <CGAL/Point_3.h>
-#include <CGAL/Segment_3.h>
-#include <CGAL/Triangle_3.h>
-#include <CGAL/Tetrahedron_3.h>
-#include <CGAL/Polyhedron_3.h>
-#include <CGAL/Bbox_3.h>
-#include <CGAL/convex_hull_3.h>
-#include <CGAL/Polygon_mesh_processing/measure.h>
+#include <CGAL/intersections.h>
 
 namespace Dune
 {

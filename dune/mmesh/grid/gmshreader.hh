@@ -14,7 +14,7 @@
 #include <dune/grid/io/file/gmshreader.hh>
 
 // MMesh includes
-#include <dune/mmesh/grid/gmshparser.hh>
+#include <dune/mmesh/grid/gmshgridfactory.hh>
 
 namespace Dune
 {

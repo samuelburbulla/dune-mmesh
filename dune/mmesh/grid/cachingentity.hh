@@ -17,25 +17,6 @@
 #include <dune/mmesh/grid/pointfieldvector.hh>
 #include <dune/mmesh/grid/polygoncutting.hh>
 
-// CGAL includes
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Cartesian_converter.h>
-#include <CGAL/number_utils.h>
-#include <CGAL/intersections.h>
-#include <CGAL/Point_2.h>
-#include <CGAL/Triangle_2.h>
-#include <CGAL/Polygon_2.h>
-#include <CGAL/Point_3.h>
-#include <CGAL/Segment_3.h>
-#include <CGAL/Triangle_3.h>
-#include <CGAL/Tetrahedron_3.h>
-#include <CGAL/Polyhedron_3.h>
-#include <CGAL/Bbox_3.h>
-#include <CGAL/convex_hull_3.h>
-#include <CGAL/Polygon_mesh_processing/measure.h>
-#include <CGAL/squared_distance_3.h>
-
 namespace Dune
 {
 
@@ -188,7 +169,7 @@ namespace Dune
       return false;
     }
 
-    //calculates the intersection volume with another MMesh entity
+    //! calculates the intersection volume with another MMesh entity
     template<int d = dim>
     std::enable_if_t<d == 2, ctype>
     intersectionVolume ( const MMeshEntityType& entity ) const
@@ -209,117 +190,7 @@ namespace Dune
     std::enable_if_t<d == 3, ctype>
     intersectionVolume( const MMeshEntityType& entity ) const
     {
-      // inexact types
-      using Epick = CGAL::Exact_predicates_inexact_constructions_kernel;
-      using Point = CGAL::Point_3<Epick>;
-      using Triangle = CGAL::Triangle_3<Epick>;
-      using Tetrahedron = CGAL::Tetrahedron_3<Epick>;
-
-      // exact types
-      using Epeck = CGAL::Exact_predicates_exact_constructions_kernel;
-      using ExactPoint = CGAL::Point_3<Epeck>;
-      using ExactSegment = CGAL::Segment_3<Epeck>;
-      using ExactTriangle = CGAL::Triangle_3<Epeck>;
-
-      // type converters
-      typedef CGAL::Cartesian_converter<Epick, Epeck> Epick_to_Epeck;
-      typedef CGAL::Cartesian_converter<Epeck, Epick> Epeck_to_Epick;
-      Epick_to_Epeck to_exact;
-      Epeck_to_Epick to_inexact;
-
-      // store and convert points
-      std::array<Point, 4> piA, piB;
-      std::array<ExactPoint, 4> peA, peB;
-      for ( int i = 0; i < 4; ++i )
-      {
-        const auto& p1 = makePoint( this->vertex_[i] );
-        piA[i] = p1;
-        peA[i] = to_exact( p1 );
-
-        const auto& p2 = entity.impl().hostEntity()->vertex(i)->point();
-        piB[i] = p2;
-        peB[i] = to_exact( p2 );
-      }
-
-      // First, check if at least the bounding boxes intersect
-      CGAL::Bbox_3 bbox1 = bbox_3(peA.begin(), peA.end());
-      CGAL::Bbox_3 bbox2 = bbox_3(peB.begin(), peB.end());
-      if( !CGAL::do_overlap( bbox1, bbox2 ) )
-        return 0.0;
-
-      // collect all points of the convex hull of the endpoints
-      std::vector<Point> endpoints;
-
-      const Tetrahedron tetraA( piA[0], piA[1], piA[2], piA[3] );
-
-      // compute the intersection points
-      for( int i = 0; i < 4; ++i )
-      {
-        const Triangle triangleB ( piB[i], piB[(i+1)%4], piB[(i+2)%4] );
-
-        // test intersection inexactly
-        if( CGAL::do_intersect( triangleB, tetraA ) )
-        {
-          const ExactTriangle triangleEB ( peB[i], peB[(i+1)%4], peB[(i+2)%4] );
-
-          // compute the endpoints of all intersections of all triangles
-          for( int j = 0; j < 4; ++j )
-          {
-            const ExactTriangle triangleEA ( peA[j], peA[(j+1)%4], peA[(j+2)%4] );
-
-            // store the intersection points as inexact points
-            const auto result = CGAL::intersection( triangleEA, triangleEB );
-            if (result)
-            {
-              // intersection is PointList
-              using PointList = std::vector<ExactPoint>;
-              if (const PointList* list = boost::get<PointList>(&*result))
-                for ( const auto& p : *list )
-                endpoints.push_back( to_inexact( p ) );
-
-              // intersection is triangle
-              else if (const ExactTriangle* t = boost::get<ExactTriangle>(&*result))
-                for( int k = 0; k < 3; ++k )
-                  endpoints.push_back( to_inexact( t->vertex(k) ) );
-
-              // intersection is segment
-              else if (const ExactSegment* s = boost::get<ExactSegment>(&*result))
-                for( int k = 0; k < 2; ++k )
-                  endpoints.push_back( to_inexact( s->vertex(k) ) );
-
-              // intersection is point
-              else if (const ExactPoint* p = boost::get<ExactPoint>(&*result))
-                endpoints.push_back( to_inexact( *p ) );
-            }
-          }
-        }
-      }
-
-      // also add the interior points of tetraA in tetraB
-      const Tetrahedron tetraB( piB[0], piB[1], piB[2], piB[3] );
-      for( int i = 0; i < 4; ++i )
-      {
-        if( tetraB.has_on_bounded_side( piA[i] ) )
-          endpoints.push_back( piA[i] );
-
-        if( tetraA.has_on_bounded_side( piB[i] ) )
-          endpoints.push_back( piB[i] );
-      }
-
-      std::sort(endpoints.begin(), endpoints.end());
-      auto last = std::unique(endpoints.begin(), endpoints.end(), [](Point& a, Point& b){ return CGAL::squared_distance( a, b ) < 1e-14; });
-      endpoints.erase(last, endpoints.end());
-
-      // check if there is an intersection volume
-      if( endpoints.size() <= 3 )
-        return 0;
-
-      // build convex hull and compute volume
-      using Polyhedron = CGAL::Polyhedron_3<Epick>;
-      Polyhedron poly;
-      CGAL::convex_hull_3(endpoints.begin(), endpoints.end(), poly);
-      assert( CGAL::is_closed( poly ) );
-      return CGAL::to_double( CGAL::Polygon_mesh_processing::volume( poly ) );
+      DUNE_THROW( NotImplemented, "intersectionVolume in 3d" );
     }
 
   }; // end of MMeshCachingEntity codim = 0

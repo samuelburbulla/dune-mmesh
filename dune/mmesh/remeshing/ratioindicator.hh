@@ -204,6 +204,6 @@ public:
     Distance<Grid> distance_;
 };
 
-} // end namespace Dumux
+} // end namespace Dune
 
 #endif

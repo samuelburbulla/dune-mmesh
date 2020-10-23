@@ -3,34 +3,10 @@
 #ifndef DUNE_MMESH_CGAL_DEFAULTS_HH
 #define DUNE_MMESH_CGAL_DEFAULTS_HH
 
-#include <dune/mmesh/mmesh.hh>
+// CGAL includes
+#include "includes.hh"
 
 #define CGAL_NO_POSTCONDITIONS
-
-// CGAL includes
-#include <CGAL/exceptions.h>
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-
-// 2D
-#include <CGAL/Triangulation_2.h>
-#include <CGAL/Triangulation_face_base_with_info_2.h>
-#include <CGAL/Triangulation_vertex_base_with_info_2.h>
-#include <CGAL/Triangulation_hierarchy_2.h>
-#include <CGAL/Triangulation_face_base_2.h>
-#include <CGAL/Triangulation_vertex_base_2.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Delaunay_mesh_face_base_2.h>
-#include <CGAL/Delaunay_mesh_vertex_base_2.h>
-
-// 3D
-#include <CGAL/Triangulation_3.h>
-#include <CGAL/Triangulation_cell_base_with_info_3.h>
-#include <CGAL/Triangulation_vertex_base_with_info_3.h>
-#include <CGAL/Triangulation_cell_base_3.h>
-#include <CGAL/Triangulation_vertex_base_3.h>
-#include <CGAL/Delaunay_triangulation_3.h>
-#include <CGAL/Delaunay_triangulation_cell_base_3.h>
-
 
 /** \file
  * \brief Some defaults to generate common CGAL triangulations
@@ -40,12 +16,6 @@ namespace Dune
 {
   namespace MMeshDefaults
   {
-
-    template< int dim >
-    class Triangulation;
-
-    template< int dim >
-    class Delaunay;
 
     /*!
      * \brief The element and vertex infos used by the dune-mmesh implementation

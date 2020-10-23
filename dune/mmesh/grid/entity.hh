@@ -249,37 +249,49 @@ namespace Dune
     }
 
     //! First incident element
-    MMeshIncidentIterator<GridImp> incidentBegin () const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentIterator<GridImp> >
+    incidentBegin () const {
       using Impl = typename MMeshIncidentIterator<GridImp>::Implementation;
       return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_) );
     }
 
     //! Last incident element
-    MMeshIncidentIterator<GridImp> incidentEnd () const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentIterator<GridImp> >
+    incidentEnd () const {
       using Impl = typename MMeshIncidentIterator<GridImp>::Implementation;
       return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
     //! First incident facet
-    MMeshIncidentFacetsIterator<GridImp> incidentFacetsBegin () const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentFacetsIterator<GridImp> >
+    incidentFacetsBegin () const {
       using Impl = typename MMeshIncidentFacetsIterator<GridImp>::Implementation;
       return MMeshIncidentFacetsIterator<GridImp>( Impl( mMesh_, hostEntity_) );
     }
 
     //! Last incident facet
-    MMeshIncidentFacetsIterator<GridImp> incidentFacetsEnd () const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentFacetsIterator<GridImp> >
+    incidentFacetsEnd () const {
       using Impl = typename MMeshIncidentFacetsIterator<GridImp>::Implementation;
       return MMeshIncidentFacetsIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
     //! First incident vertex
-    MMeshIncidentVerticesIterator<GridImp> incidentVerticesBegin ( bool includeInfinite ) const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentVerticesIterator<GridImp>>
+    incidentVerticesBegin ( bool includeInfinite ) const {
       using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
       return MMeshIncidentVerticesIterator<GridImp>( Impl( mMesh_, hostEntity_, includeInfinite) );
     }
 
     //! Last incident vertex
-    MMeshIncidentVerticesIterator<GridImp> incidentVerticesEnd ( bool includeInfinite ) const {
+    template <bool enable = true>
+    std::enable_if_t< codim == dim && enable, MMeshIncidentVerticesIterator<GridImp>>
+    incidentVerticesEnd ( bool includeInfinite ) const {
       using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
       return MMeshIncidentVerticesIterator<GridImp>( Impl( mMesh_, hostEntity_, includeInfinite, true ) );
     }
@@ -307,15 +319,19 @@ namespace Dune
     //! Return if vertex is part of the interface
     bool isInterface() const
     {
-      static_assert( codim == dim );
-      return hostEntity_->info().isInterface;
+      if constexpr( codim == dim )
+        return hostEntity_->info().isInterface;
+      else
+        DUNE_THROW( NotImplemented, "isInterface for codim != dim" );
     }
 
     //! Return boundary flag (-1 = not set, 0 = can be removed, 1 = important for domain boundary)
     int boundaryFlag() const
     {
-      static_assert( codim == dim );
-      return hostEntity_->info().boundaryFlag;
+      if constexpr( codim == dim )
+        return hostEntity_->info().boundaryFlag;
+      else
+        DUNE_THROW( NotImplemented, "boudnaryFlag for codim != dim" );
     }
 
     //! geometry of this entity
@@ -362,10 +378,15 @@ namespace Dune
   private:
 
     //! return the cgal vertex index for given dune vertex index
-    const auto& cgalIndex ( const std::size_t& i ) const
+    const auto cgalIndex ( const std::size_t& i ) const
     {
-      static_assert( codim != dim );
-      return hostEntity_.first->info().cgalIndex[i];
+      if constexpr( codim != dim )
+        return hostEntity_.first->info().cgalIndex[i];
+      else
+      {
+        DUNE_THROW( NotImplemented, "cgalIndex(i) for codim != dim");
+        return 0;
+      }
     }
 
     //! the host entity of this entity

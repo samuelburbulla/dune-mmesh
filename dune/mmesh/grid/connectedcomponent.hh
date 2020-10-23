@@ -10,9 +10,6 @@
 #include <memory>
 #include <unordered_map>
 
-// CGAL includes
-#include <CGAL/Surface_mesh/Surface_mesh.h>
-
 // MMesh includes
 #include <dune/mmesh/grid/multiid.hh>
 

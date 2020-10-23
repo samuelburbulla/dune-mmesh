@@ -3,9 +3,6 @@
 #ifndef DUNE_GRID_MMESHINCIDENTITERATOR_HH
 #define DUNE_GRID_MMESHINCIDENTITERATOR_HH
 
-// CGAL includes
-#include <CGAL/circulator.h>
-
 /** \file
  * \brief The MMeshIncidentIterator class
  */

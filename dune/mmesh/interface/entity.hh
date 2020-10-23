@@ -12,9 +12,6 @@
 #include <dune/mmesh/interface/common.hh>
 #include <dune/mmesh/interface/incidentiterator.hh>
 
-// CGAL includes
-#include <CGAL/utility.h>
-
 namespace Dune
 {
   // External forward declarations
@@ -197,57 +194,91 @@ namespace Dune
     //! Return boundary flag (-1 = not set, 0 = can be removed, 1 = important for domain boundary)
     int boundaryFlag() const
     {
-      static_assert( codim == dim );
-      return hostEntity_->info().boundaryFlag;
+      if constexpr ( codim == dim )
+        return hostEntity_->info().boundaryFlag;
+      else
+        DUNE_THROW( NotImplemented, "boundaryFlag() for codim != dim" );
     }
 
     //! Return the insertion level of the vertex
     std::size_t insertionLevel() const
     {
-      static_assert( codim == dim );
-      return hostEntity_->info().insertionLevel;
+      if constexpr ( codim == dim )
+        return hostEntity_->info().insertionLevel;
+      else
+        DUNE_THROW( NotImplemented, "boundaryFlag() for codim != dim" );
     }
 
     //! First incident vertex
     auto incidentVerticesBegin ( bool includeInfinite ) const
     {
-      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
-      return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+        return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentVerticesBegin() for codim != dim" );
     }
 
     //! Last incident vertex
     auto incidentVerticesEnd ( bool includeInfinite ) const
     {
-      using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
-      return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite, true ) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentVerticesIterator<GridImp>::Implementation;
+        return MMeshIncidentVerticesIterator<GridImp>( Impl( grid_, hostEntity_, includeInfinite, true ) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentVerticesEnd() for codim != dim" );
     }
 
     //! First incident vertex
     auto incidentInterfaceVerticesBegin () const
     {
-      using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
-      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
+        return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentInterfaceVerticesBegin() for codim != dim" );
     }
 
     //! Last incident vertex
     auto incidentInterfaceVerticesEnd () const
     {
-      using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
-      return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentInterfaceVerticesIterator<GridImp>::Implementation;
+        return MMeshIncidentInterfaceVerticesIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentInterfaceVerticesEnd() for codim != dim" );
     }
 
     //! First incident element
     auto incidentInterfaceElementsBegin () const
     {
-      using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
-      return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentInterfaceElementsBegin() for codim != dim" );
     }
 
     //! Last incident element
     auto incidentInterfaceElementsEnd () const
     {
-      using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
-      return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      if constexpr ( codim == dim )
+      {
+        using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      }
+      else
+        DUNE_THROW( NotImplemented, "incidentInterfaceElementsEnd() for codim != dim" );
     }
 
     //! returns the host entity
@@ -450,7 +481,7 @@ namespace Dune
     //! get mark of entity
     int getMark () const
     {
-      return hostEntity_->info().mark;
+      return hostEntity_.first->info().mark;
     }
 
     //! Create EntitySeed

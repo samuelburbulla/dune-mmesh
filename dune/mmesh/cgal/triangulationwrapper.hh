@@ -6,11 +6,8 @@
 /** \file
  * \brief A CGAL triangulation wrapper class
  */
-#include <dune/mmesh/mmesh.hh>
-
-// CGAL includes
-#include <CGAL/Triangulation_2.h>
-#include <CGAL/Triangulation_3.h>
+#include <dune/grid/common/exceptions.hh>
+#include <dune/mmesh/grid/pointfieldvector.hh>
 
 namespace Dune
 {
@@ -170,7 +167,6 @@ namespace Dune
   };
 
 
-
   //! TriangulationWrapper<3>
   template<>
   class TriangulationWrapper<3> :
@@ -196,6 +192,7 @@ namespace Dune
       using ThisType = DelaunayTriangulationWrapper<dim>;
       using BaseType = typename MMeshDefaults::Delaunay<dim>::type;
   };
+
 } // namespace Dune
 
 #endif

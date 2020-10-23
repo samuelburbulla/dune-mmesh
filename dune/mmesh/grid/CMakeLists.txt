@@ -9,7 +9,7 @@ set(HEADERS
   entityseed.hh
   explicitgridfactory.hh
   geometry.hh
-  gmshparser.hh
+  gmshgridfactory.hh
   gmshreader.hh
   gridfactory.hh
   hierarchiciterator.hh
@@ -20,6 +20,7 @@ set(HEADERS
   intersectioniterator.hh
   intersections.hh
   leafiterator.hh
+  mmesh.hh
   multiid.hh
   pointfieldvector.hh
   rangegenerators.hh

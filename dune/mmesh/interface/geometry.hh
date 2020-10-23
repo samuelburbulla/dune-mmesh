@@ -14,9 +14,6 @@
 #include <dune/grid/common/geometry.hh>
 #include <dune/geometry/affinegeometry.hh>
 
-// CGAL includes
-#include <CGAL/Kernel/global_functions.h>
-
 // local includes
 #include <dune/mmesh/grid/pointfieldvector.hh>
 

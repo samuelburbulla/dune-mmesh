@@ -6,12 +6,6 @@
 // Dune includes
 #include <dune/common/fvector.hh>
 
-// CGAL includes
-#include <CGAL/Point_2.h>
-#include <CGAL/Point_3.h>
-#include <CGAL/Vector_3.h>
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-
 /** \file
  * \brief Helpers for conversion from CGAL::Point_x to DUNE::FieldVector
  */
@@ -64,14 +58,11 @@ namespace Dune
    */
   typedef CGAL::Exact_predicates_inexact_constructions_kernel PointKernel;
 
-  template< typename ctype, int dim >
-  static inline auto makePoint( const Dune::FieldVector<ctype, dim>& v );
-
   /** \brief Convert FieldVector to CGAL Point
    *  \ingroup 2D
    */
   template< typename ctype >
-  static inline CGAL::Point_2<PointKernel> makePoint( const Dune::FieldVector<ctype, 2>& v )
+  static inline auto makePoint( const Dune::FieldVector<ctype, 2>& v )
   {
     return CGAL::Point_2<PointKernel> ( v[ 0 ], v[ 1 ] );
   }
@@ -80,7 +71,7 @@ namespace Dune
    *  \ingroup 3D
    */
   template< typename ctype >
-  static inline CGAL::Point_3<PointKernel> makePoint( const Dune::FieldVector<ctype, 3>& v )
+  static inline auto makePoint( const Dune::FieldVector<ctype, 3>& v )
   {
     return CGAL::Point_3<PointKernel> ( v[ 0 ], v[ 1 ], v[ 2 ] );
   }

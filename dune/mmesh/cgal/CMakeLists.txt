@@ -1,5 +1,6 @@
 set(HEADERS
   defaults.hh
+  includes.hh
   triangulationwrapper.hh
 )
 

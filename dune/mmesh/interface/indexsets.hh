@@ -188,7 +188,7 @@ namespace Dune
     }
 
     /** \brief Deliver all geometry types used in this grid */
-    const Types& geomTypes (int codim) const
+    const Types geomTypes (int codim) const
     {
       return types( codim );
     }

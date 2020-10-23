@@ -20,10 +20,8 @@
 #include <dune/grid/common/grid.hh>
 #include <dune/mmesh/grid/multiid.hh>
 
-#include <CGAL/utility.h>
-
 // The components of the MMesh interface
-#include <dune/mmesh/mmesh.hh>
+#include <dune/mmesh/grid/mmesh.hh>
 #include "entity.hh"
 #include "entityseed.hh"
 #include "connectedcomponent.hh"

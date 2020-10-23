@@ -20,7 +20,7 @@
 #include <dune/grid/common/boundarysegment.hh>
 
 // MMesh includes
-#include <dune/mmesh/mmesh.hh>
+#include <dune/mmesh/grid/mmesh.hh>
 #include <dune/mmesh/grid/common.hh>
 #include <dune/mmesh/grid/pointfieldvector.hh>
 
@@ -104,6 +104,13 @@ namespace Dune
       // Increase element count in each case
       countElements++;
     };
+
+    void insertElement ( const GeometryType &type,
+                         const std::vector< unsigned int > &v,
+                         const size_t domainMarker )
+    {
+      insertElement( type, v );
+    }
 
     /** \brief Returns if there is a face with the given vertices in the triangulation
      *  \ingroup 2D
