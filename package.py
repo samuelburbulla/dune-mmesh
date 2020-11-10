@@ -21,7 +21,6 @@ graft cmake
 graft doc
 graft dune
 graft examples
-graft lib
 graft python
 graft scripts
 include CMakeLists.txt

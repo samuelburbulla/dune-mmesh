@@ -14,10 +14,19 @@ Additionally, you'll need a current version of `CGAL` installed on your system.
 Examples
 --------
 
-See the `examples` folder for some grid creations.
-You can either use a `.msh` file, a `.dgf` file or the `CGAL` triangulation interface directly.
+See the `examples` folder for some code snippets.
 
-Short example using the GmshReader:
+Creating a mesh in python using a .msh file works as follows:
+````
+from dune.mmesh import mmesh
+from dune.grid import reader
+gridView = mmesh((reader.gmsh, "grid.msh"), dim)
+igridView = gridView.hierarchicalGrid.interfaceGrid
+````
+
+Remark that the .msh files must be built in the msh2 format, i.e for instance ``gmsh -<dim> -format msh2 grid.geo``.
+
+Short C++ example using the GmshReader:
 ````
     #include <dune/mmesh/mmesh.hh>
 
@@ -32,7 +41,7 @@ Short example using the GmshReader:
     const InterfaceGrid& igrid = grid.interfaceGrid();
 ````
 
-Remark that the .msh files must be built using ``gmsh -<dim> -format msh2 grid.geo``.
+In addition, you can use a `.dgf` file or the `CGAL` triangulation interface directly.
 
 Documentation
 -------------
