@@ -212,7 +212,6 @@ namespace Dune
     size_t boundarySegmentIndex() const
     {
       auto face = interfaceEntity_.first;
-      const auto& edgeIdx = interfaceEntity_.second;
 
       std::vector< std::size_t > vertices;
 
@@ -317,7 +316,6 @@ namespace Dune
     integrationOuterNormal (const FieldVector<ctype, dimension-1>& local) const
     {
       auto face = interfaceEntity_.first;
-      const auto& edgeIdx = interfaceEntity_.second;
 
       const auto& p1 = face->vertex( cgalIndex_[ index_ ] )->point();
       const auto& p2 = face->vertex( cgalIndex_[1-index_] )->point();

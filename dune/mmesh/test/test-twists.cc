@@ -15,7 +15,6 @@ using namespace Dune;
 template< class GridView >
 void checkTwists(const GridView& gridView)
 {
-  using Grid = typename GridView::Grid;
   static constexpr int dim = GridView::dimension;
 
   for ( const auto& e : elements(gridView) )

@@ -118,12 +118,12 @@ int main(int argc, char** argv)
     using StringList = std::vector<std::string>;
     using NumList = std::vector<double>;
 
-    constexpr int numOfGridFiles = (dim == 2) ? 9 : 3;
+    constexpr int numOfGridFiles = (dim == 2) ? 4 : 3;
     const StringList gridfiles = (dim == 2) ? StringList({"5e-2", "3e-2",
-      "2e-2", "1e-2", "9e-3", "8e-3", "7e-3", "6e-3", "5e-3"})
+      "2e-2", "1e-2"}) //, "9e-3", "8e-3", "7e-3", "6e-3", "5e-3"})
       : StringList({"9e-2", "7e-2", "5e-2"});
     const NumList characteristicLengths = (dim == 2)
-      ? NumList({5e-2, 3e-2, 2e-2, 1e-2, 9e-3, 8e-3, 7e-3, 6e-3, 5e-3})
+      ? NumList({5e-2, 3e-2, 2e-2, 1e-2}) //, 9e-3, 8e-3, 7e-3, 6e-3, 5e-3})
       :  NumList({9e-2, 7e-2, 5e-2});
 
     std::array<double, numOfGridFiles> errorsCurvatureElement;
