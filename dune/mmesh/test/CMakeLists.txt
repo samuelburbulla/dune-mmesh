@@ -70,9 +70,9 @@ dune_add_test(NAME test-curvature-2d SOURCES test-curvature.cc)
 set_property( TARGET test-curvature-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-curvature-2d "dunemmesh")
 
-# dune_add_test(NAME test-curvature-3d SOURCES test-curvature.cc)
-# set_property( TARGET test-curvature-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
-# target_link_libraries(test-curvature-3d "dunemmesh")
+dune_add_test(NAME test-curvature-3d SOURCES test-curvature.cc)
+set_property( TARGET test-curvature-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+target_link_libraries(test-curvature-3d "dunemmesh")
 
 dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
 set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
