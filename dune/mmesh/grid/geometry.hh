@@ -190,10 +190,6 @@ namespace Dune
     MMeshGeometry(const typename GridImp::template HostGridEntity<1>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices<1>(hostEntity) )
     {
-      // obtain circumcenter
-      const auto& cell     = hostEntity.first;
-      const auto& facetIdx = hostEntity.second;
-
       // use the CGAL index convention to obtain the vertices
       circumcenter_ = makeFieldVector(
         CGAL::circumcenter(

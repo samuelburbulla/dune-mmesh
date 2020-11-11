@@ -90,7 +90,6 @@ namespace Dune
     template< std::size_t dim, typename HostFacet >
     static inline std::size_t cgalFacetToDuneFacet ( const HostFacet& facet )
     {
-      const auto& c = facet.first;
       const auto& i = facet.second;
       const auto& cgalIndex = facet.first->info().cgalIndex;
 

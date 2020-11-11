@@ -101,7 +101,6 @@ namespace Dune
     std::enable_if_t< cc == 0, IndexType > subIndex (const typename std::remove_const<GridImp>::type::Traits::template Codim<cc>::Entity& e, int i, int codim) const
     {
       assert ( codim >= 0 && codim <= dim );
-      const HostGridEntity<0> hostEntity = e.impl().hostEntity();
 
       if ( codim == 0 )
           return index( e );
