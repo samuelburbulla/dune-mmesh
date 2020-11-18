@@ -52,8 +52,7 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, factor=1.0, verbose=F
             converged = True
             break
 
-    if not converged:
-        print("not converged", flush=True)
+    return {'converged': converged, 'iterations': i}
 
 def monolithicNewtonKrylov(schemes, targets, f_tol=1e-8, inner_maxiter=2000, method='gmres', **kwargs):
     """solve bulk and interface scheme coupled monolithically using scipy's newton krylov method
