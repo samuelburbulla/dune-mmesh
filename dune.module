@@ -1,7 +1,10 @@
 Module: dune-mmesh
-Version: 1.1
+Version: 2.8-git
+Author: Samuel Burbulla
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
-Whitespace-Hook: Yes
+Description: MMesh is a grid implementation based on CGAL triangulations
+URL: https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh
+Python-Requires:
 Depends: dune-grid (>= 2.8)
 Suggests: dune-fem (>= 2.8)
-Python-Modules: dune.mmesh
+Whitespace-Hook: Yes

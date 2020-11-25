@@ -8,8 +8,8 @@ DEPENDENCIES=@REQUIRES@
 
 Name: @PACKAGE_NAME@
 Version: @VERSION@
-Description: DUNE Moving Mesh Module
-URL: http://dune-project.org/
+Description: @DESCRIPTION@
+URL: @URL@
 Requires: ${DEPENDENCIES}
 Libs: -L${libdir} -ldunemmesh
 Cflags: -I${includedir}
