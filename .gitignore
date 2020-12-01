@@ -30,6 +30,9 @@ Testing
 __pycache__
 .ipynb_checkpoints
 *.tmp.msh
+dist
+_skbuild
+MANIFEST
 
 # always consider files containing source code regardless of their name
 !*.cc
