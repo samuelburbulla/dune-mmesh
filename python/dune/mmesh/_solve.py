@@ -8,54 +8,69 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
 
     Args:
         schemes:  pair of schemes
-        targets:  pair of target discrete functions
-        callback: update function that is called every time before solving a scheme
+        targets:  pair of discrete functions
         iter:     maximum number of iterations
-        f_tol:    objective tolerance between two iterates
-        factor:   iteration update damping or acceleration (1: new, 0: old)
+        f_tol:    objective tolerance between two iterates in two norm
+        callback: update function that is called every time before solving a scheme
         verbose:  print residuum for each iteration
-
     Note:
         The targets also must be used in the coupling forms.
-
+        We use a vector formulation of Aitken's fix point acceleration proposed by Irons and Tuck.
     """
     assert len(schemes) == 2
     assert len(targets) == 2
 
-    (scheme, scheme_gamma) = schemes
-    (ph, ph_gamma) = targets
+    (A, B) = schemes
+    (u, v) = targets
 
-    ph_old = ph.copy()
-    ph_gamma_old = ph_gamma.copy()
+    a = u.copy()
+    b = v.copy()
+
+    Fa = a.copy()
+    Fb = b.copy()
+
+    FFa = a.copy()
+    FFb = b.copy()
+
+    def residuum(a, b):
+        return np.sqrt(np.dot(a, a)+np.dot(b, b))
 
     converged = False
     for i in range(iter):
+        a.assign(u)
+        b.assign(v)
+
+        # Evaluation: a, b -> Fa, Fb
         if callback is not None:
             callback()
+        A.solve(u)
+        B.solve(v)
+        Fa.assign(u)
+        Fb.assign(v)
 
-        ph_old.assign(ph)
-        scheme.solve(target=ph)
-        ph.as_numpy[:] = factor*ph.as_numpy + (1-factor)*ph_old.as_numpy
-
-        phnp = ph_old.as_numpy[:]
-        phnp -= ph.as_numpy
-        error = np.sqrt(np.dot(phnp, phnp))
-
+        # Evaluation: Fa, Fb -> FFa, FFb
         if callback is not None:
             callback()
+        A.solve(u)
+        B.solve(v)
+        FFa.assign(u)
+        FFb.assign(v)
 
-        ph_gamma_old.assign(ph_gamma)
-        scheme_gamma.solve(target=ph_gamma)
-        ph_gamma.as_numpy[:] = factor*ph_gamma.as_numpy + (1-factor)*ph_gamma_old.as_numpy
+        # Irons-Tuck update
+        DA  = FFa.as_numpy - Fa.as_numpy
+        D2a = DA - Fa.as_numpy + a.as_numpy
+        u.as_numpy[:] = FFa.as_numpy - np.dot(DA, D2a) / np.dot(D2a, D2a) * DA
 
-        ph_gammanp = ph_gamma_old.as_numpy[:]
-        ph_gammanp -= ph_gamma.as_numpy
-        error_gamma = np.sqrt(np.dot(ph_gammanp, ph_gammanp))
+        DB  = FFb.as_numpy - Fb.as_numpy
+        D2b  = DB - Fb.as_numpy + b.as_numpy
+        v.as_numpy[:] = FFb.as_numpy - np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
+
+        res = residuum(u.as_numpy - a.as_numpy, v.as_numpy - b.as_numpy)
 
         if verbose:
-            print("{:3d}:".format(i), "[", "{:1.2e}".format(error), " {:1.2e}".format(error_gamma), "]", flush=True)
+            print("{:3d}:".format(i), "[", "{:1.2e}".format(res), "]", flush=True)
 
-        if max(error, error_gamma) < f_tol:
+        if res < f_tol:
             converged = True
             break
 
