@@ -76,7 +76,7 @@ namespace Dune
         MMeshImpl::MultiId,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >, // LocalIdSet
         MMeshImpl::MultiId,
-        CollectiveCommunication< MMesh<HostGrid, dim> >,
+        CollectiveCommunication< No_Comm >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshEntitySeed
@@ -1490,7 +1490,7 @@ namespace Dune
 
 
     /** \brief dummy collective communication */
-    const CollectiveCommunication< GridImp >& comm () const
+    const CollectiveCommunication< No_Comm >& comm () const
     {
       return ccobj;
     }
@@ -1570,7 +1570,7 @@ namespace Dune
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
-    CollectiveCommunication< GridImp > ccobj;
+    CollectiveCommunication< No_Comm > ccobj;
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
