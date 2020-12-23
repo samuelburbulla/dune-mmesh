@@ -64,7 +64,7 @@ namespace Dune
         MMeshImpl::MultiId, // GlobalIdSet::IdType,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >, // LocalIdSet
         MMeshImpl::MultiId, // LocalIdSet::IdType,
-        CollectiveCommunication< MMeshInterfaceGrid<MMesh> >,
+        CollectiveCommunication< No_Comm >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshInterfaceGridEntitySeed
@@ -445,7 +445,7 @@ namespace Dune
 
 
     /** \brief dummy collective communication */
-    const CollectiveCommunication< GridImp >& comm () const
+    const CollectiveCommunication< No_Comm >& comm () const
     {
       return ccobj;
     }
@@ -548,7 +548,7 @@ namespace Dune
     // **********************************************************
 
   private:
-    CollectiveCommunication< GridImp > ccobj;
+    CollectiveCommunication< No_Comm > ccobj;
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {
