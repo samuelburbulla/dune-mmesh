@@ -184,7 +184,7 @@ namespace Dune
       }
 
       using PC = Dune::PolygonCutting<ctype, GlobalCoordinate>;
-      return PC::polygonArea( PC::sutherlandHodgman(this->vertex_, entityPoints) );
+      return std::abs( PC::polygonArea( PC::sutherlandHodgman(this->vertex_, entityPoints) ) );
     }
 
     template<int d = dim>
