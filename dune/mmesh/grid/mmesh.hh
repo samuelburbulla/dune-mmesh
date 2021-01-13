@@ -938,6 +938,61 @@ namespace Dune
       return change;
     }
 
+    //! Assure the movement of vertices
+    bool ensureVertexMovement( std::vector<GlobalCoordinate> shifts )
+    {
+      assert( shifts.size() == this->leafIndexSet().size(dimension) );
+      bool change = false;
+
+      // check if grid is still valid
+      for ( const auto& element : elements( this->leafGridView() ) )
+        if ( signedVolume_( element ) <= 0.0 )
+          DUNE_THROW( GridError, "A cell has a negative volume! Maybe the interface has been moved too far?" );
+
+      // temporarily move vertices
+      moveVertices( shifts );
+
+      for ( const auto& element : elements( this->leafGridView() ) )
+        if ( signedVolume_( element ) <= 0.0 )
+        {
+          // disable removing of vertices in 3d
+          if constexpr ( dim == 3 )
+          {
+            DUNE_THROW( GridError, "Vertices could not be moved, because the removal of vertices is not supported in 3D!" );
+          }
+          else
+          {
+            for( std::size_t j = 0; j < element.subEntities(dimension); ++j )
+            {
+              const auto& v = element.template subEntity<dimension>(j);
+
+              // if vertex is part of interface, we have to do more
+              if ( !v.impl().isInterface() )
+              {
+                if ( RefinementStrategy::boundaryFlag( v ) == 1 )
+                  continue;
+
+                bool inserted = removed_.insert( globalIdSet().id( v ) ).second;
+                if ( inserted )
+                {
+                  remove_.push_back( v.impl().hostEntity() );
+                  change = true;
+                  if (verbose_)
+                    std::cout << "Remove vertex because of negative volume: " << v.geometry().center() << std::endl;
+                }
+              }
+            }
+          }
+        }
+
+      // move vertices back
+      for ( GlobalCoordinate& s : shifts )
+        s *= -1.0;
+      moveVertices( shifts );
+
+      return change;
+    }
+
     //! Callback for the grid adaptation process with restrict/prolong
     template< class GridImp, class DataHandle >
     bool adapt ( AdaptDataHandleInterface< GridImp, DataHandle > &handle )
@@ -1222,6 +1277,19 @@ namespace Dune
       {
         const VertexHandle& vh = vertex.impl().hostEntity();
         vh->point() = makePoint( vertex.geometry().center() + shifts[iindexSet.index(vertex)] );
+      }
+    }
+
+    //! Move vertices
+    void moveVertices( const std::vector<GlobalCoordinate>& shifts )
+    {
+      const auto& indexSet = this->leafIndexSet();
+      assert( shifts.size() == indexSet.size(dimension) );
+
+      for( const auto& vertex : vertices( this->leafGridView() ) )
+      {
+        const VertexHandle& vh = vertex.impl().hostEntity();
+        vh->point() = makePoint( vertex.geometry().center() + shifts[indexSet.index(vertex)] );
       }
     }
 

@@ -191,6 +191,35 @@ namespace Dune
       return true;
     }
 
+    bool isTip() const
+    {
+      if constexpr ( codim == dim )
+      {
+        if constexpr ( dim == 2 )
+          return false;
+        else
+        {
+          const auto& hostgrid = grid().getHostGrid();
+
+          int count = 0;
+          auto circulator = hostgrid.incident_edges( hostEntity_ );
+          for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+          {
+            // at boundary
+            if (hostgrid.is_infinite(circulator))
+              return false;
+
+             if (grid().isInterface(*circulator))
+              count++;
+          }
+
+          return (count == 1);
+        }
+      }
+      else
+        DUNE_THROW( NotImplemented, "isTip() for codim != dim" );
+    };
+
     //! Return boundary flag (-1 = not set, 0 = can be removed, 1 = important for domain boundary)
     int boundaryFlag() const
     {
