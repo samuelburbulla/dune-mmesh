@@ -38,7 +38,7 @@ namespace Dune
       Dune::GmshGridFactory<Grid> gmshFactory( factory, fileName );
     }
 
-    static void read (Dune::GridFactory<Grid>& factory, const std::string& fileName, std::vector<int>& boundaryIDs, std::vector<int>& elementsIDs)
+    static void read (Dune::GridFactory<Grid>& factory, const std::string& fileName, std::vector<int>& boundaryIDs, std::vector<int>& elementsIDs, bool verbose = false, bool boundarySegments = false)
     {
       Dune::GmshGridFactory<Grid> gmshFactory( factory, fileName );
     }
