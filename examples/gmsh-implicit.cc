@@ -7,7 +7,7 @@
  *
  * We can create an MMesh instance implicitly with the following code.
  */
-
+#include <config.h>
 #include <dune/mmesh/mmesh.hh>
 
 int main()
@@ -21,4 +21,6 @@ int main()
   GridFactory gridFactory( "grids/cube" + std::to_string(dim) + "d.msh" );
 
   Grid& grid = *gridFactory.grid();
+
+  std::cout << grid.size(0) << std::endl;
 }

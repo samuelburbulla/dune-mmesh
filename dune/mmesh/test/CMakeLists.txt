@@ -24,10 +24,6 @@ dune_add_test(NAME test-twists-3d SOURCES test-twists.cc)
 set_property( TARGET test-twists-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 target_link_libraries(test-twists-3d "dunemmesh")
 
-# dune_add_test(NAME test-carousel-2d SOURCES test-carousel.cc)
-# set_property( TARGET test-carousel-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-# target_link_libraries(test-carousel-2d "dunemmesh")
-
 dune_add_test(NAME test-mmesh-structured-2d SOURCES test-mmesh-structured.cc)
 set_property( TARGET test-mmesh-structured-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-mmesh-structured-2d "dunemmesh")
@@ -44,10 +40,6 @@ dune_add_test(NAME test-interfaceiterator-3d SOURCES test-interfaceiterator.cc)
 set_property( TARGET test-interfaceiterator-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 target_link_libraries(test-interfaceiterator-3d "dunemmesh")
 
-# dune_add_test(NAME test-colliding-2d SOURCES test-colliding-2d.cc)
-# set_property( TARGET test-colliding-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-# target_link_libraries(test-colliding-2d "dunemmesh")
-
 dune_add_test(NAME test-interfacegrid-2d SOURCES test-interfacegrid-2d.cc)
 set_property( TARGET test-interfacegrid-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-interfacegrid-2d "dunemmesh")
@@ -55,10 +47,6 @@ target_link_libraries(test-interfacegrid-2d "dunemmesh")
 dune_add_test(NAME test-interfacegrid-3d SOURCES test-interfacegrid-3d.cc)
 set_property( TARGET test-interfacegrid-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 target_link_libraries(test-interfacegrid-3d "dunemmesh")
-
-# dune_add_test(NAME test-fvoninterfacegrid-2d SOURCES test-fvoninterfacegrid.cc)
-# set_property( TARGET test-fvoninterfacegrid-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-# target_link_libraries(test-fvoninterfacegrid-2d "dunemmesh")
 
 if(DEFINED MPFVERSION)
   dune_add_test(NAME test-intersectionvolume-2d SOURCES test-intersectionvolume.cc)

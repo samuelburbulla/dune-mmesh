@@ -1,6 +1,7 @@
 /** \example cgal.cc
  * This is an example of how to build an MMesh using a CGAL triangulation.
  */
+#include <config.h>
 #include <dune/mmesh/mmesh.hh>
 
 int main()
@@ -21,4 +22,6 @@ int main()
 
   using Grid = Dune::MMesh<Triangulation, 2>;
   Grid grid(tr);
+
+  std::cout << grid.size(0) << std::endl;
 }
