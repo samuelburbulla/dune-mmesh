@@ -3,6 +3,7 @@
  *
  * We use the same mesh file as in interfacegrid.cc.
  */
+#include <config.h>
 
 // dune-common includes
 #include <dune/common/exceptions.hh>

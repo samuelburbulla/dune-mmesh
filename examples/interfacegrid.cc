@@ -8,6 +8,7 @@
  *
  * Then, we can create an MMesh instance and obtain the interface grid with the following code.
  */
+#include <config.h>
 
 #include <dune/mmesh/mmesh.hh>
 
@@ -23,7 +24,11 @@ int main()
 
   Grid& grid = *gridFactory.grid();
 
+  std::cout << grid.size(0) << std::endl;
+
   using InterfaceGrid = typename Grid::InterfaceGrid;
 
   const InterfaceGrid& igrid = grid.interfaceGrid();
+
+  std::cout << igrid.size(0) << std::endl;
 }
