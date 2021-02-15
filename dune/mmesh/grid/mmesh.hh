@@ -653,15 +653,24 @@ namespace Dune
 
     /** \brief Mark elements for adaption using the default remeshing indicator
      */
-    void markElements()
+    bool markElements()
     {
+      bool change = false;
       indicator_.update();
 
       for (const auto& element : elements( this->leafGridView() ))
+      {
         mark( indicator_(element), element );
+        change |= indicator_(element) != 0;
+      }
 
       for (const auto& ielement : elements( interfaceGrid_->leafGridView() ))
+      {
         interfaceGrid_->mark( indicator_(ielement), ielement );
+        change |= indicator_(ielement) != 0;
+      }
+
+      return change;
     }
 
     /** \brief Return refinement mark for entity
@@ -943,11 +952,6 @@ namespace Dune
     {
       assert( shifts.size() == this->leafIndexSet().size(dimension) );
       bool change = false;
-
-      // check if grid is still valid
-      for ( const auto& element : elements( this->leafGridView() ) )
-        if ( signedVolume_( element ) <= 0.0 )
-          DUNE_THROW( GridError, "A cell has a negative volume! Maybe the interface has been moved too far?" );
 
       // temporarily move vertices
       moveVertices( shifts );

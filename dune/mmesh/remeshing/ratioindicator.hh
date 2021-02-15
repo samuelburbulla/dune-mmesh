@@ -35,7 +35,7 @@ public:
      *
      * \param h        The objective edge length (aims at edge length in [h/4, 2*h])
      */
-    RatioIndicator( ctype h = 0.0, ctype distProportion = 0.5, ctype factor = 1.0 )
+    RatioIndicator( ctype h = 0.0, ctype distProportion = 1.0, ctype factor = 1.0 )
      : edgeRatio_( 4. ),                  // the edge ratio. Decreases minH!
        K_( 2. ),                          // the factor for the maximal edge length. Defaults to 2, because we use edge bisection.
        maxH_( K_ * h ),
