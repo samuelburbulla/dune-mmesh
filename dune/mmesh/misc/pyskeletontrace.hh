@@ -43,13 +43,31 @@ namespace Dune
         Base::bind(entity);
       }
 
-      void bind(const typename BulkGV::Intersection &intersection,
+      template< class GP = GridPart >
+      std::enable_if_t< !std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
+      bind(const typename BulkGV::Intersection &intersection,
                 IntersectionSide side)
       {
         if( Base::gridPart().grid().isInterface( intersection ) )
         {
           onInterface_ = true;
           ilf_.bind( Base::gridPart().grid().asInterfaceEntity( intersection ) );
+          sideGeometry_ = (side == IntersectionSide::in)
+            ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
+        }
+        else onInterface_ = false;
+      }
+
+      //! Overload for wrapped mmesh (e.g. with geometry grid view etc.)
+      template< class GP = GridPart >
+      std::enable_if_t< std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
+      bind(const typename BulkGV::Intersection &intersection,
+                IntersectionSide side)
+      {
+        if( Base::gridPart().hostGridPart().grid().isInterface( intersection ) )
+        {
+          onInterface_ = true;
+          ilf_.bind( Base::gridPart().hostGridPart().grid().asInterfaceEntity( intersection.impl().hostIntersection() ) );
           sideGeometry_ = (side == IntersectionSide::in)
             ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
         }
@@ -123,15 +141,19 @@ namespace Dune
       using GridPart = Dune::FemPy::GridPart<IGV>;
       using Base = Dune::Fem::BindableGridFunctionWithSpace<GridPart,typename BulkGridFunction::RangeType>;
       using BLocalFunction = Dune::Fem::ConstLocalFunction<BulkGridFunction>;
+      using BulkGridPart = typename BulkGridFunction::GridPartType;
       using SideGeometry = typename GridPart::GridType::MMeshType::Intersection::LocalGeometry::Implementation;
       static constexpr bool scalar = (BulkGridFunction::RangeType::dimension == 1);
 
       TraceGF(const IGV &iGV, const BulkGridFunction &bgf)
       : Base(Dune::FemPy::gridPart<IGV>(iGV), "trace_"+bgf.name(), bgf.order() ),
+        bulkGridPart_(bgf.gridPart()),
         blf_(bgf)
       {}
 
-      void bind(const typename Base::EntityType &entity)
+      template< class HGP = typename BulkGridPart::HostGridPartType >
+      std::enable_if_t< !std::is_class<HGP>::value, void >
+      bind(const typename Base::EntityType &entity)
       {
         Base::bind(entity);
         const auto intersection = Base::gridPart().grid().getMMesh().asIntersection( entity );
@@ -139,6 +161,23 @@ namespace Dune
           blf_.bind(intersection.inside());
         else if (intersection.neighbor())
           blf_.bind(intersection.outside());
+        else // is this the best we can do?
+          DUNE_THROW( Dune::NotImplemented, "TraceFunction on boundary can no be used with outside entity" );
+        sideGeometry_ = (side == IntersectionSide::in)
+          ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
+      }
+
+      //! Overload for wrapped mmesh (e.g. with geometry grid view etc.)
+      template< class HGP = typename BulkGridPart::HostGridPartType >
+      std::enable_if_t< std::is_class<HGP>::value, void >
+      bind(const typename Base::EntityType &entity)
+      {
+        Base::bind(entity);
+        const auto intersection = Base::gridPart().grid().getMMesh().asIntersection( entity );
+        if constexpr (side == Dune::Fem::IntersectionSide::in)
+          blf_.bind(bulkGridPart_.convert(intersection.inside()));
+        else if (intersection.neighbor())
+          blf_.bind(bulkGridPart_.convert(intersection.outside()));
         else // is this the best we can do?
           DUNE_THROW( Dune::NotImplemented, "TraceFunction on boundary can no be used with outside entity" );
         sideGeometry_ = (side == IntersectionSide::in)
@@ -179,6 +218,7 @@ namespace Dune
 
     private:
       BLocalFunction blf_;
+      const BulkGridPart& bulkGridPart_;
       SideGeometry sideGeometry_;
     };
 

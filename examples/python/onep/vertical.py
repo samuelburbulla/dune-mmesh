@@ -7,16 +7,15 @@ def create(name, h, hf=None):
     gmsh.initialize()
     gmsh.option.setNumber("General.Verbosity", 0)
     gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
-    gmsh.option.setNumber("Mesh.CharacteristicLengthMax", h)
 
     gmsh.model.add(name)
 
-    p1 = gmsh.model.geo.addPoint(   0, 0, 0, hf, 1)
+    p1 = gmsh.model.geo.addPoint(   0, 0, 0, h, 1)
     p2 = gmsh.model.geo.addPoint( 0.5, 0, 0, hf, 2)
-    p3 = gmsh.model.geo.addPoint(   1, 0, 0, hf, 3)
-    p4 = gmsh.model.geo.addPoint(   1, 1, 0, hf, 4)
+    p3 = gmsh.model.geo.addPoint(   1, 0, 0, h, 3)
+    p4 = gmsh.model.geo.addPoint(   1, 1, 0, h, 4)
     p5 = gmsh.model.geo.addPoint( 0.5, 1, 0, hf, 5)
-    p6 = gmsh.model.geo.addPoint(   0, 1, 0, hf, 6)
+    p6 = gmsh.model.geo.addPoint(   0, 1, 0, h, 6)
 
     l1 = gmsh.model.geo.addLine(p1, p2, 1)
     l2 = gmsh.model.geo.addLine(p2, p3, 2)

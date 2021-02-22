@@ -541,6 +541,13 @@ namespace Dune
       return isInterface( entity( intersection.impl().getHostIntersection() ) );
     }
 
+    //! Return if intersection is part of the interface
+    template< class OtherIntersection >
+    bool isInterface( const OtherIntersection& intersection ) const
+    {
+      return isInterface( intersection.impl().hostIntersection() );
+    }
+
     //! Return if element is part of the interface
     bool isInterface( const InterfaceElement& segment ) const
     {
@@ -606,6 +613,13 @@ namespace Dune
     InterfaceEntity asInterfaceEntity( const Intersection& intersection ) const
     {
       return InterfaceEntity {{ interfaceGrid_.get(), intersection.impl().getHostIntersection() }};
+    }
+
+    //! Return an intersection as a interface grid codim 0 entity
+    template< class OtherIntersection >
+    InterfaceEntity asInterfaceEntity( const OtherIntersection& intersection ) const
+    {
+      return asInterfaceEntity( intersection.impl().hostIntersection() );
     }
 
     //! Return an interface entity as intersection of a MMesh entity

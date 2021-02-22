@@ -10,11 +10,6 @@ from dune.generator.generator import SimpleGenerator
 # Skeleton function
 ################################################################################
 def skeleton(interfaceFunction, grid=None):
-    try:
-        return interfaceFunction.skeleton
-    except:
-        pass
-
     if grid == None:
         grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
 
@@ -39,11 +34,6 @@ def skeleton(interfaceFunction, grid=None):
 # Trace function
 ################################################################################
 def trace(bulkFunction, igrid=None):
-    try:
-        return bulkFunction.trace
-    except:
-        pass
-
     if igrid == None:
       igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
 
