@@ -1,31 +1,38 @@
-# A rectangle grid with a centered vertical fracture
-def create(file, h):
-    import pygmsh
-    import meshio
-    import numpy
-    geom = pygmsh.built_in.Geometry()
-    p1 = geom.add_point([0.0, 0.0, 0.0], lcar=h)
-    p2 = geom.add_point([0.0, 1.0, 0.0], lcar=h)
-    p3 = geom.add_point([0.5, 0.0, 0.0], lcar=h)
-    p4 = geom.add_point([0.5, 1.0, 0.0], lcar=h)
-    p5 = geom.add_point([1.0, 0.0, 0.0], lcar=h)
-    p6 = geom.add_point([1.0, 1.0, 0.0], lcar=h)
-    l0 = geom.add_line(p1, p3)
-    lf = geom.add_line(p3, p4)
-    l2 = geom.add_line(p4, p2)
-    l3 = geom.add_line(p2, p1)
-    ll0 = geom.add_line_loop([l0, lf, l2, l3])
-    rect0 = geom.add_surface(ll0)
-    geom.add_physical(rect0, label=0)
-    l4 = geom.add_line(p3, p5)
-    l5 = geom.add_line(p5, p6)
-    l6 = geom.add_line(p6, p4)
-    ll1 = geom.add_line_loop([l4, l5, l6, -lf])
-    rect1 = geom.add_surface(ll1)
-    geom.add_physical(rect1, label=1)
-    geom.add_physical(lf, label=10)
-    geom.add_physical(p1, label=11)
-    geom.add_physical(p2, label=12)
-    mesh = pygmsh.generate_mesh(geom, verbose=False)
-    meshio.gmsh.write(filename=file, mesh=mesh, fmt_version="2.2", binary=False)
-    return geom
+# A rectangle grid with a vertical interface
+def create(name, h, hf=None):
+    if hf is None:
+        hf = h
+
+    import gmsh
+    gmsh.initialize()
+    gmsh.option.setNumber("General.Verbosity", 0)
+    gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
+    gmsh.option.setNumber("Mesh.CharacteristicLengthMax", h)
+
+    gmsh.model.add(name)
+
+    p1 = gmsh.model.geo.addPoint(   0, 0, 0, hf, 1)
+    p2 = gmsh.model.geo.addPoint( 0.5, 0, 0, hf, 2)
+    p3 = gmsh.model.geo.addPoint(   1, 0, 0, hf, 3)
+    p4 = gmsh.model.geo.addPoint(   1, 1, 0, hf, 4)
+    p5 = gmsh.model.geo.addPoint( 0.5, 1, 0, hf, 5)
+    p6 = gmsh.model.geo.addPoint(   0, 1, 0, hf, 6)
+
+    l1 = gmsh.model.geo.addLine(p1, p2, 1)
+    l2 = gmsh.model.geo.addLine(p2, p3, 2)
+    l3 = gmsh.model.geo.addLine(p3, p4, 3)
+    l4 = gmsh.model.geo.addLine(p4, p5, 4)
+    l5 = gmsh.model.geo.addLine(p5, p6, 5)
+    l6 = gmsh.model.geo.addLine(p6, p1, 6)
+    lf = gmsh.model.geo.addLine(p2, p5, 10)
+
+    gmsh.model.geo.addCurveLoop([1, 10, 5, 6], 1)
+    gmsh.model.geo.addPlaneSurface([1], 0)
+    gmsh.model.geo.addCurveLoop([2, 3, 4, -10], 2)
+    gmsh.model.geo.addPlaneSurface([2], 1)
+
+    gmsh.model.geo.synchronize()
+
+    gmsh.model.mesh.generate(dim=2)
+    gmsh.write(name)
+    gmsh.finalize()

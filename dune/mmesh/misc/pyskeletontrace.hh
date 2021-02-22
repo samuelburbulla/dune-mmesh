@@ -26,6 +26,7 @@ namespace Dune
     : public BindableGridFunctionWithSpace<FemPy::GridPart<BulkGV>,
         typename InterfaceGridFunction::RangeType>
     {
+      using GridView = BulkGV;
       using GridPart = FemPy::GridPart<BulkGV>;
       using Base = BindableGridFunctionWithSpace<GridPart, typename InterfaceGridFunction::RangeType>;
       using ILocalFunction = ConstLocalFunction<InterfaceGridFunction>;
@@ -118,6 +119,7 @@ namespace Dune
     : public Dune::Fem::BindableGridFunctionWithSpace<Dune::FemPy::GridPart<IGV>,
                    typename BulkGridFunction::RangeType>
     {
+      using GridView = IGV;
       using GridPart = Dune::FemPy::GridPart<IGV>;
       using Base = Dune::Fem::BindableGridFunctionWithSpace<GridPart,typename BulkGridFunction::RangeType>;
       using BLocalFunction = Dune::Fem::ConstLocalFunction<BulkGridFunction>;
