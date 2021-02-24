@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 
     // Test MMesh mcmgmapper
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
-    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5u );
+    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5ul );
 
     int elementCount = 0;
     for(auto e : elements(gridView))

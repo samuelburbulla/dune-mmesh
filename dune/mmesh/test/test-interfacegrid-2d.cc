@@ -106,14 +106,14 @@ int main(int argc, char *argv[])
 
     // Test MMesh mcmgmapper for elements
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > elementMapper ( gridView, mcmgElementLayout() );
-    checkProperty( "size of mcmg element mapper", elementMapper.size(), 6u );
+    checkProperty( "size of mcmg element mapper", elementMapper.size(), 6ul );
     unsigned int count = 0;
     for(auto e : elements(gridView))
       checkProperty( "index mapped by element mapper", elementMapper.index(e), count++ );
 
     // Test MMesh mcmgmapper for vertices
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
-    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 7u );
+    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 7ul );
     unsigned int vertexCount = 0;
     std::vector< unsigned int > idxMap {{ 4, 6, 1, 2, 5, 0, 3 }};
     for(auto v : vertices(gridView))
@@ -180,8 +180,8 @@ int main(int argc, char *argv[])
         const auto& neighborC = is2.impl().outside();
 
         checkProperties( "neighbors centers",
-          { { neighborA.geometry().center(), { 0.625,  0.5 } },
-            { neighborB.geometry().center(), { 0.5625, 0.5625 } },
+          { { neighborA.geometry().center(), { 0.5625, 0.5625 } },
+            { neighborB.geometry().center(), { 0.625, 0.5 } },
             { neighborC.geometry().center(), { 0.125, 0.5 } } }
         );
 

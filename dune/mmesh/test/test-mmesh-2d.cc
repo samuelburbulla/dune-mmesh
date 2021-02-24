@@ -121,14 +121,14 @@ int main(int argc, char *argv[])
 
     // Test MMesh mcmgmapper for elements
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > elementMapper ( gridView, mcmgElementLayout() );
-    checkProperty( "size of mcmg element mapper", elementMapper.size(), 4u );
+    checkProperty( "size of mcmg element mapper", elementMapper.size(), 4ul );
     unsigned int count = 0;
     for(auto e : elements(gridView))
       checkProperty( "index mapped by element mapper", elementMapper.index(e), count++ );
 
     // Test MMesh mcmgmapper for vertices
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
-    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 6u );
+    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 6ul );
     unsigned int vertexCount = 0;
     for(auto v : vertices(gridView))
       checkProperty( "index mapped by vertex mapper", vertexMapper.index(v), vertexCount++ );
