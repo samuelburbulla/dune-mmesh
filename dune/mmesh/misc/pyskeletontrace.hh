@@ -151,8 +151,8 @@ namespace Dune
         blf_(bgf)
       {}
 
-      template< class HGP = typename BulkGridPart::HostGridPartType >
-      std::enable_if_t< !std::is_class<HGP>::value, void >
+      template< class GP = BulkGridPart >
+      std::enable_if_t< !std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
       bind(const typename Base::EntityType &entity)
       {
         Base::bind(entity);
@@ -168,8 +168,8 @@ namespace Dune
       }
 
       //! Overload for wrapped mmesh (e.g. with geometry grid view etc.)
-      template< class HGP = typename BulkGridPart::HostGridPartType >
-      std::enable_if_t< std::is_class<HGP>::value, void >
+      template< class GP = BulkGridPart >
+      std::enable_if_t< std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
       bind(const typename Base::EntityType &entity)
       {
         Base::bind(entity);
