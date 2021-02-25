@@ -43,9 +43,7 @@ namespace Dune
         Base::bind(entity);
       }
 
-      template< class GP = GridPart >
-      std::enable_if_t< !std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
-      bind(const typename BulkGV::Intersection &intersection,
+      void bind(const typename BulkGV::Intersection &intersection,
                 IntersectionSide side)
       {
         if( Base::gridPart().grid().isInterface( intersection ) )
@@ -58,22 +56,7 @@ namespace Dune
         else onInterface_ = false;
       }
 
-      //! Overload for wrapped mmesh (e.g. with geometry grid view etc.)
-      template< class GP = GridPart >
-      std::enable_if_t< std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
-      bind(const typename BulkGV::Intersection &intersection,
-                IntersectionSide side)
-      {
-        if( Base::gridPart().hostGridPart().grid().isInterface( intersection ) )
-        {
-          onInterface_ = true;
-          ilf_.bind( Base::gridPart().hostGridPart().grid().asInterfaceEntity( intersection.impl().hostIntersection() ) );
-          sideGeometry_ = (side == IntersectionSide::in)
-            ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
-        }
-        else onInterface_ = false;
-      }
-
+    public:
       template <class Point>
       void evaluate(const Point &x, typename Base::RangeType &ret) const
       {
@@ -151,29 +134,11 @@ namespace Dune
         blf_(bgf)
       {}
 
-      template< class GP = BulkGridPart >
-      std::enable_if_t< !std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
-      bind(const typename Base::EntityType &entity)
+      void bind(const typename Base::EntityType &entity)
       {
         Base::bind(entity);
         const auto intersection = Base::gridPart().grid().getMMesh().asIntersection( entity );
-        if constexpr (side == Dune::Fem::IntersectionSide::in)
-          blf_.bind(intersection.inside());
-        else if (intersection.neighbor())
-          blf_.bind(intersection.outside());
-        else // is this the best we can do?
-          DUNE_THROW( Dune::NotImplemented, "TraceFunction on boundary can no be used with outside entity" );
-        sideGeometry_ = (side == IntersectionSide::in)
-          ? intersection.geometryInInside().impl() : intersection.geometryInOutside().impl();
-      }
 
-      //! Overload for wrapped mmesh (e.g. with geometry grid view etc.)
-      template< class GP = BulkGridPart >
-      std::enable_if_t< std::is_member_function_pointer<decltype(&GP::hostGridPart)>::value, void >
-      bind(const typename Base::EntityType &entity)
-      {
-        Base::bind(entity);
-        const auto intersection = Base::gridPart().grid().getMMesh().asIntersection( entity );
         if constexpr (side == Dune::Fem::IntersectionSide::in)
           blf_.bind(bulkGridPart_.convert(intersection.inside()));
         else if (intersection.neighbor())
