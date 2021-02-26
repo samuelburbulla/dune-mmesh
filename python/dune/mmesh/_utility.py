@@ -3,6 +3,7 @@ logger = logging.getLogger(__name__)
 
 import io
 from dune.generator import algorithm
+from dune.generator.exceptions import CompileError
 
 ################################################################################
 # Edge movement
@@ -108,7 +109,7 @@ def interfaceedgemovement(igridView, shifts):
 # Obtain domain markers
 ################################################################################
 def domainMarker(gridView):
-    code="""
+    code = """
     #include <functional>
     template <class GV>
     auto domainMarker(const GV &gv) {
@@ -119,7 +120,12 @@ def domainMarker(gridView):
     }
     """
     from dune.fem.function import cppFunction
-    return cppFunction(gridView, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[gridView])
+    try:
+        return cppFunction(gridView, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[gridView])
+    except CompileError as e:
+        code = code.replace("impl()", "impl().hostEntity().impl()")
+        return cppFunction(gridView, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[gridView])
+
 ################################################################################
 
 
