@@ -48,6 +48,8 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml" }
+# breathe_default_project = 'dune-mmesh'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -62,5 +64,7 @@ html_favicon = "_static/favicon.png"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml" }
-# breathe_default_project = 'dune-mmesh'
+# -- Options for Latex output -------------------------------------------------
+latex_documents = [
+    ('index', 'dune-mmesh.tex', 'The dune-mmesh module', 'Samuel Burbulla', 'scrartcl')
+]

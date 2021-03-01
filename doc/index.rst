@@ -16,7 +16,7 @@ The dune-mmesh module
 
 .. toctree::
   :maxdepth: 2
-  :caption: Further steps
+  :caption: Next steps
 
   snippets
   examples

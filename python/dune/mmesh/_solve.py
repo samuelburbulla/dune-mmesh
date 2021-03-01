@@ -46,7 +46,7 @@ def iterativeSolve(schemes, targets, iter=100, f_tol=1e-8, factor=1.0, verbose=F
         error_gamma = np.dot(ph_gammanp, ph_gammanp)
 
         if verbose:
-            print("["+str(i)+"]: errors=", [error, error_gamma], flush=True)
+            print("{:3d}:".format(i), "[", "{:1.2e}".format(error), " {:1.2e}".format(error_gamma), "]", flush=True)
 
         if max(error, error_gamma) < f_tol:
             converged = True

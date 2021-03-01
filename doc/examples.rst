@@ -8,4 +8,4 @@ Examples
   :maxdepth: 1
 
   examples/moving
-  examples/onep.ipynb
+  examples/onep

@@ -46,13 +46,15 @@ def domainMarker(grid):
       return ret;
     }
     """
+    from dune.fem.space import finiteVolume
     from dune.fem.function import cppFunction
     try:
-        return cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
+        cppfunc = cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
     except CompileError as e:
         code = code.replace("impl()", "impl().hostEntity().impl()")
-        return cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
-
+        cppfunc = cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
+    fvspace = finiteVolume(grid)
+    return fvspace.interpolate(cppfunc, name="domainMarker")
 
 def normals(igrid):
     """Return normal vectors to the interface grid elements.
