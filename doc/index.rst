@@ -1,20 +1,28 @@
-.. dune-mmesh documentation master file, created by
-   sphinx-quickstart on Mon Mar  1 11:22:11 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to dune-mmesh's documentation!
-======================================
+The dune-mmesh module
+=====================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+  :maxdepth: 1
+  :caption: First steps
 
+  about
 
+.. toctree::
+  :maxdepth: 1
+  :caption: Getting started
 
-Indices and tables
-==================
+  installation
+  quickstart
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+  :maxdepth: 2
+  :caption: Further steps
+
+  snippets
+  examples
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Reference
+
+  reference

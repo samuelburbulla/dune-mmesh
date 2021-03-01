@@ -1,3 +1,7 @@
+"""
+.. module:: _grids
+"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
@@ -8,39 +12,20 @@ from dune.common.checkconfiguration import assertHave, ConfigurationError
 from dune.generator.generator import SimpleGenerator
 from dune.common.hashit import hashIt
 
-# export normals to the interface elements
-def normal(igridView):
-
-    try:
-        return igridView.hierarchicalGrid.interfaceGrid.normals
-    except:
-        pass
-
-    code="""
-    #include <functional>
-    template <class IGV>
-    auto normal(const IGV &igv, bool minus=false) {
-      return [&igv, minus] (const auto& entity, const auto& xLocal) mutable -> auto {
-        return igv.grid().getMMesh().asIntersection( entity ).centerUnitOuterNormal() * (minus ? -1.0 : 1.0);
-      };
-    }
-    """
-
-    import io
-    import dune.ufl
-    from dune.fem.function import cppFunction
-    n_p = cppFunction(igridView, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, True])
-    n_m = cppFunction(igridView, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igridView, False])
-    predefined = {}
-    predefined[n_p('+')] = n_p
-    predefined[n_p('-')] = n_m
-    n_p.predefined = predefined
-    return n_p
-
-
 mmGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMGrid")
 mmifGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMIFGrid")
 def mmesh(constructor, dimgrid=None, **parameters):
+    """Create an MMesh grid.
+
+    Args:
+        constructor: Grid constructor, e.g. (dune.grid.reader.gmsh, 'grid.msh').
+        dimgrid (int, optional): The world dimension (must be 2 or 3). Might be guessed by constructor.
+        **parameters: Additional parameters.
+
+    Returns:
+        An MMesh grid instance.
+    """
+
     from dune.grid.grid_generator import module, getDimgrid
 
     if not dimgrid:

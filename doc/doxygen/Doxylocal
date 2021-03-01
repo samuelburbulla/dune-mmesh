@@ -27,3 +27,6 @@ EXAMPLE_PATH          += @top_srcdir@/examples
 # the \image command).
 
 # IMAGE_PATH            += @top_srcdir@/dune/mmesh/pics
+
+# We need xml output for breathe.
+GENERATE_XML = YES

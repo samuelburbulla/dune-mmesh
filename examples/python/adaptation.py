@@ -1,5 +1,5 @@
 from dune.grid import reader, cartesianDomain
-from dune.mmesh import mmesh, skeleton, edgemovement, cellVolumes
+from dune.mmesh import mmesh, skeleton, edgeMovement, cellVolumes
 from dune.ufl import Constant
 import ufl
 import numpy as np
@@ -41,7 +41,7 @@ def getShifts():
   return shifts
 
 shifts = getShifts()
-em = edgemovement(gridView, shifts)
+em = edgeMovement(gridView, shifts)
 
 space = dglagrange(gridView, dimRange=1, order=1)
 trial = ufl.TrialFunction(space)
@@ -117,7 +117,7 @@ for step in range(1, int(tEnd/dt)+1):
 
   hgrid.moveInterface(shifts*dt)
 
-  em = edgemovement(gridView, shifts)
+  em = edgeMovement(gridView, shifts)
 
   t += dt
   time.assign(t)
