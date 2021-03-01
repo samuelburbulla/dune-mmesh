@@ -85,8 +85,6 @@ struct Scheme
       adaptationManager_( gridPart_.grid(), restrictProlong_ ),
       step_( step )
   {
-    if( discreteSpace_.begin() != discreteSpace_.end() )
-      solution_.localFunction( *(discreteSpace_.begin()) )[0] = 0.;
     solution_.clear();
   }
 
