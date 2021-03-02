@@ -7,7 +7,8 @@ Examples
 .. toctree::
   :maxdepth: 1
 
-  examples/concepts
+  examples/coupling
   examples/moving
   examples/onep
   examples/poroelasticity
+  examples/twophase

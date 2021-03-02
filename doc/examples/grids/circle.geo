@@ -1,5 +1,5 @@
 lc = 0.1;
-lcf = 0.02;
+lcf = 0.1;
 
 // Domain
 Point(1) = {0, 0, 0, lc};
@@ -29,9 +29,9 @@ Ellipse(8) = {9, 5, 6};
 Curve Loop(1) = {5:8};
 Curve Loop(2) = {1:4};
 
+Plane Surface(0) = {2,1};
 Plane Surface(1) = {1};
-Plane Surface(2) = {2,1};
+Physical Surface(0) = {0};
 Physical Surface(1) = {1};
-Physical Surface(2) = {2};
 
 Physical Curve(10) = {5:8};
