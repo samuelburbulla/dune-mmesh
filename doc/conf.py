@@ -68,3 +68,14 @@ html_static_path = ['_static']
 latex_documents = [
     ('index', 'dune-mmesh.tex', 'The dune-mmesh module', 'Samuel Burbulla', 'scrartcl')
 ]
+
+latex_elements = {
+    'preamble': r'''
+\newcommand{\llbracket}{[\mskip-5mu[}
+\newcommand{\rrbracket}{]\mskip-5mu]}
+\newcommand{\jump}[1]{\llbracket #1 \rrbracket}
+\newcommand{\ldblbrace}{\{\mskip-5mu\{}
+\newcommand{\rdblbrace}{\}\mskip-5mu\}}
+\newcommand{\avg}[1]{\ldblbrace #1 \rdblbrace}
+''',
+}
