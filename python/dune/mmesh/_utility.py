@@ -145,8 +145,9 @@ def edgeMovement(grid, shifts):
     """
     from dune.fem.function import cppFunction
     cppFunc = cppFunction(grid, name="edgeMovement", order=1, fctName="edgeMovement", includes=io.StringIO(code), args=[grid, shifts])
-    from dune.fem.function import uflFunction
-    return uflFunction(grid, "edgeMovement", 1, cppFunc)
+    from dune.fem.space import lagrange
+    space = lagrange(grid, dimRange=grid.dimWorld, order=1)
+    return space.interpolate(cppFunc, name="edgeMovement")
 
 
 def interfaceEdgeMovement(igrid, shifts):
@@ -166,7 +167,7 @@ def interfaceEdgeMovement(igrid, shifts):
     #include <dune/python/pybind11/numpy.h>
 
     template <class GV>
-    auto interfaceedgeMovement(const GV &gv, const pybind11::array_t<double>& input) {
+    auto interfaceEdgeMovement(const GV &gv, const pybind11::array_t<double>& input) {
         static constexpr int dim = GV::dimension;
         static constexpr int dimw = GV::dimensionworld;
         using GlobalCoordinate = Dune::FieldVector<double, dimw>;
@@ -199,6 +200,7 @@ def interfaceEdgeMovement(igrid, shifts):
     }
     """
     from dune.fem.function import cppFunction
-    cppFunc = cppFunction(igrid, name="interfaceedgeMovement", order=1, fctName="interfaceedgeMovement", includes=io.StringIO(code), args=[igrid, shifts])
-    from dune.fem.function import uflFunction
-    return uflFunction(igrid, "interfaceedgeMovement", 1, cppFunc)
+    cppFunc = cppFunction(igrid, name="interfaceEdgeMovement", order=1, fctName="interfaceEdgeMovement", includes=io.StringIO(code), args=[igrid, shifts])
+    from dune.fem.space import lagrange
+    space = lagrange(igrid, dimRange=igrid.dimWorld, order=1)
+    return space.interpolate(cppFunc, name="interfaceEdgeMovement")

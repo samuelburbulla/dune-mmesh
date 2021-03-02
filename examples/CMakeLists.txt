@@ -1,5 +1,6 @@
-add_subdirectory(grids)
-add_subdirectory(python)
+dune_symlink_to_source_files(FILES
+  grids
+)
 
 add_executable("cgal" cgal.cc)
 target_link_libraries("cgal" "dunemmesh")

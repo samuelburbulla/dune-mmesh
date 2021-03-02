@@ -66,7 +66,7 @@ html_static_path = ['_static']
 
 # -- Options for Latex output -------------------------------------------------
 latex_documents = [
-    ('index', 'dune-mmesh.tex', 'The dune-mmesh module', 'Samuel Burbulla', 'scrartcl')
+    ('index', 'dune-mmesh.tex', 'dune-mmesh: The DUNE grid module for moving interfaces', 'Samuel Burbulla', 'scrartcl')
 ]
 
 latex_elements = {

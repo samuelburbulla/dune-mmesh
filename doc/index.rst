@@ -1,5 +1,5 @@
-The dune-mmesh module
-=====================
+The DUNE grid module for moving interfaces
+==========================================
 
 .. toctree::
   :maxdepth: 1
