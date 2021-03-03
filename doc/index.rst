@@ -1,28 +1,30 @@
+******************************************
 The DUNE grid module for moving interfaces
-==========================================
+******************************************
 
 .. toctree::
   :maxdepth: 1
   :caption: First steps
 
-  about
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Getting started
-
-  installation
+  introduction
   quickstart
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
   :caption: Next steps
 
-  snippets
+  concepts
   examples
 
 .. toctree::
   :maxdepth: 1
-  :caption: Reference
+  :caption: API Reference
 
-  reference
+  pyreference
+  cppreference
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Appendix
+
+  acknowledgements

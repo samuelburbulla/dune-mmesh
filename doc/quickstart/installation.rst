@@ -1,6 +1,5 @@
-************
 Installation
-************
+============
 
 The following dependencies are needed for dune-mmesh:
 
@@ -9,8 +8,8 @@ The following dependencies are needed for dune-mmesh:
 * `CGAL <https://www.cgal.org>`_ (5.1 or later)
 
 
-Using Pip
-=========
+Using pip
+---------
 
 The easiest way to install dune-mmesh is using pip.
 
@@ -31,22 +30,16 @@ Then download and build dune-mmesh and its dependecies
 Note that this takes some time in order to compile all dependent Dune libraries.
 
 
-From Source
-===========
+From source
+-----------
 
 You can install dune-mmesh from source to get full access to the source code.
 It also enables git support if you want to contribute.
 
-* Required Dune modules (2.8 or later)
-
-  * `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_
-  * `dune-geometry <https://gitlab.dune-project.org/core/dune-geometry.git>`_
-  * `dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_
-
-* Recommended Dune modules (2.8 or later)
-
-  * `dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_
-
+The required Dune modules are `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,
+`dune-geometry <https://gitlab.dune-project.org/core/dune-geometry.git>`_,
+`dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_ and
+`dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_ in Version 2.8 or later.
 Read the instructions on how to `build Dune with Python support`_ which also
 links to general instructions on how to `build Dune modules`_. Note that
 the Python bindings require some additional CMake flags to be set as

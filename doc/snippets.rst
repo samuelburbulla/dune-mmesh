@@ -1,5 +1,0 @@
-********
-Snippets
-********
-
-Useful code snippets

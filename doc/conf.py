@@ -66,10 +66,12 @@ html_static_path = ['_static']
 
 # -- Options for Latex output -------------------------------------------------
 latex_documents = [
-    ('index', 'dune-mmesh.tex', 'dune-mmesh: The DUNE grid module for moving interfaces', 'Samuel Burbulla', 'scrartcl')
+    ('index', 'dune-mmesh.tex', 'dune-mmesh: The DUNE grid module for moving interfaces', 'Samuel Burbulla', 'article')
 ]
 
+latex_toplevel_sectioning = 'section'
 latex_elements = {
+    'tableofcontents': '',
     'preamble': r'''
 \newcommand{\llbracket}{[\mskip-5mu[}
 \newcommand{\rrbracket}{]\mskip-5mu]}
