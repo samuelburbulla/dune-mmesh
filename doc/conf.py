@@ -38,6 +38,7 @@ extensions = [
   "sphinx.ext.viewcode",
   "breathe",
   "nbsphinx",
+  "sphinxcontrib.tikz",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,6 +51,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml" }
 # breathe_default_project = 'dune-mmesh'
+
+tikz_proc_suite = 'GhostScript'
 
 # -- Options for HTML output -------------------------------------------------
 

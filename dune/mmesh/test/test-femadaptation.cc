@@ -21,7 +21,7 @@
 #include <dune/fem/misc/l2norm.hh>
 
 #ifndef POLORDER
-#define POLORDER 1
+#define POLORDER 2
 #endif
 
 
@@ -155,7 +155,7 @@ struct Function : Dune::Fem::Function< FunctionSpace, Function< FunctionSpace > 
 {
   void evaluate( const typename FunctionSpace::DomainType &x, typename FunctionSpace::RangeType &y ) const
   {
-    y[ 0 ] = x[ 0 ] + x[ 1 ];
+    y[ 0 ] = x[ 0 ] * x[ 0 ] + x[ 1 ] * x[ 1 ];
   }
 };
 

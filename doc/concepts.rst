@@ -1,3 +1,5 @@
+.. _concepts:
+
 ********
 Concepts
 ********
@@ -5,4 +7,5 @@ Concepts
 .. toctree::
   :maxdepth: 1
 
+  concepts/interface
   concepts/moving

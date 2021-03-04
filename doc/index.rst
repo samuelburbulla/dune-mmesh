@@ -2,6 +2,9 @@
 The DUNE grid module for moving interfaces
 ******************************************
 
+The dune-mmesh module is grid implementation within the DUNE framework that
+is tailored for numerical applications with moving physical interfaces.
+
 .. toctree::
   :maxdepth: 1
   :caption: First steps

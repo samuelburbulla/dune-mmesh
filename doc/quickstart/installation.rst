@@ -11,23 +11,23 @@ The following dependencies are needed for dune-mmesh:
 Using pip
 ---------
 
-The easiest way to install dune-mmesh is using pip.
+The easiest way to install dune-mmesh is using pip and the package uploaded to `PyPI <https://pypi.org/project/dune-mmesh/>`_.
 
 We strongly recommend the usage of a virtual environment.
-In some folder setup a virtual environment and activate it
+In some folder setup a virtual environment and activate it:
 
 .. code-block:: bash
 
   python3 -m venv dune-env
   source dune-env/bin/activate
 
-Then download and build dune-mmesh and its dependecies
+Then download and build dune-mmesh and its dependecies:
 
 .. code-block:: bash
 
   pip install dune-mmesh
 
-Note that this takes some time in order to compile all dependent Dune libraries.
+Note that this takes some time in order to compile all dependent Dune modules.
 
 
 From source
