@@ -1,7 +1,7 @@
 Installation
 ============
 
-The following dependencies are needed for dune-mmesh:
+The following dependencies are needed for Dune-MMesh:
 
 * C++ compiler (at least C++17 compatible)
 * Python (3.4 or later)
@@ -11,7 +11,7 @@ The following dependencies are needed for dune-mmesh:
 Using pip
 ---------
 
-The easiest way to install dune-mmesh is using pip and the package uploaded to `PyPI <https://pypi.org/project/dune-mmesh/>`_.
+The easiest way to install Dune-MMesh is using pip and the package uploaded to `PyPI <https://pypi.org/project/dune-mmesh/>`_.
 
 We strongly recommend the usage of a virtual environment.
 In some folder setup a virtual environment and activate it:
@@ -33,7 +33,7 @@ Note that this takes some time in order to compile all dependent Dune modules.
 From source
 -----------
 
-You can install dune-mmesh from source to get full access to the source code.
+You can install Dune-MMesh from source to get full access to the source code.
 It also enables git support if you want to contribute.
 
 The required Dune modules are `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,

@@ -2,8 +2,12 @@
 The DUNE grid module for moving interfaces
 ******************************************
 
-The dune-mmesh module is grid implementation within the DUNE framework that
+Dune-MMesh is an implementation of the `DUNE <https://www.dune-project.org>`_ grid interface that
 is tailored for numerical applications with moving physical interfaces.
+The implementation based on `CGAL <https://www.cgal.org>`_ triangulations supports two and three dimensional meshes
+and can export a predefined set of facets as a separate interface grid.
+In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm
+that implements non-hierarchical adaptation procedures.
 
 .. toctree::
   :maxdepth: 1

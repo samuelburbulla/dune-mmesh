@@ -60,7 +60,7 @@ tikz_proc_suite = 'GhostScript'
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-html_favicon = "_static/favicon.png"
+html_favicon = "favicon.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -69,7 +69,7 @@ html_static_path = ['_static']
 
 # -- Options for Latex output -------------------------------------------------
 latex_documents = [
-    ('index', 'dune-mmesh.tex', 'dune-mmesh: The DUNE grid module for moving interfaces', 'Samuel Burbulla', 'article')
+    ('index', 'dune-mmesh.tex', 'Dune-MMesh: The DUNE Grid Module for Moving Interfaces', 'Samuel Burbulla', 'article')
 ]
 
 latex_toplevel_sectioning = 'section'
