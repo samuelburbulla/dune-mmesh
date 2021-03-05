@@ -1,18 +1,18 @@
-lc = 0.02;
-lcf = 0.02;
+lc = 0.05;
+lcf = 0.05;
 
 // Domain
 Point(1) = {0, 0, 0, lc};
 Point(2) = {1, 0, 0, lc};
-Point(3) = {1, 1, 0, lc};
-Point(4) = {0, 1, 0, lc};
+Point(3) = {1, 2, 0, lc};
+Point(4) = {0, 2, 0, lc};
 
 // Points of circle
 Point(5)  = {0.5, 0.5, 0, lcf};
 Point(6)  = {0.5, 0.7, 0, lcf};
-Point(7)  = {0.2, 0.5, 0, lcf};
+Point(7)  = {0.3, 0.5, 0, lcf};
 Point(8)  = {0.5, 0.3, 0, lcf};
-Point(9)  = {0.8, 0.5, 0, lcf};
+Point(9)  = {0.7, 0.5, 0, lcf};
 
 // Domain outline
 Line(1) = {1, 2};
