@@ -33,10 +33,13 @@ namespace Dune
    */
   template<int dim, class GridImp>
   class MMeshInterfaceCachingEntity<0,dim,GridImp> :
-    public EntityDefaultImplementation <0,dim,GridImp,MMeshInterfaceCachingEntity>
+    public MMeshInterfaceGridEntity<0,dim,GridImp>
   {
     template <class GridImp_>
     friend class MMeshInterfaceGridLeafIndexSet;
+
+    template <class GridImp_>
+    friend class MMeshInterfaceGridLocalIdSet;
 
     template <class GridImp_>
     friend class MMeshInterfaceGridGlobalIdSet;
@@ -44,6 +47,9 @@ namespace Dune
   private:
     // this type
     typedef MMeshInterfaceCachingEntity<0,dim,GridImp> ThisType;
+
+    // base type
+    typedef MMeshInterfaceGridEntity<0,dim,GridImp> BaseType;
 
     // type of scalars
     typedef typename GridImp::ctype ctype;
@@ -70,19 +76,20 @@ namespace Dune
     MMeshInterfaceCachingEntity() = delete;
 
     explicit MMeshInterfaceCachingEntity(const Element& element)
+      : BaseType(
+        &element.impl().grid(),
+        element.impl().hostEntity(),
+        element.impl().grid().globalIdSet().id( element )
+      )
     {
-      const auto& hostEntity = element.impl().hostEntity();
       for ( int i = 0; i < dim+1; ++i )
-        vertex_[i] = makeFieldVector( hostEntity.first->vertex( (hostEntity.second+i+1)%(dim+2) )->point() );
-
-      const auto& grid = element.impl().grid();
-      id_ = grid.globalIdSet().id( grid.entity( hostEntity ) );
+        this->vertex_[i] = element.geometry().corner(i);
     }
 
     //! returns true if host entities are equal
     bool equals(const MMeshInterfaceCachingEntity& other) const
     {
-      return id_ == other.id_;
+      return this->id_ == other.id_;
     }
 
     //! returns true if host entities are equal
@@ -94,13 +101,13 @@ namespace Dune
     //! returns true if caching entity has same id like mmesh entity
     bool operator==(const MMeshEntity& entity) const
     {
-      return id_ == entity.impl().grid()->globalIdSet().id( entity );
+      return this->id_ == entity.impl().grid()->globalIdSet().id( entity );
     }
 
     //! returns true if id of other is greater
     bool operator<(const MMeshInterfaceCachingEntity& other) const
     {
-      return id_ < other.id_;
+      return this->id_ < other.id_;
     }
 
     //! returns true if father entity exists
@@ -136,7 +143,7 @@ namespace Dune
     //! Geometry of this entity
     Geometry geometry () const
     {
-      return Geometry( GeometryTypes::simplex(dim), vertex_ );
+      return Geometry( GeometryTypes::simplex(dim), this->vertex_ );
     }
 
     //! Return the number of subEntities of codimension cc
@@ -156,24 +163,17 @@ namespace Dune
       return binomial;
     }
 
+    //! returns true if Entity has no children
+    bool isLeaf() const {
+      return false;
+    }
+
     //calculates the intersection volume with another entity
     ctype intersectionVolume ( const MMeshEntity& entity ) const
     {
-      // assuming simple components (of dim entities)
+      // assuming simple components (of 2 entities)
       return std::min( geometry().volume(), entity.geometry().volume() );
     }
-
-    IdType id() const
-    {
-      return id_;
-    }
-
-  private:
-    //! the vertices of the host entity object of this entity
-    std::array<GlobalCoordinate, dim+1> vertex_;
-
-    //! the id of the cached host entity object
-    IdType id_;
 
   }; // end of MMeshInterfaceCachingEntity codim = 0
 

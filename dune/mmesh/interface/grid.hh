@@ -395,6 +395,40 @@ namespace Dune
       return mMesh_->adapt(buildComponents);
     }
 
+    //! Callback for the grid adaptation process with restrict/prolong
+    template< class GridImp, class DataHandle >
+    bool adapt ( AdaptDataHandleInterface< GridImp, DataHandle > &handle )
+    {
+      preAdapt();
+
+      for (const auto& ielement : elements( this->leafGridView() ))
+        if (ielement.isNew())
+        {
+          bool initialize = true;
+
+          for ( const auto& old : ielement.impl().connectedComponent().children() )
+          {
+            const Entity& father = old;
+
+            if (father.geometry().volume() > ielement.geometry().volume())
+            {
+              ielement.impl().bindFather( father );
+              handle.prolongLocal( father, ielement, true );
+            }
+            else
+            {
+              father.impl().bindFather( ielement );
+              handle.restrictLocal( ielement, father, initialize );
+            }
+
+            initialize = false;
+          }
+        }
+
+      postAdapt();
+      return true;
+    }
+
     //! Clean up refinement markers
     void postAdapt()
     {

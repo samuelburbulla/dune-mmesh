@@ -217,13 +217,17 @@ std::array<double, 2> algorithm ( HGridType &grid, IGridType &igrid, const int s
     // data I/O
     dataOutput.write();
     idataOutput.write();
+
+    // make range smaller
+    grid.indicator().maxH() *= 0.8;
+    grid.indicator().minH() *= 1.2;
   }
 
   // compute error
   Dune::Fem::L2Norm< GridPartType > l2norm( gridPart );
   Dune::Fem::L2Norm< IGridPartType > il2norm( igridPart );
   return {{ l2norm.distance( gridExactSolution, scheme.solution() ),
-          il2norm.distance( igridExactSolution, ischeme.solution() ) }};
+           il2norm.distance( igridExactSolution, ischeme.solution() ) }};
 }
 
 
@@ -252,7 +256,7 @@ try
 
   // create grid from DGF file
   std::stringstream gridfilestr;
-  gridfilestr << "grids/mimesh2d.msh";
+  gridfilestr << "grids/line2d.msh";
 
   std::string gridfile;
   Dune::Fem::Parameter::get( "fem.io.macrogrid", gridfilestr.str(), gridfile );
@@ -261,16 +265,16 @@ try
   Dune::GridPtr< HGridType > gridPtr( gridfile );
   HGridType& grid = *gridPtr ;
 
-  grid.indicator().maxH() = 0.1;
-  grid.indicator().minH() = 0.025;
+  grid.indicator().maxH() = 0.75;
+  grid.indicator().minH() = 0.05;
   grid.indicator().factor() = 1.0;
 
   auto errors = algorithm( grid, grid.interfaceGrid(), 0 );
   std::cout << "Error bulk: " << errors[0] << std::endl;
   std::cout << "Error interface: " << errors[1] << std::endl;
 
-  assert( error[0] < 1e-12 );
-  assert( error[1] < 1e-12 );
+  assert( errors[0] < 1e-12 );
+  assert( errors[1] < 1e-12 );
 
   return 0;
 }

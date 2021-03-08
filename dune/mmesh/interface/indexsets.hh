@@ -377,8 +377,7 @@ namespace Dune
 
     IdType id (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e) const
     {
-      const auto& host = e.impl().hostEntity();
-      return id( host );
+      return IdType( e.impl().id() );
     }
 
     template< int d = dimension >
@@ -395,35 +394,6 @@ namespace Dune
       static_assert( cd == dimension );
       const auto& host = e.impl().hostEntity();
       return id( host );
-    }
-
-    template<int cd>
-    IdType id (const MMeshInterfaceCachingEntity<cd,dimension,GridImp>& cachingEntity) const
-    {
-      return cachingEntity.id();
-    }
-
-    template< int d = dimensionworld >
-    std::enable_if_t< d == 2, IdType >
-    id (const typename std::remove_const<GridImp>::type::template MMeshInterfaceEntity<0>& host) const
-    {
-      std::size_t vId0 = host.first->vertex((host.second+1)%(dimensionworld+1))->info().id;
-      std::size_t vId1 = host.first->vertex((host.second+2)%(dimensionworld+1))->info().id;
-      if( vId0 > vId1 )
-        std::swap( vId0, vId1 );
-      return IdType( { vId0, vId1 } );
-    }
-
-    template< int d = dimensionworld >
-    std::enable_if_t< d == 3, IdType >
-    id (const typename std::remove_const<GridImp>::type::template MMeshInterfaceEntity<0>& host) const
-    {
-      std::vector< std::size_t > ids ( 3 );
-      ids[0] = host.first->vertex((host.second+1)%(dimensionworld+1))->info().id;
-      ids[1] = host.first->vertex((host.second+2)%(dimensionworld+1))->info().id;
-      ids[2] = host.first->vertex((host.second+3)%(dimensionworld+1))->info().id;
-      std::sort( ids.begin(), ids.end() );
-      return IdType( ids );
     }
 
     template< int d = dimensionworld >

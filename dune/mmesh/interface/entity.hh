@@ -349,6 +349,8 @@ namespace Dune
   {
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
+    typedef Entity< 0, dim, GridImp, MMeshInterfaceGridEntity > EntityType;
+
   public:
     // equivalent entity in the host grid
     typedef typename GridImp::template MMeshInterfaceEntity<0> MMeshInterfaceEntity;
@@ -371,13 +373,24 @@ namespace Dune
     //! The type of the connected component
     typedef typename GridImp::ConnectedComponent ConnectedComponent;
 
+    //! define the type used for persistent indices
+    using IdType = MMeshImpl::MultiId;
+
+    // type of global coordinate
+    typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
+    // type of local coordinate
+    typedef typename Geometry::LocalCoordinate LocalCoordinate;
+
+    //! define the type used for storage the vertices of a caching entity
+    using VertexStorage = std::array<GlobalCoordinate, dim+1>;
+
     MMeshInterfaceGridEntity()
-      : grid_(nullptr)
+      : grid_(nullptr), isLeaf_(true)
     {}
 
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
-      : hostEntity_(hostEntity)
-      , grid_(grid)
+      : hostEntity_(hostEntity), grid_(grid), isLeaf_(true)
     {
       const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
       if ( hostEntity_.first->info().index > mirrored.first->info().index )
@@ -385,22 +398,31 @@ namespace Dune
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
-      : hostEntity_(std::move(hostEntity))
-      , grid_(grid)
+      : hostEntity_(std::move(hostEntity)), grid_(grid), isLeaf_(true)
     {
       const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
       if ( hostEntity_.first->info().index > mirrored.first->info().index )
         hostEntity_ = mirrored;
     }
 
+    MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity, const IdType& id)
+      : hostEntity_(hostEntity), grid_(grid)
+      , id_(id), isLeaf_(false)
+    {}
+
+    MMeshInterfaceGridEntity(const GridImp* grid, const VertexStorage& vertex)
+      : grid_(grid), vertex_(vertex)
+      , id_( /*caching id*/ IdType({42,42}) ), isLeaf_(false)
+    {}
+
     MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)
-      : hostEntity_(original.hostEntity_)
-      , grid_(original.grid_)
+      : hostEntity_(original.hostEntity_), id_(original.id_), isLeaf_(original.isLeaf_)
+      , grid_(original.grid_), vertex_(original.vertex_)
     {}
 
     MMeshInterfaceGridEntity(MMeshInterfaceGridEntity&& original)
-      : hostEntity_(std::move(original.hostEntity_))
-      , grid_(original.grid_)
+      : hostEntity_(std::move(original.hostEntity_)), id_(original.id_), isLeaf_(original.isLeaf_)
+      , grid_(original.grid_), vertex_(original.vertex_)
     {}
 
     MMeshInterfaceGridEntity& operator=(const MMeshInterfaceGridEntity& original)
@@ -409,6 +431,9 @@ namespace Dune
       {
         grid_ = original.grid_;
         hostEntity_ = original.hostEntity_;
+        isLeaf_ = original.isLeaf_;
+        id_ = original.id_;
+        vertex_ = original.vertex_;
       }
       return *this;
     }
@@ -419,6 +444,9 @@ namespace Dune
       {
         grid_ = original.grid_;
         hostEntity_ = std::move(original.hostEntity_);
+        isLeaf_ = original.isLeaf_;
+        id_ = original.id_;
+        vertex_ = original.vertex_;
       }
       return *this;
     }
@@ -475,8 +503,32 @@ namespace Dune
       return false;
     }
 
-    LocalGeometry geometryInFather() const {
-      DUNE_THROW( InvalidStateException, "MMesh entities do no implement a geometry in father!" );
+    void bindFather( const EntityType& father ) const
+    {
+      father_ = &father;
+    }
+
+    //! Geometry of this entity in bounded father entity ( assumption: this \subset father )
+    LocalGeometry geometryInFather() const
+    {
+      if constexpr( dim != 1 )
+        DUNE_THROW(NotImplemented, "geometryInFather() for dim != 1");
+      else
+      {
+        assert( father_ != nullptr );
+
+        auto thisPoints = this->vertex_;
+
+        if( isLeaf_ )
+          for ( int i = 0; i < 2; ++i )
+            thisPoints[i] = geometry().corner(i);
+
+        std::array< LocalCoordinate, 2 > local;
+        for ( int i = 0; i < 2; ++i )
+          local[i] = father_->impl().geometry().local( thisPoints[i] );
+
+        return LocalGeometry( local );
+      }
     }
 
     //! returns true if this entity is new after adaptation
@@ -534,7 +586,10 @@ namespace Dune
     //! Geometry of this entity
     Geometry geometry () const
     {
-      return Geometry( hostEntity_ );
+      if (isLeaf_)
+        return Geometry( hostEntity_ );
+      else
+        return Geometry( this->vertex_ );
     }
 
     //! Return the number of subEntities of codimension cc
@@ -632,7 +687,7 @@ namespace Dune
 
     //! returns true if Entity has no children
     bool isLeaf() const {
-      return true;
+      return isLeaf_ && !isNew();
     }
 
     //! returns if grid was refined
@@ -665,12 +720,40 @@ namespace Dune
       return *grid_;
     }
 
+    //! return cached id
+    IdType id() const
+    {
+      // cache id
+      if (id_ == IdType())
+      {
+        typename IdType::VT idlist( dim+1 );
+        for( std::size_t i = 0; i < this->subEntities(dim); ++i )
+          idlist[i] = this->subEntity<dim>(i).impl().hostEntity()->info().id;
+        std::sort( idlist.begin(), idlist.end() );
+        id_ = IdType( idlist );
+      }
+
+      return id_;
+    }
+
   private:
     //! the host entity of this entity
     MMeshInterfaceEntity hostEntity_;
 
+    //! the cached id
+    mutable IdType id_;
+
     //! the grid implementation
     const GridImp* grid_;
+
+    //! return if leaf
+    bool isLeaf_;
+
+  protected:
+    //! the vertices of the host entity object of this entity (for caching entity)
+    VertexStorage vertex_;
+
+    mutable const EntityType* father_;
 
   }; // end of MMeshInterfaceGridEntity codim = 0
 

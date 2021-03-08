@@ -37,6 +37,7 @@ namespace Dune
     typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
 
   public:
+
     enum { dimension = GridImp::dimension };
     enum { dimensionworld = GridImp::dimensionworld };
     enum { coorddimension = coorddim };
@@ -51,18 +52,13 @@ namespace Dune
         circumcenter_ *= 0.5;
     }
 
-    //! Constructor from host geometry with codim 0
-    template< class Vertex >
-    MMeshInterfaceGridGeometry(const std::array<Vertex, 2>& vertices)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 2>( {
-           makeFieldVector( vertices[0].point() ),
-           makeFieldVector( vertices[1].point() )
-       } ) )
+    //! Constructor from vertex array
+    MMeshInterfaceGridGeometry(const std::array<FVector, 2>& points)
+     : BaseType( GeometryTypes::simplex(mydim), points )
     {
-        circumcenter_ = this->corner(0);
-        circumcenter_ += this->corner(1);
-        circumcenter_ *= 0.5;
+      circumcenter_ = this->corner(0);
+      circumcenter_ += this->corner(1);
+      circumcenter_ *= 0.5;
     }
 
     //! Constructor from host geometry with codim 1
@@ -138,22 +134,16 @@ namespace Dune
       );
     }
 
-    //! Constructor from host geometry with codim 0
-    template< class Vertex >
-    MMeshInterfaceGridGeometry(const std::array<Vertex, 3>& vertices)
-     : BaseType( GeometryTypes::simplex(mydim),
-         std::array<FVector, 3>( {
-           makeFieldVector( vertices[0].point() ),
-           makeFieldVector( vertices[1].point() ),
-           makeFieldVector( vertices[2].point() )
-       } ) )
+    //! Constructor from vertex list
+    MMeshInterfaceGridGeometry(const std::array<FVector, 3>& points)
+     : BaseType( GeometryTypes::simplex(mydim), points )
     {
       // obtain circumcenter
       circumcenter_ = makeFieldVector(
         CGAL::circumcenter(
-          vertices[0].point(),
-          vertices[1].point(),
-          vertices[2].point()
+          makePoint( this->corner(0) ),
+          makePoint( this->corner(1) ),
+          makePoint( this->corner(2) )
         )
       );
     }
@@ -236,6 +226,11 @@ namespace Dune
     //! Constructor for local geometry of intersection from intersection index
     MMeshInterfaceGridGeometry(int i)
      : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { i } ) )
+    {}
+
+    //! Constructor from vertex array
+    MMeshInterfaceGridGeometry(const std::array<FVector, 2>& points)
+     : BaseType( GeometryTypes::simplex(mydim), points )
     {}
 
   };

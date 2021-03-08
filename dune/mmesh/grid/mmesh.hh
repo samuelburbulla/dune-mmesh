@@ -1356,8 +1356,6 @@ namespace Dune
       remove_.clear();
       inserted_.clear();
       removed_.clear();
-
-      interfaceGrid_->postAdapt();
     }
 
   private:
