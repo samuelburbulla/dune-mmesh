@@ -46,11 +46,14 @@ namespace Dune
       MMeshImpl::MultiId id ( {42, 42, 42} );
       this->data_.insert( std::make_pair( id, value ) );
 
+      // add one id for a codim 1 entity during adaptation
+      MMeshImpl::MultiId eid ( {42, 42} );
+      this->data_.insert( std::make_pair( eid, value ) );
+
       // add one id for caching vertices during adaptation
       auto vh = this->grid_->getHostGrid().infinite_vertex();
       MMeshImpl::MultiId vid ( vh->info().id );
       this->data_.insert( std::make_pair( vid, value ) );
-      // TODO should add three different caching vertices
 
       // create empty map, but keep old data
       Map data;
@@ -103,7 +106,6 @@ namespace Dune
       auto vh = this->grid_->getHostGrid().infinite_vertex();
       MMeshImpl::MultiId vid ( vh->info().id );
       this->data_.insert( std::make_pair( vid, value ) );
-      // TODO should add two different caching vertices
 
       // create empty map, but keep old data
       Map data;
