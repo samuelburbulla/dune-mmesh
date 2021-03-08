@@ -42,8 +42,8 @@ public:
        k_( K_ / ( 2. * edgeRatio_ ) ),    // ensure that a triangle with two edges longer than maxH splits up to a triangle where all edges are longer than minH
        minH_( k_ * h ),
        radiusRatio_( 30. ),               // additional radius ratio to avoid very ugly cells
-       distProportion_( 0.5 ),            // cells with distance to interface of value greater than distProportion_ * max(dist) are refined to ...
-       factor_( 1.0 )                     // ... edge length in [factor * minH_, factor * maxH_]
+       distProportion_( distProportion ), // cells with distance to interface of value greater than distProportion_ * max(dist) are refined to ...
+       factor_( factor )                  // ... edge length in [factor * minH_, factor * maxH_]
     {}
 
     /*!
@@ -171,7 +171,17 @@ public:
       return maxH_;
     }
 
+    ctype& maxH ()
+    {
+      return maxH_;
+    }
+
     ctype minH () const
+    {
+      return minH_;
+    }
+
+    ctype& minH ()
     {
       return minH_;
     }
