@@ -50,6 +50,29 @@ private:
   int step_;
 };
 
+struct IDataOutputParameters
+: public Dune::Fem::LocalParameter< Dune::Fem::DataOutputParameters, IDataOutputParameters >
+{
+  IDataOutputParameters ( const int step )
+  : step_( step )
+  {}
+
+  IDataOutputParameters ( const IDataOutputParameters &other )
+  : step_( other.step_ )
+  {}
+
+  std::string prefix () const
+  {
+    std::stringstream s;
+    s << "femadaptation-interface-" << step_ << "-";
+    return s.str();
+  }
+
+private:
+  int step_;
+};
+
+
 // Scheme
 // ------
 
@@ -72,11 +95,10 @@ struct Scheme
 
   typedef Dune::Fem::AdaptationManager< GridType, RestrictionProlongationType > AdaptationManagerType;
 
-  typedef typename DiscreteFunctionSpaceType :: IteratorType IteratorType;
   typedef typename GridType :: template Codim< 0 > :: Entity ElementType;
   typedef typename DiscreteFunctionSpaceType :: DomainType DomainType;
 
-  Scheme( GridPartType &gridPart, const int step  = 0 )
+  Scheme( GridPartType &gridPart, const int step = 0 )
     : gridPart_( gridPart ),
       grid_( gridPart_.grid() ),
       discreteSpace_( gridPart_ ),
@@ -102,35 +124,7 @@ struct Scheme
   //! mark elements for adaptation
   bool mark ( double time ) const
   {
-    int refine = 0;
-    int coarse = 0;
-    int total = 0;
-
-    // loop over all elements
-    for( const auto& entity : discreteSpace_ )
-    {
-      // find center
-      auto center = entity.geometry().center();
-      DomainType x = DomainType(-time);
-      x += center;
-
-      if( grid_.leafIndexSet().index( entity ) == 3 )
-      {
-        grid_.mark( 1, entity );
-        refine++;
-      }
-      else if( grid_.leafIndexSet().index( entity ) == 17 )
-      {
-        grid_.mark( -1, entity );
-        coarse++;
-      }
-
-      total++;
-    }
-
-    std::cout << "Marked " << refine << " for refine and " << coarse << " for coarse of total " << total << std::endl;
-
-    return (coarse + refine > 0);
+    return grid_.markElements();
   }
 
   //! do the adaptation for a given marking
@@ -162,25 +156,38 @@ struct Function : Dune::Fem::Function< FunctionSpace, Function< FunctionSpace > 
 // algorithm
 // ---------
 
-template <class HGridType>
-double algorithm ( HGridType &grid, const int step )
+template <class HGridType, class IGridType>
+std::array<double, 2> algorithm ( HGridType &grid, IGridType &igrid, const int step )
 {
   // we want to solve the problem on the leaf elements of the grid
   typedef Dune::Fem::AdaptiveLeafGridPart< HGridType > GridPartType;
   GridPartType gridPart(grid);
 
+  // and on the interface grid
+  typedef Dune::Fem::AdaptiveLeafGridPart< IGridType > IGridPartType;
+  IGridPartType igridPart(igrid);
+
   // use a scalar function space
   typedef Dune::Fem::FunctionSpace< double, double, HGridType :: dimensionworld, 1 > FunctionSpaceType;
+  typedef Dune::Fem::FunctionSpace< double, double, IGridType :: dimensionworld, 1 > IFunctionSpaceType;
 
   typedef Scheme< GridPartType, FunctionSpaceType > SchemeType;
   SchemeType scheme( gridPart, step );
+  typedef Scheme< IGridPartType, IFunctionSpaceType > ISchemeType;
+  ISchemeType ischeme( igridPart, step );
 
   typedef Function< FunctionSpaceType > FunctionType;
   FunctionType f;
+  typedef Function< IFunctionSpaceType > IFunctionType;
+  IFunctionType i_f;
+
   typedef Dune::Fem::GridFunctionAdapter< FunctionType, GridPartType > GridExactSolutionType;
   GridExactSolutionType gridExactSolution("exact solution", f, gridPart, 5 );
+  typedef Dune::Fem::GridFunctionAdapter< IFunctionType, IGridPartType > IGridExactSolutionType;
+  IGridExactSolutionType igridExactSolution("interface exact solution", i_f, igridPart, 5 );
 
   scheme.initialize( gridExactSolution );
+  ischeme.initialize( igridExactSolution );
 
   // output
   typedef std::tuple< const typename SchemeType::DiscreteFunctionType *, GridExactSolutionType * > IOTupleType;
@@ -188,6 +195,12 @@ double algorithm ( HGridType &grid, const int step )
   IOTupleType ioTuple( &(scheme.solution()), &gridExactSolution);
   DataOutputType dataOutput( grid, ioTuple, DataOutputParameters( step ) );
   dataOutput.write();
+
+  typedef std::tuple< const typename ISchemeType::DiscreteFunctionType *, IGridExactSolutionType * > IIOTupleType;
+  typedef Dune::Fem::DataOutput< IGridType, IIOTupleType > IDataOutputType;
+  IIOTupleType iioTuple( &(ischeme.solution()), &igridExactSolution);
+  IDataOutputType idataOutput( igrid, iioTuple, IDataOutputParameters( step ) );
+  idataOutput.write();
 
   for( int time = 0; time <= 5; time++ )
   {
@@ -199,14 +212,18 @@ double algorithm ( HGridType &grid, const int step )
 
     // adapt grid
     scheme.adapt();
+    ischeme.adapt();
 
     // data I/O
     dataOutput.write();
+    idataOutput.write();
   }
 
   // compute error
   Dune::Fem::L2Norm< GridPartType > l2norm( gridPart );
-  return l2norm.distance( gridExactSolution, scheme.solution() );
+  Dune::Fem::L2Norm< IGridPartType > il2norm( igridPart );
+  return {{ l2norm.distance( gridExactSolution, scheme.solution() ),
+          il2norm.distance( igridExactSolution, ischeme.solution() ) }};
 }
 
 
@@ -235,7 +252,7 @@ try
 
   // create grid from DGF file
   std::stringstream gridfilestr;
-  gridfilestr << "grids/" << HGridType::dimension << "dgrid.dgf";
+  gridfilestr << "grids/mimesh2d.msh";
 
   std::string gridfile;
   Dune::Fem::Parameter::get( "fem.io.macrogrid", gridfilestr.str(), gridfile );
@@ -244,10 +261,16 @@ try
   Dune::GridPtr< HGridType > gridPtr( gridfile );
   HGridType& grid = *gridPtr ;
 
-  auto error = algorithm( grid, 0 );
-  std::cout << "Error: " << error << std::endl;
+  grid.indicator().maxH() = 0.1;
+  grid.indicator().minH() = 0.025;
+  grid.indicator().factor() = 1.0;
 
-  assert( error < 1e-12 );
+  auto errors = algorithm( grid, grid.interfaceGrid(), 0 );
+  std::cout << "Error bulk: " << errors[0] << std::endl;
+  std::cout << "Error interface: " << errors[1] << std::endl;
+
+  assert( error[0] < 1e-12 );
+  assert( error[1] < 1e-12 );
 
   return 0;
 }
