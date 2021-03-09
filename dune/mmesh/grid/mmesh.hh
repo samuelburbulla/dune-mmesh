@@ -119,17 +119,17 @@ namespace Dune
   //
   //************************************************************************
   /*!
-   * \brief Provides the base class of a grid wrapper of a CGAL triangulation
+   * \brief The MMesh class templatized by the CGAL host grid type and the dimension.
    * \ingroup GridImplementations
    * \ingroup MMesh
-   *
-   * \tparam HostGrid The CGAL host grid type wrapped by the MMesh
    */
-  template <class HostGrid, int dim>
+  template < class HostGrid, int dim >
   class MMesh
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
    : public GridDefaultImplementation< dim, dim,
                                        double, ///*FieldType=*/typename HostGrid::Point::R::RT,
                                        MMeshFamily<dim, HostGrid> >
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
   public:
     //! The world dimension
@@ -245,21 +245,12 @@ namespace Dune
     //! The type of the employed refinement strategy for the interface grid
     using InterfaceRefinementStrategy = LongestEdgeRefinement<InterfaceGrid>;
 
-    /** \brief Constructor that takes a CGAL triangulation
-     *
-     * \param hostgrid      The CGAL triangulation wrapped by the MMesh
+    //! Constructor that takes a CGAL triangulation
      */
     explicit MMesh(HostGrid hostgrid)
      : MMesh(hostgrid, {}, {}, {}, {}) {}
 
-    /** \brief Constructor
-     *
-     * \param hostgrid                     The CGAL triangulation wrapped by the MMesh
-     * \param boundarySegments             The boundary segment index mapper
-     * \param interfaceBoundarySegments    The boundary segment index mapper for the interface grid
-     * \param boundaryIds                  The boundary id mapper
-     * \param interfaceSegments            The set of interface segments
-     */
+    //! Constructor that takes additional about interface and boundary.
     explicit MMesh(HostGrid hostgrid,
                    BoundarySegments boundarySegments,
                    BoundarySegments interfaceBoundarySegments,
@@ -346,7 +337,7 @@ namespace Dune
       return interfaceSegments_;
     }
 
-    //! add an interface
+    //! Add an intersection to the interface
     void addInterface( const Intersection& intersection )
     {
       const auto& facet = entity( intersection.impl().getHostIntersection() );
@@ -629,8 +620,8 @@ namespace Dune
       return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
     }
 
-    //! Locate an entity by coordinate
-    const Entity locate ( const GlobalCoordinate& p, const typename Traits::template Codim<0>::Entity& element = {} ) const
+    //! Locate an entity by coordinate using CGAL's locate
+    const Entity locate ( const GlobalCoordinate& p, const Entity& element = {} ) const
     {
       return entity( hostgrid_.inexact_locate( makePoint( p ), element.impl().hostEntity() ) );
     }
@@ -648,7 +639,7 @@ namespace Dune
           mark( 1, element );
 
         preAdapt();
-        adapt(false);
+        adapt();
         postAdapt();
       }
     }
@@ -666,6 +657,7 @@ namespace Dune
     }
 
     /** \brief Mark elements for adaption using the default remeshing indicator
+     * \return if elements have been marked.
      */
     bool markElements()
     {
@@ -702,8 +694,10 @@ namespace Dune
       return (interfaceGrid_->preAdapt()) || (coarsenMarked_ > 0) || (remove_.size() > 0);
     }
 
-    //! Triggers the grid adaptation process
-    bool adapt(bool buildComponents = true)
+    /** \brief Triggers the grid adaptation process
+      * \return if triangulation has changed
+      */
+    bool adapt()
     {
       // Obtain the adaption points
       for ( const auto& element : elements( this->leafGridView() ) )
@@ -796,10 +790,13 @@ namespace Dune
       if (verbose_)
         std::cout << "- insert " << insert_.size() << "\t remove " << remove_.size() << std::endl;
 
-      return adapt_(buildComponents);
+      return adapt_(true);
     }
 
-    //! Assure the movement of interface vertices
+    /** \brief Mark elements such that after movement of interface vertices no cell degenerates
+     * \param shifts Vector that maps interface vertex index to global coordinate
+     * \return If elements have been marked.
+     */
     bool ensureInterfaceMovement( std::vector<GlobalCoordinate> shifts )
     {
       assert( shifts.size() == this->interfaceGrid().leafIndexSet().size(dimension-1) );
@@ -961,7 +958,10 @@ namespace Dune
       return change;
     }
 
-    //! Assure the movement of vertices
+    /** \brief Mark elements such that after movement of vertices no cell degenerates
+     * \param shifts Vector that maps vertex index to GlobalCoordinate
+     * \return If elements have been marked.
+     */
     bool ensureVertexMovement( std::vector<GlobalCoordinate> shifts )
     {
       assert( shifts.size() == this->leafIndexSet().size(dimension) );
@@ -1285,7 +1285,9 @@ namespace Dune
     }
 
   public:
-    //! Move vertices
+    /** \brief Move interface vertices
+     * \param shifts Vector that maps interface vertex indices to GlobalCoordinate
+     */
     void moveInterface( const std::vector<GlobalCoordinate>& shifts )
     {
       const auto& iindexSet = this->interfaceGrid().leafIndexSet();
@@ -1298,7 +1300,9 @@ namespace Dune
       }
     }
 
-    //! Move vertices
+    /** \brief Move vertices
+     * \param shifts Vector that maps interface vertex indices to GlobalCoordinate
+     */
     void moveVertices( const std::vector<GlobalCoordinate>& shifts )
     {
       const auto& indexSet = this->leafIndexSet();
@@ -1592,31 +1596,31 @@ namespace Dune
     // End of Interface Methods
     // **********************************************************
 
-    //! get a reference to the host grid (the underlying CGAL triangulation)
+    //! Get reference to the underlying CGAL triangulation.
     const HostGrid& getHostGrid() const
     {
       return hostgrid_;
     }
 
-    //! get a non-const reference to the host grid (the underlying CGAL triangulation)
+    //! Get non-const reference to the underlying CGAL triangulation.
     HostGrid& getHostGrid()
     {
       return hostgrid_;
     }
 
-    //! get a reference to the interface grid
+    //! Get reference to the interface grid.
     const InterfaceGrid& interfaceGrid() const
     {
       return *interfaceGrid_;
     }
 
-    //! get a non-const reference to the interface grid
+    //! Get a non-const reference to the interface grid.
     InterfaceGrid& interfaceGrid()
     {
       return *interfaceGrid_;
     }
 
-    //! get a pointer to the interface grid
+    //! Get a pointer to the interface grid
     const std::shared_ptr<InterfaceGrid>& interfaceGridPtr()
     {
       return interfaceGrid_;

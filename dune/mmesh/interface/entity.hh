@@ -26,14 +26,12 @@ namespace Dune
   //
   /** \brief The implementation of entities in a MMesh interface grid
    *   \ingroup MMeshInterfaceGrid
-   *
-   *  A Grid is a container of grid entities. An entity is parametrized by the codimension.
-   *  An entity of codimension c in dimension d is a d-c dimensional object.
-   *
    */
   template<int codim, int dim, class GridImp>
-  class MMeshInterfaceGridEntity :
-    public EntityDefaultImplementation <codim,dim,GridImp,MMeshInterfaceGridEntity>
+  class MMeshInterfaceGridEntity
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+   : public EntityDefaultImplementation <codim,dim,GridImp,MMeshInterfaceGridEntity>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     template <class GridImp_>
     friend class MMeshInterfaceGridLeafIndexSet;
@@ -191,6 +189,7 @@ namespace Dune
       return true;
     }
 
+    //! Return if this vertex is a tip
     bool isTip() const
     {
       if constexpr ( codim == dim )
@@ -310,7 +309,7 @@ namespace Dune
         DUNE_THROW( NotImplemented, "incidentInterfaceElementsEnd() for codim != dim" );
     }
 
-    //! returns the host entity
+    //! Return reference to the host entity
     const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
@@ -344,8 +343,10 @@ namespace Dune
    * For example, Entities of codimension 0 allow to visit all neighbors.
    */
   template<int dim, class GridImp>
-  class MMeshInterfaceGridEntity<0,dim,GridImp> :
-    public EntityDefaultImplementation<0,dim,GridImp, MMeshInterfaceGridEntity>
+  class MMeshInterfaceGridEntity<0,dim,GridImp>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+   : public EntityDefaultImplementation<0,dim,GridImp, MMeshInterfaceGridEntity>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 

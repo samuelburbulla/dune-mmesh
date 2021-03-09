@@ -1,13 +1,16 @@
 .. _pyreference:
 
-**********
-Python API
-**********
+******
+Python
+******
+
+In the following, we describe the additional python functionality
+that is not already part of Dune or dune-fem.
 
 .. toctree::
   :maxdepth: 1
 
-  reference/grid
-  reference/trace
-  reference/utility
-  reference/solve
+  pyreference/grid
+  pyreference/trace
+  pyreference/utility
+  pyreference/solve

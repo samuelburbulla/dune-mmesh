@@ -30,3 +30,5 @@ EXAMPLE_PATH          += @top_srcdir@/examples
 
 # We need xml output for breathe.
 GENERATE_XML = YES
+
+PREDEFINED = DOXYGEN_SHOULD_SKIP_THIS

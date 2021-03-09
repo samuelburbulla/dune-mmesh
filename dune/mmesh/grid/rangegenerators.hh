@@ -8,55 +8,55 @@
 namespace Dune
 {
   /**
-   * Incident elements range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling incidentBegin() and incidentEnd() without specifying a partition type.
-   *
+   * \brief Elements incident to a given vertex.
    */
   template<typename Vertex>
-  inline auto incidentElements(const Vertex& e)
-    -> IteratorRange<decltype(e.impl().incidentBegin())>
+  inline auto incidentElements(const Vertex& vertex)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    -> IteratorRange<decltype(vertex.impl().incidentBegin())>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     static_assert(Vertex::mydimension == 0, "Incident element range iterator is only available for vertices!");
-    return IteratorRange<decltype(e.impl().incidentBegin())>(e.impl().incidentBegin(),e.impl().incidentEnd());
+    return IteratorRange<decltype(vertex.impl().incidentBegin())>(vertex.impl().incidentBegin(),vertex.impl().incidentEnd());
   }
 
   /**
-   * Incident facets range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling incidentFacetsBegin() and incidentFacetsEnd() without specifying a partition type.
-   *
+   * \brief Facets incident to a given vertex.
    */
   template<typename Vertex>
-  inline auto incidentFacets(const Vertex& e)
-    -> IteratorRange<decltype(e.impl().incidentFacetsBegin())>
+  inline auto incidentFacets(const Vertex& vertex)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    -> IteratorRange<decltype(vertex.impl().incidentFacetsBegin())>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     static_assert(Vertex::mydimension == 0, "Incident facet range iterator is only available for vertices!");
-    return IteratorRange<decltype(e.impl().incidentFacetsBegin())>(e.impl().incidentFacetsBegin(),e.impl().incidentFacetsEnd());
+    return IteratorRange<decltype(vertex.impl().incidentFacetsBegin())>(vertex.impl().incidentFacetsBegin(),vertex.impl().incidentFacetsEnd());
   }
 
   /**
-   * Incident vertices range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling incidentVerticesBegin() and incidentVerticesEnd() without specifying a partition type.
-   *
+   * \brief Vertices incident to a given vertex.
    */
   template<typename Vertex>
-  inline auto incidentVertices(const Vertex& e, bool includeInfinite = false)
-    -> IteratorRange<decltype(e.impl().incidentVerticesBegin( includeInfinite ))>
+  inline auto incidentVertices(const Vertex& vertex, bool includeInfinite = false)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    -> IteratorRange<decltype(vertex.impl().incidentVerticesBegin( includeInfinite ))>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     static_assert(Vertex::mydimension == 0, "Incident vertices range iterator is only available for vertices!");
-    return IteratorRange<decltype(e.impl().incidentVerticesBegin( includeInfinite ))>(
-      e.impl().incidentVerticesBegin( includeInfinite ),
-      e.impl().incidentVerticesEnd( includeInfinite )
+    return IteratorRange<decltype(vertex.impl().incidentVerticesBegin( includeInfinite ))>(
+      vertex.impl().incidentVerticesBegin( includeInfinite ),
+      vertex.impl().incidentVerticesEnd( includeInfinite )
     );
   }
 
   /**
-   * Interface elements range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling interfaceBegin() and interfaceEnd() without specifying a partition type.
-   *
+   * \brief All interface elements.
    */
   template<typename GridView, int codim = 1>
   inline auto interfaceElements(const GridView& gv, bool includeBoundary = false)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     -> IteratorRange<decltype(gv.grid().template interfaceBegin<codim>( includeBoundary ))>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     return IteratorRange<decltype(gv.grid().template interfaceBegin<codim>( includeBoundary ))>(
       gv.grid().template interfaceBegin<codim>( includeBoundary ),
@@ -65,13 +65,13 @@ namespace Dune
   }
 
   /**
-   * Interface vertices range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling interfaceVerticesBegin() and interfaceVerticesEnd() without specifying a partition type.
-   *
+   * \brief All interface vertices.
    */
   template<typename GridView>
   inline auto interfaceVertices(const GridView& gv, bool includeBoundary = false)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
     -> IteratorRange<decltype(gv.grid().interfaceVerticesBegin( includeBoundary ))>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     return IteratorRange<decltype(gv.grid().interfaceVerticesBegin( includeBoundary ))>(
       gv.grid().interfaceVerticesBegin( includeBoundary ),
@@ -80,34 +80,34 @@ namespace Dune
   }
 
   /**
-   * Incident interface vertices range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling incidentInterfaceVerticesBegin() and incidentInterfaceVerticesEnd() without specifying a partition type.
-   *
+   * \brief Incident interface vertices.
    */
   template<typename Vertex>
-  inline auto incidentInterfaceVertices(const Vertex& e)
-    -> IteratorRange<decltype(e.impl().incidentInterfaceVerticesBegin())>
+  inline auto incidentInterfaceVertices(const Vertex& vertex)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    -> IteratorRange<decltype(vertex.impl().incidentInterfaceVerticesBegin())>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     static_assert(Vertex::mydimension == 0, "Incident interface vertices range iterator is only available for interface vertices!");
-    return IteratorRange<decltype(e.impl().incidentInterfaceVerticesBegin())>(
-      e.impl().incidentInterfaceVerticesBegin(),
-      e.impl().incidentInterfaceVerticesEnd()
+    return IteratorRange<decltype(vertex.impl().incidentInterfaceVerticesBegin())>(
+      vertex.impl().incidentInterfaceVerticesBegin(),
+      vertex.impl().incidentInterfaceVerticesEnd()
     );
   }
 
   /**
-   * Incident interface elements range implementation without PartitionSet parameter. The default implementation obtains the
-   * iterators by calling incidentInterfaceElementsBegin() and incidentInterfaceElementsEnd() without specifying a partition type.
-   *
+   * \brief Incident interface elements.
    */
   template<typename Vertex>
-  inline auto incidentInterfaceElements(const Vertex& e)
-    -> IteratorRange<decltype(e.impl().incidentInterfaceElementsBegin())>
+  inline auto incidentInterfaceElements(const Vertex& vertex)
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+    -> IteratorRange<decltype(vertex.impl().incidentInterfaceElementsBegin())>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     static_assert(Vertex::mydimension == 0, "Incident interface vertices range iterator is only available for interface vertices!");
-    return IteratorRange<decltype(e.impl().incidentInterfaceElementsBegin())>(
-      e.impl().incidentInterfaceElementsBegin(),
-      e.impl().incidentInterfaceElementsEnd()
+    return IteratorRange<decltype(vertex.impl().incidentInterfaceElementsBegin())>(
+      vertex.impl().incidentInterfaceElementsBegin(),
+      vertex.impl().incidentInterfaceElementsEnd()
     );
   }
 

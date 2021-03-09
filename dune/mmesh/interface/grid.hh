@@ -80,14 +80,14 @@ namespace Dune
    * \brief Provides a DUNE grid interface class for the interface of a MMesh interface grid
    * \ingroup GridImplementations
    * \ingroup MMeshInterfaceGrid
-   *
-   * \tparam MMesh The MMesh grid type for which this MMeshInterfaceGrid implements the interface grid
    */
   template <class MMesh>
   class MMeshInterfaceGrid
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
    : public GridDefaultImplementation< MMesh::dimension-1, MMesh::dimension,
                                        typename MMesh::FieldType,
                                        MMeshInterfaceGridFamily<MMesh> >
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
   public:
     static constexpr int dimension = MMesh::dimension-1;
@@ -146,15 +146,12 @@ namespace Dune
     using Vertex = typename Traits::template Codim<dimension>::Entity;
 
     //! The type of a connected component
-    using ConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension, const GridImp>;
+    using ConnectedComponent = MMeshInterfaceConnectedComponent<const GridImp>;
 
     //! The type of the default remeshing indicator
     using RemeshingIndicator = RatioIndicator<GridImp>;
 
-    /** \brief Constructor
-     *
-     * \param hostgrid The host grid wrapped by the MMesh
-     */
+    //! Constructor
     explicit MMeshInterfaceGrid(MMesh* mMesh, BoundarySegments boundarySegments = {})
      : mMesh_(mMesh),
        boundarySegments_(boundarySegments),
@@ -348,7 +345,7 @@ namespace Dune
           mark( 1, element );
 
         preAdapt();
-        adapt(false);
+        adapt();
         postAdapt();
       }
     }
@@ -387,12 +384,14 @@ namespace Dune
       return mark_.size() > 0;
     }
 
-    //! Triggers the grid refinement process
-    bool adapt(bool buildComponents = true)
+    /** \brief Triggers the grid adaptation process
+      * \return if triangulation has changed
+      * \note Refers to the adapt() of the underlying MMesh
+      *       because it will definitely change as well
+      */
+    bool adapt()
     {
-      // refer to the adapt() function of the underlying mMesh
-      // because the mMesh_ will definitely change as well
-      return mMesh_->adapt(buildComponents);
+      return mMesh_->adapt();
     }
 
     //! Callback for the grid adaptation process with restrict/prolong
@@ -600,11 +599,13 @@ namespace Dune
       leafIndexSet_->update(this);
     }
 
+    //! Return reference to MMesh
     const MMesh& getMMesh() const
     {
       return *mMesh_;
     }
 
+    //! Return reference to underlying CGAL triangulation
     const HostGridType& getHostGrid() const
     {
       return mMesh_->getHostGrid();

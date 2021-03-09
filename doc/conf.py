@@ -36,6 +36,7 @@ extensions = [
   "sphinx.ext.autodoc",
   "sphinx.ext.mathjax",
   "sphinx.ext.viewcode",
+  "sphinx_rtd_theme",
   "breathe",
   "nbsphinx",
   "sphinxcontrib.tikz",
@@ -49,8 +50,8 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml" }
-# breathe_default_project = 'dune-mmesh'
+breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml/" }
+breathe_default_project = 'dune-mmesh'
 
 tikz_proc_suite = 'GhostScript'
 
@@ -60,9 +61,8 @@ nbsphinx_execute = 'never'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
+
 html_theme = "sphinx_rtd_theme"
-html_favicon = "favicon.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
