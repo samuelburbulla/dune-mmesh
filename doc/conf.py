@@ -83,4 +83,5 @@ latex_elements = {
 \newcommand{\rdblbrace}{\}\mskip-5mu\}}
 \newcommand{\avg}[1]{\ldblbrace #1 \rdblbrace}
 ''',
+    'printindex': '',
 }

@@ -10,13 +10,15 @@ In spatial dimension two, arbitrary movement of vertices is enhanced with a reme
 that implements non-hierarchical adaptation procedures.
 
 .. toctree::
+  :hidden:
   :maxdepth: 1
   :caption: First steps
 
   introduction
-  quickstart
+  installation
 
 .. toctree::
+  :hidden:
   :maxdepth: 1
   :caption: Next steps
 
@@ -24,6 +26,7 @@ that implements non-hierarchical adaptation procedures.
   examples
 
 .. toctree::
+  :hidden:
   :maxdepth: 1
   :caption: API Reference
 
@@ -31,6 +34,7 @@ that implements non-hierarchical adaptation procedures.
   cppreference
 
 .. toctree::
+  :hidden:
   :maxdepth: 1
   :caption: Appendix
 

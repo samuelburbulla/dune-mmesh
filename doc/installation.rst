@@ -1,0 +1,56 @@
+.. _installation:
+
+************
+Installation
+************
+
+In order to install and use Dune-MMesh you need
+a recent C++ compiler (at least C++17 compatible), Python (3.7 or later)
+and `CGAL <https://www.cgal.org>`_ (5.1 or later). There are two different ways of installing Dune-MMesh.
+
+Using Pip
+---------
+
+The easiest way to install Dune-MMesh is using pip and the package uploaded to `PyPI <https://pypi.org/project/dune-mmesh/>`_.
+
+We strongly recommend the usage of a virtual environment.
+
+.. code-block:: bash
+
+  python3 -m venv dune-env
+  source dune-env/bin/activate
+
+Then download and build Dune-MMesh and its dependencies.
+
+.. code-block:: bash
+
+  pip install dune-mmesh
+
+Note that this takes some time in order to compile all dependent Dune modules.
+
+
+From Source
+-----------
+
+You can install Dune-MMesh from source to get full access to the source code.
+It also enables git support if you want to contribute.
+
+Clone the required Dune modules `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,
+`dune-geometry <https://gitlab.dune-project.org/core/dune-geometry.git>`_,
+`dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_ and
+`dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_.
+
+.. code-block:: bash
+
+  git clone https://gitlab.dune-project.org/core/dune-common.git
+  git clone https://gitlab.dune-project.org/core/dune-geometry.git
+  git clone https://gitlab.dune-project.org/core/dune-grid.git
+  git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git
+  git clone https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git
+
+In a virtual environment build the modules and install the python bindings.
+
+.. code-block:: bash
+
+  ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
+  ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts make install_python

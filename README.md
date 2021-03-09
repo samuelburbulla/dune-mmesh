@@ -14,8 +14,6 @@ Additionally, you'll need a current version of `CGAL` installed on your system.
 Examples
 --------
 
-See the `examples` folder for some code snippets or use `python -m dune.mmesh` to obtain a tutorial folder.
-
 Creating a mesh in python using a .msh file works as follows:
 ````
 from dune.mmesh import mmesh
