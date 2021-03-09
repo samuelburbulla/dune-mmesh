@@ -228,7 +228,7 @@ namespace Dune
     using InterfaceEntity = typename InterfaceGrid::Traits::template Codim<0>::Entity;
 
     //! The type of a connected component of interface grid entities
-    using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<0, dimension-1, const InterfaceGrid>;
+    using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<const InterfaceGrid>;
 
     //! The type of an id
     using IdType = MMeshImpl::MultiId;
@@ -246,7 +246,6 @@ namespace Dune
     using InterfaceRefinementStrategy = LongestEdgeRefinement<InterfaceGrid>;
 
     //! Constructor that takes a CGAL triangulation
-     */
     explicit MMesh(HostGrid hostgrid)
      : MMesh(hostgrid, {}, {}, {}, {}) {}
 

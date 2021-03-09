@@ -57,16 +57,16 @@ namespace Dune
     typedef typename GridImp::HostGridType::Vertex HostGridVertex;
 
     // type of caching entity
-    using CachingEntity = MMeshInterfaceCachingEntity< 0, dim, const GridImp >;
+    using CachingEntity = MMeshInterfaceCachingEntity< 0, GridImp::dimension, const GridImp >;
 
     // id type
     using IdType = MMeshImpl::MultiId;
 
     // vertex storage
-    using Vertices = std::array<HostGridVertex, dim+1>;
+    using Vertices = std::array<HostGridVertex, GridImp::dimension+1>;
 
   public:
-    typedef MMeshInterfaceGridGeometry<dim, dim+1, GridImp> Geometry;
+    typedef MMeshInterfaceGridGeometry<GridImp::dimension, GridImp::dimension+1, GridImp> Geometry;
 
     MMeshInterfaceConnectedComponent() {};
 
