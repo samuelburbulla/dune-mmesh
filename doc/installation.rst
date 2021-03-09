@@ -35,10 +35,11 @@ From Source
 You can install Dune-MMesh from source to get full access to the source code.
 It also enables git support if you want to contribute.
 
-Clone the required Dune modules `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,
+Clone the Dune modules `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,
 `dune-geometry <https://gitlab.dune-project.org/core/dune-geometry.git>`_,
-`dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_ and
-`dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_.
+`dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_,
+`dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_
+and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>`_.
 
 .. code-block:: bash
 

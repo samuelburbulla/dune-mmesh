@@ -54,6 +54,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 tikz_proc_suite = 'GhostScript'
 
+nbsphinx_execute = 'never'
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

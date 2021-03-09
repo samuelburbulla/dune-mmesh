@@ -1,8 +1,8 @@
 .. _cppreference:
 
-***
-C++
-***
+*******
+C++ API
+*******
 
 .. toctree::
   :maxdepth: 1

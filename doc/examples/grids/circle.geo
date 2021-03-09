@@ -1,5 +1,5 @@
 lc = 0.1;
-lcf = 0.025;
+lcf = 0.05;
 
 // Domain
 Point(1) = {0, 0, 0, lc};

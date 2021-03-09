@@ -1,8 +1,8 @@
 .. _pyreference:
 
-******
-Python
-******
+**********
+Python API
+**********
 
 .. toctree::
   :maxdepth: 1
@@ -10,3 +10,4 @@ Python
   reference/grid
   reference/trace
   reference/utility
+  reference/solve
