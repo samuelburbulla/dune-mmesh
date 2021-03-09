@@ -1,7 +1,7 @@
 # A rectangle grid with a horizontal centered interface
 name = "rayleigh.msh"
-h = 0.1
-hf = 0.1
+h = 0.05
+hf = 0.025
 
 import gmsh
 gmsh.initialize()
