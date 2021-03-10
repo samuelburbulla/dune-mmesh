@@ -1,5 +1,10 @@
-.. tikz:: An example for a conforming triangulation.
-    
+.. tikz:: A domain with a T-shaped interface and an example for a conforming triangulation.
+
+  \draw (-4,0) node[anchor=south west]{$\Omega$} rectangle (-1,3);
+  \draw[thick] (-3,1) -- (-2.5,1.5);
+  \draw[thick] (-2.5,1.5) -- (-2,2) node[anchor=south west]{$\Gamma$};
+  \draw[thick] (-2.5,1.5) -- (-2,1);
+
   \coordinate (1) at (0,0);
   \coordinate (2) at (3,0);
   \coordinate (3) at (3,3);

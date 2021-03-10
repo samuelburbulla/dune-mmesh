@@ -1,6 +1,6 @@
 name = 'grid.msh'
 
-tikz = [".. tikz:: An example for a conforming triangulation.", "  "]
+tikz = []
 readNodes = False
 readElements = False
 edges = set()
@@ -41,6 +41,6 @@ for line in file.readlines():
             if int(p) >= 10:
                 tikz += ['\draw[very thick] ('+a+') -- ('+b+');']
 
-out = open(name+'.rst', 'w')
-out.write("\n  ".join(tikz))
+out = open(name+'.tikz', 'w')
+out.write("\n".join(tikz))
 out.close()
