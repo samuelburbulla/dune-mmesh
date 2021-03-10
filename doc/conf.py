@@ -54,6 +54,7 @@ breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml/" }
 breathe_default_project = 'dune-mmesh'
 
 tikz_proc_suite = 'GhostScript'
+tikz_tikzlibraries = 'calc'
 
 nbsphinx_execute = 'never'
 
