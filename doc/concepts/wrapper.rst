@@ -4,7 +4,7 @@
 CGAL Wrapper
 ************
 
-In its core, Dune-MMesh is a wrapper of CGAL (Delaunay) Triangulations in :math:`\mathbb{R}^d, d = 2, 3,`
+In its core, Dune-MMesh is a wrapper of CGAL Triangulations in :math:`\mathbb{R}^d, d = 2, 3,`
 that implements the Dune grid interface.
 Therefore, it is essential to understand how CGAL triangulation objects are translated into Dune entities.
 
@@ -21,26 +21,27 @@ opposite to the vertex with index :math:`i`. Remark that a facet has two implici
 For :math:`d=3`, edges are represented by triples of a cell :math:`c` and
 two indices :math:`i` and :math:`j` that indicate the two vertices of the edge.
 
-.. tikz:: CGAL representation of cells.
+.. tikz:: CGAL representation of cells and differing Dune numbering in brackets.
 
   \tikzset{vertex/.style={circle, fill=white, draw, inner sep=1pt}}
   \tikzset{edge/.style={midway, sloped, circle, fill=white, inner sep=1pt}}
 
   \draw[thick] (0,0) node[vertex] {\tiny 0}
-    -- (2,0) node[vertex] {\tiny 1} node[edge] {\tiny 2}
-    -- (0,2) node[vertex] {\tiny 2} node[edge] {\tiny 0}
-    -- (0,0) node[edge] {\tiny 1};
+    -- (2,0) node[vertex] {\tiny 1} node[edge] {\tiny 2(1)}
+    -- (0,2) node[vertex] {\tiny 2} node[edge] {\tiny 0(2)}
+    -- (0,0) node[edge] {\tiny 1(1)};
 
-  \draw[thick] (4.5,0) node[vertex] {\tiny 0}
-    -- (7,0) node[vertex] {\tiny 1}
-    -- (5.5,1) node[vertex] {\tiny 2}
-    -- (4.5,0)
-    -- (5,2.5) node[vertex] {\tiny 3}
-    -- (7,0) -- (5,2.5) -- (5.5,1);
-  \node at (5.5,0.4) {\tiny 3};
-  \node at (5.05,1.2) {\tiny 1};
-  \node at (5.8,1.2) {\tiny 0};
-  \node at (4.9,0.15) {\tiny 2};
+  \draw[thick] (4.5,-0.1) node[vertex] {\tiny 0}
+    -- (7,0) node[vertex] {\tiny 1} node[edge] {\tiny (0)}
+    -- (5.5,0.7) node[vertex] {\tiny 2} node[edge] {\tiny (2)}
+    -- (4.5,-0.1) node[edge] {\tiny (1)}
+    -- (5.3,2.5) node[vertex] {\tiny 3} node[edge] {\tiny (3)}
+    -- (7,0) node[edge] {\tiny (4)}
+    -- (5.3,2.5) -- (5.5,0.7) node[edge] {\tiny (5)};
+  \node at (5.6,0.3) {\tiny 3(0)};
+  \node at (5.1,0.9) {\tiny 1(2)};
+  \node at (5.8,1) {\tiny 0(3)};
+  \node at (5.05,-0.25) {\tiny 2(1)};
 
 In order to match the Dune grid interface we have to follow the reference element numbering.
 Fortunately, the vertex numbering of cells can be retained.
@@ -48,27 +49,6 @@ However, each facet :math:`i` of the CGAL representation corresponds to the codi
 For the representation of Dune intersections we can directly use CGAL's cell-index representation of facets
 which is already equipped with an orientation.
 With this reference mapping all geometry and sub-entity objects of the Dune grid interface can be specified.
-
-..  tikz:: Dune representation of codim-0-entities.
-
-   \tikzset{vertex/.style={circle, fill=white, draw, inner sep=1pt}}
-   \tikzset{edge/.style={midway, sloped, circle, fill=white, inner sep=1pt}}
-
-   \draw[thick] (0,0) node[vertex] {\tiny 0}
-     -- (2,0) node[vertex] {\tiny 1} node[edge] {\tiny 0}
-     -- (0,2) node[vertex] {\tiny 2} node[edge] {\tiny 2}
-     -- (0,0) node[edge] {\tiny 1};
-
-   \draw[thick] (4.5,0) node[vertex] {\tiny 0}
-     -- (7,0) node[vertex] {\tiny 1}
-     -- (5.5,1) node[vertex] {\tiny 2}
-     -- (4.5,0)
-     -- (5,2.5) node[vertex] {\tiny 3}
-     -- (7,0) -- (5,2.5) -- (5.5,1);
-   \node at (5.5,0.4) {\tiny 0};
-   \node at (5.05,1.2) {\tiny 2};
-   \node at (5.8,1.2) {\tiny 3};
-   \node at (4.9,0.15) {\tiny 1};
 
 
 Various iterators of CGAL triangulations can directly by used to construct the Dune grid range generators.
