@@ -1,0 +1,3 @@
+breathe
+nbsphinx
+sphinxcontrib-tikz
