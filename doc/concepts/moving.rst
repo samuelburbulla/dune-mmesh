@@ -13,7 +13,7 @@ Therefore, Dune-MMesh implements the method
 
 .. code-block:: cpp
 
-  moveInterface(std::vector<GlobalCoordinate> shifts)
+  moveInterface(shifts)
 
 that takes a vector of shift coordinates indexed by interface vertex indices.
 The shifts are simply used to update the vertex position coordinates.
@@ -76,7 +76,7 @@ In advance of moving, the method
 
 .. code-block:: cpp
 
-  ensureInterfaceMovement(std::vector<GlobalCoordinate> shifts)
+  ensureInterfaceMovement(shifts)
 
 (respectively :code:`ensureVertexMovement`) can be called to prepare Dune-MMesh for moving the vertices.
 The routine checks for presumbly degenerate cells and marks them for coarsening. Hence, they will be removed during adaptation.
