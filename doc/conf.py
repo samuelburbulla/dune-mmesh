@@ -12,8 +12,8 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../python/dune/'))
-
+import subprocess
+sys.path.insert(0, os.path.abspath('../python/'))
 
 # -- Project information -----------------------------------------------------
 
@@ -26,6 +26,8 @@ release = '1.2'
 
 
 # -- General configuration ---------------------------------------------------
+
+autodoc_mock_imports = ["dune.generator"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -50,7 +52,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-breathe_projects = { "dune-mmesh": "../build-cmake/doc/doxygen/xml/" }
+breathe_projects = { "dune-mmesh": "xml" }
 breathe_default_project = 'dune-mmesh'
 
 tikz_proc_suite = 'GhostScript'
@@ -79,12 +81,14 @@ latex_toplevel_sectioning = 'section'
 latex_elements = {
     'tableofcontents': '',
     'preamble': r'''
-\newcommand{\llbracket}{[\mskip-5mu[}
-\newcommand{\rrbracket}{]\mskip-5mu]}
-\newcommand{\jump}[1]{\llbracket #1 \rrbracket}
-\newcommand{\ldblbrace}{\{\mskip-5mu\{}
-\newcommand{\rdblbrace}{\}\mskip-5mu\}}
-\newcommand{\avg}[1]{\ldblbrace #1 \rdblbrace}
+\newcommand{\jump}[1]{[\mskip-5mu[ #1 ]\mskip-5mu]}
+\newcommand{\avg}[1]{\{\mskip-5mu\{ #1 \}\mskip-5mu\}}
 ''',
     'printindex': '',
 }
+
+def generate_doxygen_xml(app):
+    subprocess.call(["doxygen", "doxygen/Doxyfile"], cwd=app.confdir)
+
+def setup(app):
+    app.connect("builder-inited", generate_doxygen_xml)

@@ -39,6 +39,8 @@ that implements non-hierarchical adaptation procedures.
   :caption: Appendix
 
   acknowledgements
+  contribute
+
 
 .. [BBD+21] P. Bastian, M. Blatt, A. Dedner, N.-A. Dreier, C. Engwer, R. Fritze, C. Gräser, C. Grüninger, D. Kempf, R. Klöfkorn, M. Ohlberger, O. Sander. The DUNE framework: Basic concepts and recent developments. Computers & Mathematics with Applications 81, 2021, pp. 75-112.
 
