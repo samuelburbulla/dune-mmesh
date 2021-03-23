@@ -45,8 +45,8 @@ def trace(bulkFunction, igrid=None):
         igrid (InterfaceGrid, optional): The interface grid.
 
     Returns:
-        Trace representation of given interface function.
-        This function can be restricted to positive ('+') and negative side ('-').
+        Trace representation of a given interface function.
+        This function has to be restricted to positive ('+') or negative side ('-').
     """
     if igrid == None:
       igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid

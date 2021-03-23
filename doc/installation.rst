@@ -6,7 +6,9 @@ Installation
 
 In order to install and use Dune-MMesh you need
 a recent C++ compiler (at least C++17 compatible), Python (3.7 or later)
-and `CGAL <https://www.cgal.org>`_ (5.1 or later). There are two different ways of installing Dune-MMesh.
+and `CGAL <https://www.cgal.org>`_ (5.1 or later).
+
+There are two ways of installing Dune-MMesh.
 
 Using Pip
 ---------
