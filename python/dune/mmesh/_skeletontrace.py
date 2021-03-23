@@ -5,11 +5,19 @@ import hashlib
 
 from dune.generator.generator import SimpleGenerator
 
-
-################################################################################
-# Skeleton function
-################################################################################
 def skeleton(interfaceFunction, grid=None):
+    """Return the skeleton representation of a discrete function on the interface grid.
+
+    Args:
+        interfaceFunction: The discrete function on the interface grid.
+        grid (Grid, optional): The bulk grid. Necessary, if wrapped.
+
+    Returns:
+        Skeleton representation of given interface function.
+
+    Note:
+        This function has to be restricted when evaluated on facets, e.g. using avg(skeleton).
+    """
     if grid == None:
         grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
 
@@ -27,13 +35,19 @@ def skeleton(interfaceFunction, grid=None):
 
     interfaceFunction.skeleton = skeleton
     return skeleton
-################################################################################
 
 
-################################################################################
-# Trace function
-################################################################################
 def trace(bulkFunction, igrid=None):
+    """Return the trace representation of a discrete function on the bulk grid.
+
+    Args:
+        bulkFunction: The discrete function on the bulk grid.
+        igrid (InterfaceGrid, optional): The interface grid.
+
+    Returns:
+        Trace representation of given interface function.
+        This function can be restricted to positive ('+') and negative side ('-').
+    """
     if igrid == None:
       igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
 

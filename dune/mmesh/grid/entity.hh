@@ -43,13 +43,12 @@ namespace Dune
   /** \brief The implementation of entities in a MMesh
    *   \ingroup MMesh
    *
-   *  A Grid is a container of grid entities. An entity is parametrized by the codimension.
-   *  An entity of codimension c in dimension d is a d-c dimensional object.
-   *
    */
   template<int codim, int dim, class GridImp>
-  class MMeshEntity :
-    public EntityDefaultImplementation <codim,dim,GridImp,MMeshEntity>
+  class MMeshEntity
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+   : public EntityDefaultImplementation <codim,dim,GridImp,MMeshEntity>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     template <class GridImp_>
     friend class MMeshLeafIndexSet;
@@ -402,16 +401,15 @@ namespace Dune
   //  --MMeshEntity
   //
   //***********************
-  /** \brief Specialization for codim-0-entities.
+  /** \brief The implementation of entities in MMesh
    * \ingroup MMesh
    *
-   * This class embodies the topological parts of elements of the grid.
-   * It has an extended interface compared to the general entity class.
-   * For example, Entities of codimension 0 allow to visit all neighbors.
    */
   template<int dim, class GridImp>
-  class MMeshEntity<0,dim,GridImp> :
-    public EntityDefaultImplementation<0,dim,GridImp, MMeshEntity>
+  class MMeshEntity<0,dim,GridImp>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+   : public EntityDefaultImplementation<0,dim,GridImp, MMeshEntity>
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
     friend struct HostGridAccess< typename std::remove_const< GridImp >::type >;
 
@@ -543,7 +541,8 @@ namespace Dune
       return false;
     }
 
-    //! returns the connected component as father entity
+    /* \brief Returns the connected component
+     */
     const ConnectedComponent& connectedComponent () const
     {
       assert( isNew() == true );
@@ -756,31 +755,31 @@ namespace Dune
       return GeometryTypes::simplex(dim);
     }
 
-    //! return domain marker of entity
+    //! Return domain marker of entity
     std::size_t domainMarker() const
     {
       return hostEntity_->info().domainMarker;
     }
 
-    //! returns the host entity
+    //! Return the host entity
     const HostGridEntity& hostEntity () const
     {
       return hostEntity_;
     }
 
-    //! returns the host entity
+    //! Return the host entity
     HostGridEntity& hostEntity ()
     {
       return hostEntity_;
     }
 
-    //! returns the host grid
+    //! Return the host grid
     const GridImp& grid () const
     {
       return *mMesh_;
     }
 
-    //! returns id computed by vertex ids
+    //! Return id computed by vertex ids
     IdType id() const
     {
       // cache id

@@ -6,3 +6,7 @@ add_python_targets(mmesh
   _solve
   _utility
 )
+
+dune_symlink_to_source_files(FILES
+  tutorial
+)

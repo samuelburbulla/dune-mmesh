@@ -1,10 +1,11 @@
-lc = 1;
-lcf = 1./32.;
+lc = 0.1;
+lcf = 0.05;
+lcg = 1.3;
 
 // domain corners
 Point(1) = {0, 0, 0, lc};
 Point(2) = {1, 0, 0, lc};
-Point(3) = {1, 0.5, 0, lcf};
+Point(3) = {1, 0.5, 0, lcg};
 Point(4) = {1, 1, 0, lc};
 Point(5) = {0, 1, 0, lc};
 Point(6) = {0, 0.5, 0, lcf};

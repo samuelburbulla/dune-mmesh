@@ -46,11 +46,66 @@ namespace Dune
       MMeshImpl::MultiId id ( {42, 42, 42} );
       this->data_.insert( std::make_pair( id, value ) );
 
+      // add one id for a codim 1 entity during adaptation
+      MMeshImpl::MultiId eid ( {42, 42} );
+      this->data_.insert( std::make_pair( eid, value ) );
+
       // add one id for caching vertices during adaptation
       auto vh = this->grid_->getHostGrid().infinite_vertex();
       MMeshImpl::MultiId vid ( vh->info().id );
       this->data_.insert( std::make_pair( vid, value ) );
-      // TODO should add three different caching vertices
+
+      // create empty map, but keep old data
+      Map data;
+
+      // add new entries
+      this->template migrateLevel< codim >( 0, value, data, hasEntity );
+    }
+  };
+
+  template< class MMesh, class T >
+  class PersistentContainer< MMeshInterfaceGrid< MMesh >, T >
+    : public Dune::PersistentContainerMap<
+        MMeshInterfaceGrid< MMesh >,
+        typename MMeshInterfaceGrid< MMesh >::LocalIdSet,
+        std::map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > >
+  {
+    typedef MMeshInterfaceGrid< MMesh > G;
+    typedef PersistentContainerMap< G, typename G::LocalIdSet, std::map< typename G::LocalIdSet::IdType, T > > Base;
+    typedef typename MMeshInterfaceGrid< MMesh >::LocalIdSet IdSet;
+    typedef std::map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > Map;
+
+  public:
+    typedef typename Base::Grid Grid;
+    typedef typename Base::Value Value;
+
+    PersistentContainer ( const Grid &grid, int codim, const Value &value = Value() )
+      : Base( grid, codim, grid.localIdSet(), value )
+    {}
+
+    using Base::codimension;
+    using Base::migrateLevel;
+
+    void resize ( const Value &value = Value() )
+    {
+      Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
+        [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+    }
+
+    template< int codim >
+    void resize ( const Value &value )
+    {
+      std::integral_constant< bool, Capabilities::hasEntity< Grid, codim >::v > hasEntity;
+      assert( codim == codimension() );
+
+      // add one id for caching entity during adaptation
+      MMeshImpl::MultiId id ( {42, 42} );
+      this->data_.insert( std::make_pair( id, value ) );
+
+      // add one id for caching vertices during adaptation
+      auto vh = this->grid_->getHostGrid().infinite_vertex();
+      MMeshImpl::MultiId vid ( vh->info().id );
+      this->data_.insert( std::make_pair( vid, value ) );
 
       // create empty map, but keep old data
       Map data;

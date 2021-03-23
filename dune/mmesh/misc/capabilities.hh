@@ -38,6 +38,18 @@ namespace Dune
         static const bool v = true;
       };
 
+      template< class MMesh >
+      struct supportsCallbackAdaptation< MMeshInterfaceGrid< MMesh > >
+      {
+        static const bool v = true;
+      };
+
+      template< class MMesh >
+      struct isLocallyAdaptive< MMeshInterfaceGrid< MMesh > >
+      {
+        static const bool v = true;
+      };
+
     } // namespace Capabilities
 
   } // namespace Fem

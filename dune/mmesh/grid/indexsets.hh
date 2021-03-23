@@ -376,7 +376,11 @@ namespace Dune
       switch( codim )
       {
         case 0: return id<0>( e.impl().template subEntity<0>( i ) );
-        case 1: return id<1>( e.impl().template subEntity<1>( i ) );
+        case 1:
+          if ( e.isLeaf() )
+            return id<1>( e.impl().template subEntity<1>( i ) );
+          else // we have no codim 1 for caching entities
+            return IdType( {42, 42} );
         case 2: return id<2>( e.impl().template subEntity<2>( i ) );
       };
       return IdType();

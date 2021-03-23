@@ -79,6 +79,8 @@ namespace Dune
         using Element = typename Grid::template Codim< 0 >::Entity;
         using Intersection = typename Grid::Intersection;
         using InterfaceEntity = typename Grid::InterfaceEntity;
+        using InterfaceGrid = typename Grid::InterfaceGrid;
+        using InterfaceVertex = typename InterfaceGrid::template Codim< InterfaceGrid::dimension >::Entity;;
         using FieldVector = Dune::FieldVector< double, d >;
 
         cls.def( "preAdapt", [] ( Grid &self ) {
@@ -149,6 +151,13 @@ namespace Dune
         },
         R"doc(
           Remove adaption markers and connected components
+        )doc" );
+
+        cls.def( "isTip", [] ( Grid &self, const InterfaceVertex& interfaceVertex ) {
+          return interfaceVertex.impl().isTip();
+        },
+        R"doc(
+          Return if interface vertex is a tip
         )doc" );
       }
 

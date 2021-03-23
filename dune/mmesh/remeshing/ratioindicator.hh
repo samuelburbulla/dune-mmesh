@@ -19,7 +19,7 @@ namespace Dune
 
 /*!
  * \ingroup MMesh Adaptive
- * \brief   Class defining an indicator for grid remeshing regarding the ratio of outer to inner sphere radius (normalized by factor 1/dimension).
+ * \brief   Class defining an indicator for grid remeshing regarding the edge length ratio.
  *          By default, we take 2x length of the longest edge contained in the interface as maximal edge length and 0.5x length of the shortest edge as minimal edge length.
  */
 template<class Grid>
@@ -33,7 +33,9 @@ public:
     /*!
      * \brief Calculates the indicator for each grid cell.
      *
-     * \param h        The objective edge length (aims at edge length in [h/4, 2*h])
+     * \param h                The objective edge length (aims at edge length in [h/4, 2*h]).
+     * \param distProportion   Cells with distance to interface of value greater than distProportion * max(dist) are refined to ...
+     * \param factor           ... edge length in [factor * minH, factor * maxH].
      */
     RatioIndicator( ctype h = 0.0, ctype distProportion = 1.0, ctype factor = 1.0 )
      : edgeRatio_( 4. ),                  // the edge ratio. Decreases minH!
@@ -46,11 +48,7 @@ public:
        factor_( factor )                  // ... edge length in [factor * minH_, factor * maxH_]
     {}
 
-    /*!
-     * \brief Calculates minH_ and maxH_ for the current interface edge length and sets factor_ to maxh / minh.
-     *
-     * \param grid     The grid implementation
-     */
+    //! Calculates minH_ and maxH_ for the current interface edge length and sets factor_ to maxh / minh.
     void init(const Grid& grid)
     {
       maxH_ = 0.0;
@@ -91,13 +89,11 @@ public:
     }
 
     /*!
-     * \brief function call operator to return mark
+     * \brief Function call operator to return mark
      *
-     * \return  1 if an element should be refined
-     *         -1 if an element should be coarsened
-     *          0 otherwise
-     *
-     * \param element A grid element
+     * \return  1 if an element should be refined,
+     *         -1 if an element should be coarsened,
+     *          0 otherwise.
      */
     template< class Element >
     int operator() (const Element& element) const
@@ -166,21 +162,25 @@ public:
       return edgeRatio_;
     }
 
+    //! Returns maxH
     ctype maxH () const
     {
       return maxH_;
     }
 
+    //! Returns reference to maxH
     ctype& maxH ()
     {
       return maxH_;
     }
 
+    //! Returns minH
     ctype minH () const
     {
       return minH_;
     }
 
+    //! Returns reference to minH
     ctype& minH ()
     {
       return minH_;
@@ -191,11 +191,13 @@ public:
       return radiusRatio_;
     }
 
+    //! Returns reference to distProportion
     ctype& distProportion ()
     {
       return distProportion_;
     }
 
+    //! Returns reference to factor
     ctype& factor ()
     {
       return factor_;

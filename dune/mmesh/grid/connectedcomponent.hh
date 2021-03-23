@@ -93,11 +93,13 @@ namespace Dune
       return entities_;
     }
 
+    //! Return list of caching entities in this component
     const std::list< CachingEntity >& children() const
     {
       return entities();
     }
 
+    //! Return number of caching entities in this component
     const std::size_t size() const
     {
       return entities_.size();

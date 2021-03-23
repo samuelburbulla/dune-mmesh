@@ -28,9 +28,8 @@ namespace Dune
    *  The connected component copies the vertex coordinates and ids.
    *
    */
-  template<int dim, class GridImp>
-  class MMeshInterfaceConnectedComponent<0,dim,GridImp> :
-    public EntityDefaultImplementation <0,dim,GridImp,MMeshInterfaceConnectedComponent>
+  template<class GridImp>
+  class MMeshInterfaceConnectedComponent
   {
     template <class GridImp_>
     friend class MMeshInterfaceGridLeafIndexSet;
@@ -43,7 +42,7 @@ namespace Dune
 
   private:
     // this type
-    typedef MMeshInterfaceConnectedComponent<0,dim,GridImp> ThisType;
+    typedef MMeshInterfaceConnectedComponent<GridImp> ThisType;
 
     // type of scalars
     typedef typename GridImp::ctype ctype;
@@ -58,16 +57,16 @@ namespace Dune
     typedef typename GridImp::HostGridType::Vertex HostGridVertex;
 
     // type of caching entity
-    using CachingEntity = MMeshInterfaceCachingEntity< 0, dim, const GridImp >;
+    using CachingEntity = MMeshInterfaceCachingEntity< 0, GridImp::dimension, const GridImp >;
 
     // id type
     using IdType = MMeshImpl::MultiId;
 
     // vertex storage
-    using Vertices = std::array<HostGridVertex, dim+1>;
+    using Vertices = std::array<HostGridVertex, GridImp::dimension+1>;
 
   public:
-    typedef MMeshInterfaceGridGeometry<dim, dim+1, GridImp> Geometry;
+    typedef MMeshInterfaceGridGeometry<GridImp::dimension, GridImp::dimension+1, GridImp> Geometry;
 
     MMeshInterfaceConnectedComponent() {};
 
@@ -84,13 +83,13 @@ namespace Dune
       assert( children_.size() <= 2 ); // at the moment, more children are not supported
     }
 
-    //! Return the children of this connected component
+    //! Return list of caching entities in this component
     const std::vector<CachingEntity>& children() const
     {
       return children_;
     }
 
-    //! Return the number of children
+    //! Return number of caching entities in this component
     const std::size_t size() const
     {
       return children_.size();
