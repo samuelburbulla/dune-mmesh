@@ -179,12 +179,6 @@ int main(int argc, char *argv[])
         const auto& neighborB = is1.impl().outside();
         const auto& neighborC = is2.impl().outside();
 
-        checkProperties( "neighbors centers",
-          { { neighborA.geometry().center(), { 0.5625, 0.5625 } },
-            { neighborB.geometry().center(), { 0.625, 0.5 } },
-            { neighborC.geometry().center(), { 0.125, 0.5 } } }
-        );
-
         // check global vertex indices obtained by intersection subentities
         const auto refElement = Dune::ReferenceElements<double, 1>::general(geo.type());
 
