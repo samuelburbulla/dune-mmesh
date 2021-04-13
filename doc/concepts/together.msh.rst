@@ -1,4 +1,5 @@
 .. tikz:: A domain with a T-shaped interface and an example for a conforming triangulation.
+  :xscale: 75
 
   \draw (-4,0) node[anchor=south west]{$\Omega$} rectangle (-1,3);
   \draw[thick] (-3,1) -- (-2.5,1.5);

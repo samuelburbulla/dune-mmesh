@@ -20,6 +20,7 @@ The shifts are simply used to update the vertex position coordinates.
 
 
 .. tikz:: Moving the interface.
+  :xscale: 25
 
   \coordinate (A) at (-0.7,-0.5);
   \coordinate (B) at (1,1);
@@ -91,6 +92,7 @@ which uses a default indicator that marks elements
 for coarsening or refinement depending on their current geometrical properties.
 
 .. tikz:: Marking elements. Here, green for refinement, red for coarsening.
+  :xscale: 25
 
   \coordinate (A) at (-0.7,-0.5);
   \coordinate (B) at (1,1);
@@ -116,8 +118,9 @@ for coarsening or refinement depending on their current geometrical properties.
 
 
 This indicator considers primarily maximal and minimal edge length.
-If an edge is longer (shorter) than a maximum (minimum) edge length :math:`h_{max}` (:math:`h_{min}`),
-the cell will be marked for refine (coarsening).
+The objective edge length range between :math:`h_{max}` and :math:`h_{min}` is determined automatically at grid initialization.
+If an edge is longer than the maximum edge length :math:`h_{max}`, the cell will be marked for refine.
+If an edge is shorter than the minimum edge length :math:`h_{min}`, the cell will be marked for coarsening.
 
 Additionally, if the ratio of longest to shortest edge is larger than 4, the cell is marked for coarsening.
 The number 4 occurs from the fact that we we will use bisection and a triangle where two edges are longer then :math:`h_{max}`
@@ -144,6 +147,7 @@ After marking elements the
 routine performs the actual adaptation process.
 
 .. tikz:: Inserting and removing points.
+  :xscale: 25
 
   \coordinate (A) at (-0.7,-0.5);
   \coordinate (B) at (1,1);
@@ -193,6 +197,7 @@ the incident cells to a vertex that is to be removed.
 Though, we have to combine overlapping sets of these representatives.
 
 .. tikz:: Connected components.
+  :xscale: 25
 
   \coordinate (A) at (-0.7,-0.5);
   \coordinate (B) at (1,1);
@@ -222,3 +227,9 @@ which enables evalutation with agglomerated quadrature rules on triangles.
 Here, we prolong from an old cell onto such a cut triangle and prolong onto the new cell.
 This whole projection is performed under the hood and just assumes that you use the callback adaptation in dune-fem.
 We use a similar concept on the interface grid that enables projection of discrete functions on the interface.
+
+.. note::
+  The remeshing feature is not (yet) supported in spatial dimension three because the removal of a vertex is not
+  offered by the underlying CGAL Triangulation_3 class. In fact, it could appear that the region formed by its
+  adjacent tetrahedrons is an instance of the untetrahedralizable Schönhardt's polyhedron. In this case, the
+  removal of the vertex might be impossible without rebuilding the whole triangulation.
