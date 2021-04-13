@@ -1,4 +1,9 @@
-name = 'grid.msh'
+import sys
+
+if len(sys.argv) > 1:
+    name = sys.argv[1]
+else:
+    name = 'grid.msh'
 
 tikz = []
 readNodes = False
@@ -37,8 +42,8 @@ for line in file.readlines():
 
         # interface edges
         if len(data) == 7:
-            _, _, _, _, p, a, b = line.split(' ')
-            if int(p) >= 10:
+            _, _, _, o, p, a, b = line.split(' ')
+            if int(o) >= 10 or int(p) >= 10:
                 tikz += ['\draw[very thick] ('+a+') -- ('+b+');']
 
 out = open(name+'.tikz', 'w')

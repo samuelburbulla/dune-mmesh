@@ -1,4 +1,4 @@
-# A rectangle grid with a horizontal centered interface
+# A rectangle grid with a T-shaped junction
 
 name = "tjunction.msh"
 h = 0.1

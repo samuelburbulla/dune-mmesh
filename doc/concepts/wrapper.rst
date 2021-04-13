@@ -27,7 +27,7 @@ two indices :math:`i` and :math:`j` that indicate the two vertices of the edge.
   \tikzset{edge/.style={midway, sloped, circle, fill=white, inner sep=1pt}}
 
   \draw[thick] (0,0) node[vertex] {\tiny 0}
-    -- (2,0) node[vertex] {\tiny 1} node[edge] {\tiny 2(1)}
+    -- (2,0) node[vertex] {\tiny 1} node[edge] {\tiny 2(0)}
     -- (0,2) node[vertex] {\tiny 2} node[edge] {\tiny 0(2)}
     -- (0,0) node[edge] {\tiny 1(1)};
 

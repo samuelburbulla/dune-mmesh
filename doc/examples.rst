@@ -16,7 +16,13 @@ We implemented a few examples to display how Dune-MMesh can be used in different
   examples/poroelasticity
   examples/twophase
 
+.. toctree::
+  :maxdepth: 1
+  :hidden:
 
+  examples/grids/grids
+
+Some examples for the creation of grid files can be found in :ref:`grids`.
 
 .. [CMR+18] C. Chalons, J. Magiera, C. Rohde, M. Wiebe. A Finite-Volume Tracking Scheme for Two-Phase Compressible Flow. Theory, Numerics and Applications of Hyperbolic Problems I, pp. 309--322, 2018.
 
