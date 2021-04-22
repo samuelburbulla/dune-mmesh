@@ -366,12 +366,17 @@ namespace Dune
     //! returns id computed by vertex ids
     IdType id() const
     {
-      typename IdType::VT idlist( dim+1-codim );
-      for( std::size_t i = 0; i < this->subEntities(dim); ++i )
-        idlist[i] = this->template subEntity<dim>(i).impl().hostEntity()->info().id;
-      std::sort( idlist.begin(), idlist.end() );
+      // cache id
+      if (id_ == IdType())
+      {
+        typename IdType::VT idlist( dim+1-codim );
+        for( std::size_t i = 0; i < this->subEntities(dim); ++i )
+          idlist[i] = this->template subEntity<dim>(i).impl().hostEntity()->info().id;
+        std::sort( idlist.begin(), idlist.end() );
+        id_ = IdType( idlist );
+      }
 
-      return IdType( idlist );
+      return id_;
     }
 
   private:
@@ -387,6 +392,10 @@ namespace Dune
         return 0;
       }
     }
+
+
+    //! the cached id
+    mutable IdType id_;
 
     //! the host entity of this entity
     HostGridEntity hostEntity_;

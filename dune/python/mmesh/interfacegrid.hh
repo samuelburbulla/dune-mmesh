@@ -98,7 +98,7 @@ namespace Dune
         )doc" );
 
         cls.def( "markElements", [] ( Grid &self ) {
-          self.markElements();
+          return self.markElements();
         },
         R"doc(
           Mark all elements in accordance to the default indicator

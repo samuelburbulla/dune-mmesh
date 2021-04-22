@@ -57,9 +57,12 @@ public:
       for ( const auto& edge : edges( grid.interfaceGrid().leafGridView() ) )
       {
         const ctype h = edge.geometry().volume();
-        maxH_ = std::max( maxH_, K_ * h );
-        minH_ = std::min( minH_, k_ * h );
+        maxH_ = std::max( maxH_, h );
+        minH_ = std::min( minH_, h );
       }
+
+      maxH_ = K_ * maxH_;
+      minH_ = k_ * minH_;
 
       ctype maxh = 0.0;
       ctype minh = 1e100;
