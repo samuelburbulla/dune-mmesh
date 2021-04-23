@@ -1,6 +1,7 @@
 #ifndef DUNE_MMESH_MISC_PERSISTENTCONTAINER_HH
 #define DUNE_MMESH_MISC_PERSISTENTCONTAINER_HH
 
+#include <unordered_map>
 #include <dune/grid/utility/persistentcontainer.hh>
 #include <dune/grid/utility/persistentcontainermap.hh>
 
@@ -12,12 +13,12 @@ namespace Dune
     : public Dune::PersistentContainerMap<
         MMesh< HostGrid, dim >,
         typename MMesh< HostGrid, dim >::LocalIdSet,
-        std::map< typename MMesh< HostGrid, dim >::LocalIdSet::IdType, T > >
+        std::unordered_map< typename MMesh< HostGrid, dim >::LocalIdSet::IdType, T > >
   {
     typedef MMesh< HostGrid, dim > G;
-    typedef PersistentContainerMap< G, typename G::LocalIdSet, std::map< typename G::LocalIdSet::IdType, T > > Base;
+    typedef PersistentContainerMap< G, typename G::LocalIdSet, std::unordered_map< typename G::LocalIdSet::IdType, T > > Base;
     typedef typename MMesh< HostGrid, dim >::LocalIdSet IdSet;
-    typedef std::map< typename MMesh< HostGrid, dim >::LocalIdSet::IdType, T > Map;
+    typedef std::unordered_map< typename MMesh< HostGrid, dim >::LocalIdSet::IdType, T > Map;
 
   public:
     typedef typename Base::Grid Grid;
@@ -68,12 +69,12 @@ namespace Dune
     : public Dune::PersistentContainerMap<
         MMeshInterfaceGrid< MMesh >,
         typename MMeshInterfaceGrid< MMesh >::LocalIdSet,
-        std::map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > >
+        std::unordered_map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > >
   {
     typedef MMeshInterfaceGrid< MMesh > G;
-    typedef PersistentContainerMap< G, typename G::LocalIdSet, std::map< typename G::LocalIdSet::IdType, T > > Base;
+    typedef PersistentContainerMap< G, typename G::LocalIdSet, std::unordered_map< typename G::LocalIdSet::IdType, T > > Base;
     typedef typename MMeshInterfaceGrid< MMesh >::LocalIdSet IdSet;
-    typedef std::map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > Map;
+    typedef std::unordered_map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > Map;
 
   public:
     typedef typename Base::Grid Grid;
