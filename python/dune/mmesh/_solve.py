@@ -59,11 +59,15 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
         # Irons-Tuck update
         DA  = FFa.as_numpy - Fa.as_numpy
         D2a = DA - Fa.as_numpy + a.as_numpy
-        u.as_numpy[:] = FFa.as_numpy - np.dot(DA, D2a) / np.dot(D2a, D2a) * DA
+        u.as_numpy[:] = FFa.as_numpy
+        if np.dot(D2a, D2a) != 0:
+            u.as_numpy[:] -= np.dot(DA, D2a) / np.dot(D2a, D2a) * DA
 
         DB  = FFb.as_numpy - Fb.as_numpy
         D2b  = DB - Fb.as_numpy + b.as_numpy
-        v.as_numpy[:] = FFb.as_numpy - np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
+        v.as_numpy[:] = FFb.as_numpy
+        if np.dot(D2b, D2b) != 0:
+            v.as_numpy[:] -= np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
 
         res = residuum(u.as_numpy - a.as_numpy, v.as_numpy - b.as_numpy)
 
