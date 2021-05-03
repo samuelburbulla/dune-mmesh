@@ -7,17 +7,19 @@ Moving Mesh
 Most interface driven-problems have time-dependent interfaces :math:`\Gamma = \Gamma(t)`.
 Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial dimension two.
 
-We assume that movement is given by shifts of vertices.
-Then, this movement can be performed by just changing the coordinates of vertices.
-Therefore, Dune-MMesh implements the method
+Moving Vertices
+***************
+
+Dune-MMesh allows the movement of the interface and even all grid vertices by a predescribed movement.
+We assume that movement is given by the shift of vertices.
+This movement can be performed by changing the coordinates of vertices.
+For this purpose, Dune-MMesh provides the method
 
 .. code-block:: cpp
 
   moveInterface(shifts)
 
 that takes a vector of shift coordinates indexed by interface vertex indices.
-The shifts are simply used to update the vertex position coordinates.
-
 
 .. tikz:: Moving the interface.
   :xscale: 25
@@ -61,14 +63,28 @@ The shifts are simply used to update the vertex position coordinates.
   \draw[very thick] (A2) -- (B2) -- (C2);
 
 
-There is a second method :code:`moveVertices` that can be used to move all vertices of the triangulation.
-This method is indexed by bulk vertex indices.
+A second method :code:`moveVertices` is available for moving all vertices of the triangulation that is indexed by bulk vertex indices.
 
-Remark that moving might lead to degeneration of the triangulation, i.e. cells have non-positive volume.
+
+Remark that moving might lead to degeneration of the triangulation, i.e. cells can have non-positive volume.
 To prevent that, Dune-MMesh is equipped with remeshing routines.
-Remeshing is performed in two stages.
-First, elements are marked for coarsening or refinement.
-Second, the mesh is adapted.
+
+
+Adaptation
+**********
+
+Adaption in DUNE is hierarchical by definition. Whenever a grid element is supposed to be refined,
+it is split into smaller cells belonging to a higher level of the grid hierarchy.
+If all children in the highest refinement level of a grid element are supposed to be coarsenend,
+the children cells are put together again to form a single father cell one level lower.
+
+Hereby, the adaptation procedure is performed in two stages:
+  1. Mark: Grid elements are marked for coarsening or refinement.
+  2. Adapt: The elements are adapted due to their markers and discrete functions are restricted or prolongated.
+
+In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is inavoidable.
+However, we will try to follow th general DUNE approach of adaptation as good as possible.
+For this reason, we similarily separate the adaptation into the following two stages.
 
 Mark
 ----
@@ -134,6 +150,11 @@ initialized automatically when constructing a mesh by determining the range of e
 
 The `markElements()` routine also checks all elements of the interface grid.
 Therefore, the interface will be refined and coarsened as well if edges of the interface get too long or too short.
+
+.. note:: The method `markElements()` is just a convenience method iterating over the grid and setting the element markers
+  due to the default indicator value. It is also possible to use a proprietary procedure marking the elements manually
+  using `removeVertex(vertex)` and `refineEdge(element, edgeIndex)`.
+
 
 Adapt
 -----

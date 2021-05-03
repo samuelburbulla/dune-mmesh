@@ -693,6 +693,64 @@ namespace Dune
       return (interfaceGrid_->preAdapt()) || (coarsenMarked_ > 0) || (remove_.size() > 0);
     }
 
+    /** \brief Refine edge manually */
+    void refineEdge(const Entity& entity, const std::size_t edgeIndex, const double where = 0.5)
+    {
+      RefinementInsertionPoint ip;
+      ip.edge = entity.template subEntity<dim-1>(edgeIndex);
+      ip.edgeId = globalIdSet().id( ip.edge );
+      ip.point = makePoint( where * ip.edge.geometry().corner(0) + (1 - where) * ip.edge.geometry().corner(1) );
+      ip.v0 = ip.edge.impl().template subEntity<dim>(0).impl().hostEntity();
+      ip.v1 = ip.edge.impl().template subEntity<dim>(1).impl().hostEntity();
+      ip.insertionLevel = ip.edge.impl().insertionLevel() + 1;
+
+      if ( isInterface( ip.edge ) )
+      {
+        ip.isInterface = true;
+        if constexpr (dim != 3)
+        {
+          InterfaceEntity component {{ interfaceGrid_.get(), ip.edge.impl().hostEntity() }};
+          ip.connectedcomponent = InterfaceGridConnectedComponent( component );
+        }
+      }
+
+      if ( inserted_.insert( ip.edgeId ).second )
+      {
+        insert_.push_back( ip );
+        if (verbose_)
+          std::cout << "Insert vertex manually: " << ip.point << std::endl;
+      }
+    }
+
+    /** \brief Insert vertex in cell manually */
+    void insertVertexInCell(const GlobalCoordinate& position)
+    {
+      RefinementInsertionPoint ip;
+      ip.point = makePoint( position );
+
+      insert_.push_back( ip );
+      if (verbose_)
+        std::cout << "Insert vertex in cell manually: " << ip.point << std::endl;
+    }
+
+    /** \brief Remove interface vertex manually */
+    void removeVertex(const typename InterfaceGrid::Traits::template Codim<dim-1>::Entity& interfaceVertex)
+    {
+      const Vertex& vertex = entity( interfaceVertex.impl().hostEntity() );
+      removeVertex( vertex );
+    }
+
+    /** \brief Remove vertex manually */
+    void removeVertex(const Vertex& vertex)
+    {
+      if ( removed_.insert( globalIdSet().id( vertex ) ).second )
+      {
+        remove_.push_back( vertex.impl().hostEntity() );
+        if (verbose_)
+          std::cout << "Remove vertex manually: " << vertex.geometry().center() << std::endl;
+      }
+    }
+
     /** \brief Triggers the grid adaptation process
       * \return if triangulation has changed
       */
@@ -1143,7 +1201,7 @@ namespace Dune
           vh = insertInCell_( ip.point );
 
           // check if edge is really part of the triangulation
-          if ( !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
+          if ( ip.v0 != VertexHandle() && !getHostGrid().tds().is_edge( ip.v0, vh ) ) // TODO 3D
           {
             // try again with half distance
             if constexpr (dimension == 2)

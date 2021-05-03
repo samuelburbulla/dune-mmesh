@@ -77,6 +77,7 @@ namespace Dune
           )doc" );
 
         using Element = typename Grid::template Codim< 0 >::Entity;
+        using Vertex = typename Grid::template Codim< d >::Entity;
         using Intersection = typename Grid::Intersection;
         using InterfaceEntity = typename Grid::InterfaceEntity;
         using InterfaceGrid = typename Grid::InterfaceGrid;
@@ -159,6 +160,42 @@ namespace Dune
         R"doc(
           Return if interface vertex is a tip
         )doc" );
+
+        cls.def( "refineEdge", [] ( Grid &self, const Element& element, const std::size_t edgeIndex, const double where ) {
+          return self.refineEdge(element, edgeIndex, where);
+        },
+        R"doc(
+          Refine edge manually
+        )doc" );
+
+        cls.def( "refineEdge", [] ( Grid &self, const Element& element, const std::size_t edgeIndex ) {
+          return self.refineEdge(element, edgeIndex, 0.5);
+        },
+        R"doc(
+          Refine edge manually
+        )doc" );
+
+        cls.def( "removeVertex", [] ( Grid &self, const Vertex& vertex ) {
+          return self.removeVertex(vertex);
+        },
+        R"doc(
+          Remove vertex manually
+        )doc" );
+
+        cls.def( "removeVertex", [] ( Grid &self, const InterfaceVertex& vertex ) {
+          return self.removeVertex(vertex);
+        },
+        R"doc(
+          Remove interface vertex manually
+        )doc" );
+
+        cls.def( "insertVertexInCell", [] ( Grid &self, const FieldVector& position ) {
+          return self.insertVertexInCell(position);
+        },
+        R"doc(
+          Insert vertex in cell manually
+        )doc" );
+
       }
 
     } // namespace MMGrid

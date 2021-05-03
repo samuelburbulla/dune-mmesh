@@ -12,7 +12,7 @@ We implemented a few examples to display how Dune-MMesh can be used in different
 
   examples/coupling
   examples/moving
-  examples/onep
+  examples/anisotropic
   examples/poroelasticity
   examples/twophase
 

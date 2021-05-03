@@ -38,6 +38,7 @@ that implements non-hierarchical adaptation procedures.
   :maxdepth: 1
   :caption: Appendix
 
+  issues
   acknowledgements
   contribute
 
