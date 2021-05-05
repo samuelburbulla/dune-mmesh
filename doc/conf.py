@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../python/'))
 
 project = 'dune-mmesh'
 copyright = '2021, Samuel Burbulla'
-author = 'Samuel Burbulla'
+author = 'Samuel Burbulla, Andreas Dedner, Maximilian Hörl, Christian Rohde'
 
 # The full version, including alpha/beta/rc tags
 release = '1.2'
@@ -57,7 +57,7 @@ breathe_default_project = 'dune-mmesh'
 
 tikz_proc_suite = 'GhostScript'
 tikz_tikzlibraries = 'calc'
-tikz_resolution = 2000
+tikz_resolution = 1000
 
 nbsphinx_execute = 'never'
 
@@ -75,7 +75,7 @@ html_theme = "sphinx_rtd_theme"
 
 # -- Options for Latex output -------------------------------------------------
 latex_documents = [
-    ('index', 'dune-mmesh.tex', 'Dune-MMesh: The DUNE Grid Module for Moving Interfaces', 'Samuel Burbulla', 'article')
+    ('index', 'dune-mmesh.tex', 'Dune-MMesh: The DUNE Grid Module for Moving Interfaces', author, 'article')
 ]
 
 latex_toplevel_sectioning = 'section'

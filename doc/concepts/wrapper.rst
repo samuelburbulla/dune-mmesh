@@ -51,14 +51,19 @@ which is already equipped with an orientation.
 With this reference mapping all geometry and sub-entity objects of the Dune grid interface can be specified.
 
 
-Various iterators of CGAL triangulations can directly by used to construct the Dune grid range generators.
+Various iterators of CGAL triangulations can directly be used to construct the Dune grid range generators.
+For instance, the element iterator coincides with the :code:`finite_faces_iterator` or :code:`finite_cells_iterator`.
+Additional (non-standard Dune) iterators could be added easily, e.g. :code:`incidentElements` or :code:`incidentVertices` of a vertex.
 
-The remaining large objects that have to be implemented are the index and id sets.
+The main large objects that have to be implemented are the index and id sets.
 For this purpose, we define ids of entities as follows. At creation, each vertex is equipped with a unique integer id.
 Each higher dimensional entity's id is defined by the sorted tuple of corresponding vertex ids.
 
-As CGAL vertices and cells allow to append data (called *info*) to the objects, we can store and access the vertex ids directly within the vertex objects.
-Indices are consecutively distributed at grid creation and stored in the corresponding info, too.
+As CGAL vertices and cells allow to append data (called: *info*) to the objects, we can store and access the vertex ids directly within the vertex objects.
+Entity indices are consecutively distributed at grid creation (or after adaptation) and also can be stored in the corresponding cell or vertex info.
+For entities of codimensions different than :math:`0` and :math:`d`, an id-index mapping is used.
 
-The geometrical representation of each entity is made unique by using the vertices sorted after their id.
-This prevents twists of intersections and we obtain a twist free grid implementation.
+The geometrical representation of entities that are not intrinsically CGAL entities (i.e., codimensions :math:`1,...,d-1`) is made unique
+by an ascending order of vertex ids. In additon, this prevents twists of intersections and we obtain a twist free grid implementation.
+
+We extend the above described concepts of wrapping the CGAL triangulation to export a set of facets as :ref:`interface`.
