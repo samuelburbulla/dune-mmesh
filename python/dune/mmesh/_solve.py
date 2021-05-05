@@ -9,9 +9,9 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
     Args:
         schemes:  pair of schemes
         targets:  pair of discrete functions
+        callback: update function that is called every time before solving a scheme
         iter:     maximum number of iterations
         f_tol:    objective tolerance between two iterates in two norm
-        callback: update function that is called every time before solving a scheme
         verbose:  print residuum for each iteration
     Note:
         The targets also must be used in the coupling forms.
@@ -79,3 +79,115 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
             break
 
     return {'converged': converged, 'iterations': i}
+
+
+
+def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1e-8, verbose=False):
+    """Helper function to solve bulk and interface scheme coupled monolithically.
+       A newton method based on scipy.
+       The coupling jacobian blocks are evalutaed by finite difference on demand.
+       The Schur complement is used for the inversion of the block-wise jacobian.
+
+    Args:
+        schemes:  pair of schemes
+        targets:  pair of discrete functions that should be solved for AND that are used in the coupling forms
+        callback: update function that is called every time before solving a scheme
+        iter:     maximum number of iterations
+        f_tol:    objective residual two norm
+        eps:      step size for finite difference
+        verbose:  print residuum for each iteration
+    """
+    assert len(schemes) == 2
+    assert len(targets) == 2
+
+    (scheme, ischeme) = schemes
+    (uh, th) = targets
+
+    n = len(uh.as_numpy)
+    m = len(th.as_numpy)
+
+    if m == 0:
+        if verbose:
+            print("second scheme is empty, forward to scheme.solve()", flush=True)
+        scheme.solve(target=uh)
+        return
+
+    from dune.fem.operator import linear as linearOperator
+
+    # We use the block structure to solve with the Schur complement
+    # jac  = [[ A, B ],  = [[ D_u scheme(u,t),  D_t scheme(u,t)  ],
+    #         [ C, D ]]     [ D_u ischeme(u,t), D_t ischeme(u,t) ]]
+
+    A = linearOperator(scheme)
+    D = linearOperator(ischeme)
+
+    def updateJacobians():
+        scheme.jacobian(uh, A)
+        ischeme.jacobian(th, D)
+
+    # Evaluate the coupling blocks by finite difference on-demand
+    Bz = uh.copy()
+    def B(z):
+        th.as_numpy[:] += eps * z
+        scheme(uh, Bz)
+        th.as_numpy[:] -= eps * z
+        Bz.as_numpy[:] -= f.as_numpy
+        Bz.as_numpy[:] /= eps
+        return Bz.as_numpy
+
+    Cz = th.copy()
+    def C(z):
+        uh.as_numpy[:] += eps * z
+        ischeme(th, Cz)
+        uh.as_numpy[:] -= eps * z
+        Cz.as_numpy[:] -= g.as_numpy
+        Cz.as_numpy[:] /= eps
+        return Cz.as_numpy
+
+    # Evaluate
+    f = uh.copy()
+    g = th.copy()
+    scheme(uh, f)
+    ischeme(th, g)
+
+    i = 0
+    def checkResiduum():
+        a = f.as_numpy
+        b = g.as_numpy
+        res = np.sqrt(np.dot(a, a) + np.dot(b, b))
+
+        if verbose:
+            print("i:", i, "  res =", res)
+
+        if res < f_tol:
+            return True
+
+    if checkResiduum():
+        return
+
+    x = uh.copy().as_numpy
+    y = th.copy().as_numpy
+
+    from scipy.sparse.linalg import spsolve, LinearOperator, gmres
+    for i in range(1, iter):
+
+        updateJacobians()
+
+        # Compute Newton update
+        def evalS(y):
+            x = spsolve(A.as_numpy, B(y))
+            return D.as_numpy.dot(y) - C(x)
+
+        S = LinearOperator((m,m), evalS)
+        Ainvf = spsolve(A.as_numpy, f.as_numpy)
+        y, _ = gmres(S, g.as_numpy - C(Ainvf), tol=f_tol)
+        x = spsolve(A.as_numpy, f.as_numpy - B(y))
+
+        uh.as_numpy[:] -= x
+        th.as_numpy[:] -= y
+
+        scheme(uh, f)
+        ischeme(th, g)
+
+        if checkResiduum():
+            return
