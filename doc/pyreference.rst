@@ -15,4 +15,4 @@ that is not already part of Dune or dune-fem [DNK+20]_.
   pyreference/utility
   pyreference/solve
 
-.. [DNK+20] Andreas Dedner, Martin Nolte, and Robert Klöfkorn. Python Bindings for the DUNE-FEM module. Zenodoo, 2020, DOI 10.5281/zenodo.3706994.
+.. [DNK+20] A. Dedner, M. Nolte, and R. Klöfkorn. Python Bindings for the DUNE-FEM module. Zenodoo, 2020, DOI 10.5281/zenodo.3706994.

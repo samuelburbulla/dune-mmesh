@@ -2,9 +2,9 @@
 Known Issues
 ************
 
-There are a few known issues that either just haven't be implemented so far
+There are a few known issues that either just haven't been implemented so far
 or need further clarification:
 
-- Topology change of (e.g. merging two) moving interfaces
-- Moving in three dimension
-- Parallelization
+- Adaptation in spatial dimension three
+- Topology change of interface (e.g. merging)
+- MPI parallelization
