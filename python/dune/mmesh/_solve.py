@@ -147,6 +147,10 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
     # Evaluate
     f = uh.copy()
     g = th.copy()
+
+    if callback is not None:
+        callback()
+
     scheme(uh, f)
     ischeme(th, g)
 
@@ -180,11 +184,14 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
 
         S = LinearOperator((m,m), evalS)
         Ainvf = spsolve(A.as_numpy, f.as_numpy)
-        y, _ = gmres(S, g.as_numpy - C(Ainvf), tol=f_tol)
+        y, _ = gmres(S, g.as_numpy - C(Ainvf), tol=f_tol, maxiter=100)
         x = spsolve(A.as_numpy, f.as_numpy - B(y))
 
         uh.as_numpy[:] -= x
         th.as_numpy[:] -= y
+
+        if callback is not None:
+            callback()
 
         scheme(uh, f)
         ischeme(th, g)
