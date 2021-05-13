@@ -82,7 +82,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1e-8, verbose=False):
+def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e-6, verbose=0):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method based on scipy.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
@@ -95,7 +95,10 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
         iter:     maximum number of iterations
         f_tol:    objective residual two norm
         eps:      step size for finite difference
-        verbose:  print residuum for each iteration
+        verbose:  1: print residuum for each iteration, 2: and for each Schur iteration
+
+    Returns:
+        if converged
     """
     assert len(schemes) == 2
     assert len(targets) == 2
@@ -112,12 +115,11 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
         scheme.solve(target=uh)
         return
 
-    from dune.fem.operator import linear as linearOperator
-
     # We use the block structure to solve with the Schur complement
     # jac  = [[ A, B ],  = [[ D_u scheme(u,t),  D_t scheme(u,t)  ],
     #         [ C, D ]]     [ D_u ischeme(u,t), D_t ischeme(u,t) ]]
 
+    from dune.fem.operator import linear as linearOperator
     A = linearOperator(scheme)
     D = linearOperator(ischeme)
 
@@ -125,32 +127,42 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
         scheme.jacobian(uh, A)
         ischeme.jacobian(th, D)
 
+    def call():
+        if callback is not None:
+            callback()
+
     # Evaluate the coupling blocks by finite difference on-demand
     Bz = uh.copy()
     def B(z):
-        th.as_numpy[:] += eps * z
+        norm = np.sqrt(z.dot(z))
+        if norm == 0:
+            return np.zeros(n)
+        th.as_numpy[:] += z * eps / norm
+        call()
         scheme(uh, Bz)
-        th.as_numpy[:] -= eps * z
+        th.as_numpy[:] -= z * eps / norm
         Bz.as_numpy[:] -= f.as_numpy
         Bz.as_numpy[:] /= eps
-        return Bz.as_numpy
+        return Bz.as_numpy * norm
 
     Cz = th.copy()
     def C(z):
-        uh.as_numpy[:] += eps * z
+        norm = np.sqrt(z.dot(z))
+        if norm == 0:
+            return np.zeros(m)
+        uh.as_numpy[:] += z * eps / norm
+        call()
         ischeme(th, Cz)
-        uh.as_numpy[:] -= eps * z
+        uh.as_numpy[:] -= z * eps / norm
         Cz.as_numpy[:] -= g.as_numpy
         Cz.as_numpy[:] /= eps
-        return Cz.as_numpy
+        return Cz.as_numpy * norm
 
     # Evaluate
     f = uh.copy()
     g = th.copy()
 
-    if callback is not None:
-        callback()
-
+    call()
     scheme(uh, f)
     ischeme(th, g)
 
@@ -160,41 +172,49 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, eps=1
         b = g.as_numpy
         res = np.sqrt(np.dot(a, a) + np.dot(b, b))
 
-        if verbose:
-            print("i:", i, "  res =", res)
+        if verbose > 0:
+            print(" i:", i, " | f | =", res)
 
         if res < f_tol:
             return True
 
     if checkResiduum():
-        return
+        return True
 
     x = uh.copy().as_numpy
     y = th.copy().as_numpy
 
-    from scipy.sparse.linalg import spsolve, LinearOperator, gmres
+    from scipy.sparse.linalg import spsolve, LinearOperator
+    from scipy.sparse.linalg import lgmres as iterativeSolver
+
+    def iterCallback(xk):
+        if verbose == 2:
+            t = evalS(xk)-r
+            print("  |Sx-r| =", np.sqrt(t.dot(t)))
+
     for i in range(1, iter):
 
         updateJacobians()
 
         # Compute Newton update
         def evalS(y):
-            x = spsolve(A.as_numpy, B(y))
-            return D.as_numpy.dot(y) - C(x)
+            AinvBy = spsolve(A.as_numpy, B(y))
+            return D.as_numpy.dot(y) - C(AinvBy)
 
         S = LinearOperator((m,m), evalS)
         Ainvf = spsolve(A.as_numpy, f.as_numpy)
-        y, _ = gmres(S, g.as_numpy - C(Ainvf), tol=f_tol, maxiter=100)
+        r = g.as_numpy - C(Ainvf)
+        y, _ = iterativeSolver(S, r, x0=th.as_numpy, tol=f_tol, callback=iterCallback)
         x = spsolve(A.as_numpy, f.as_numpy - B(y))
 
         uh.as_numpy[:] -= x
         th.as_numpy[:] -= y
 
-        if callback is not None:
-            callback()
-
+        call()
         scheme(uh, f)
         ischeme(th, g)
 
         if checkResiduum():
-            return
+            return True
+
+    return False
