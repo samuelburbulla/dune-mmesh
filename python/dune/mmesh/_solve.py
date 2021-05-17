@@ -115,10 +115,6 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
         scheme.solve(target=uh)
         return
 
-    # We use the block structure to solve with the Schur complement
-    # jac  = [[ A, B ],  = [[ D_u scheme(u,t),  D_t scheme(u,t)  ],
-    #         [ C, D ]]     [ D_u ischeme(u,t), D_t ischeme(u,t) ]]
-
     from dune.fem.operator import linear as linearOperator
     A = linearOperator(scheme)
     D = linearOperator(ischeme)
@@ -181,34 +177,25 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
     if checkResiduum():
         return True
 
-    x = uh.copy().as_numpy
-    y = th.copy().as_numpy
-
-    from scipy.sparse.linalg import spsolve, LinearOperator
-    from scipy.sparse.linalg import lgmres as iterativeSolver
-
-    def iterCallback(xk):
-        if verbose == 2:
-            t = evalS(xk)-r
-            print("  |Sx-r| =", np.sqrt(t.dot(t)))
+    from scipy.sparse.linalg import LinearOperator, spsolve, lgmres
 
     for i in range(1, iter):
 
         updateJacobians()
 
-        # Compute Newton update
-        def evalS(y):
-            AinvBy = spsolve(A.as_numpy, B(y))
-            return D.as_numpy.dot(y) - C(AinvBy)
+        def eval(x):
+            return
 
-        S = LinearOperator((m,m), evalS)
-        Ainvf = spsolve(A.as_numpy, f.as_numpy)
-        r = g.as_numpy - C(Ainvf)
-        y, _ = iterativeSolver(S, r, x0=th.as_numpy, tol=f_tol, callback=iterCallback)
-        x = spsolve(A.as_numpy, f.as_numpy - B(y))
+        S = LinearOperator((n+m,n+m), lambda x: np.concatenate((A.as_numpy.dot(x[:n]) + B(x[n:]), C(x[:n]) + D.as_numpy.dot(x[n:]))))
+        M = LinearOperator((n+m, n+m), lambda x: np.concatenate((spsolve(A.as_numpy, x[:n]), spsolve(D.as_numpy, x[n:]))))
 
-        uh.as_numpy[:] -= x
-        th.as_numpy[:] -= y
+        r = np.concatenate((f.as_numpy, g.as_numpy))
+        x0 = np.concatenate((uh.as_numpy, th.as_numpy))
+
+        x, _ = lgmres(S, r, x0=x0, M=M, tol=f_tol)
+
+        uh.as_numpy[:] -= x[:n]
+        th.as_numpy[:] -= x[n:]
 
         call()
         scheme(uh, f)
