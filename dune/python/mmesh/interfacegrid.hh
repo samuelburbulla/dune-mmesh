@@ -126,6 +126,13 @@ namespace Dune
           Move the interface by the given movement for each interface vertex
         )doc" );
 
+        cls.def( "moveVertices", [] ( Grid &self, const std::vector< FieldVector >& shifts ) {
+          self.moveVertices( shifts );
+        },
+        R"doc(
+          Move all vertices of the triangulation by the given movement
+        )doc" );
+
         cls.def( "isInterface", [] ( Grid &self, const Intersection& intersection ) {
           return self.isInterface( intersection );
         },

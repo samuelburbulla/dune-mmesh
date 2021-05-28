@@ -1074,6 +1074,7 @@ namespace Dune
     {
       preAdapt();
       adapt();
+      sequence_ += 1;
 
       for (const auto& element : elements( this->leafGridView() ))
         if (element.isNew())
@@ -1702,6 +1703,11 @@ namespace Dune
       return indicator_;
     }
 
+    int sequence() const
+    {
+      return sequence_;
+    }
+
   private:
     // count how much elements where marked
     mutable int coarsenMarked_;
@@ -1734,6 +1740,7 @@ namespace Dune
     RemeshingIndicator indicator_;
 
     static const bool verbose_ = false;
+    int sequence_ = 0;
 
   private:
     //! Flag all elements in conflict as mightVanish

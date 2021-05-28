@@ -33,8 +33,11 @@ namespace Dune
 
     void resize ( const Value &value = Value() )
     {
-      Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
-        [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+      if( sequence_ != this->grid_->sequence() )
+      {
+        Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
+          [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+      }
     }
 
     template< int codim >
@@ -62,6 +65,10 @@ namespace Dune
       // add new entries
       this->template migrateLevel< codim >( 0, value, data, hasEntity );
     }
+
+  private:
+    int sequence_ = -1;
+
   };
 
   template< class MMesh, class T >
@@ -89,8 +96,12 @@ namespace Dune
 
     void resize ( const Value &value = Value() )
     {
-      Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
-        [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+      if( sequence_ != this->grid_->getMMesh().sequence() )
+      {
+        Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
+          [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+        sequence_ = this->grid_->getMMesh().sequence();
+      }
     }
 
     template< int codim >
@@ -114,6 +125,10 @@ namespace Dune
       // add new entries
       this->template migrateLevel< codim >( 0, value, data, hasEntity );
     }
+
+  private:
+    int sequence_ = -1;
+
   };
 
 } // namespace Dune
