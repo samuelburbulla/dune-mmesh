@@ -23,7 +23,7 @@ namespace Dune
 
   // Type of wrapper triangulation
   template< int dim >
-  struct TriangulationWrapper;
+  class TriangulationWrapper;
 
   // Type shortcut with default triangulation
   template< int dim >
