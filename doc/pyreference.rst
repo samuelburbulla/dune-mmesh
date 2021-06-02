@@ -5,7 +5,7 @@ Python
 ******
 
 In the following, we describe the additional python functionality
-that is not already part of Dune or dune-fem [DNK+20]_.
+that is not already part of Dune or dune-fem.
 
 .. toctree::
   :maxdepth: 1
@@ -14,5 +14,3 @@ that is not already part of Dune or dune-fem [DNK+20]_.
   pyreference/trace
   pyreference/utility
   pyreference/solve
-
-.. [DNK+20] A. Dedner, M. Nolte, and R. Klöfkorn. Python Bindings for the DUNE-FEM module. Zenodoo, 2020, DOI 10.5281/zenodo.3706994.
