@@ -1,0 +1,75 @@
+name: test pypi packages
+
+# Controls when the action will run.
+on:
+  # schedual test for nightly build
+  schedule:
+    - cron: "0 0 * * *"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'Warning'
+      tags:
+        description: 'Test packages'
+
+jobs:
+  # test packages
+  test:
+    strategy:
+        fail-fast: false
+        matrix:
+            os: [ubuntu-latest, macOS-latest]
+            test: [core, extensions]
+            python: [3.7,3.9]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt update
+            sudo apt install libopenmpi-dev openmpi-bin libsuperlu-dev libsuitesparse-dev petsc-dev paraview python3-paraview gmsh libcgal-dev
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew update
+            brew install openmpi superlu suite-sparse petsc paraview gmsh libcgal-dev
+          fi
+        shell: bash
+
+      - name: Setup venv
+        run: |
+          python3 -m venv dune-env
+          source dune-env/bin/activate
+          pip install --upgrade pip
+          pip install matplotlib scipy gmsh nbconvert
+        shell: bash
+
+      - name: Install dune modules
+        run: |
+          source dune-env/bin/activate
+          pip install dune-mmesh
+        shell: bash
+
+      - name: Setup dune-py
+        run: |
+          source dune-env/bin/activate
+          pip list
+          DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=config.opts
+          python -m dune.mmesh tutorial
+        shell: bash
+
+      - name: Run tutorial
+        run: |
+          source dune-env/bin/activate
+          export DUNE_LOG_LEVEL=${{ github.event.inputs.logLevel }}
+          python -m nbconvert --to python doc/examples/coupling.ipynb
+          python doc/examples/coupling.py
+        shell: bash
