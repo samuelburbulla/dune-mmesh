@@ -63,7 +63,6 @@ jobs:
           source dune-env/bin/activate
           pip list
           DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=config.opts
-          python -m dune.mmesh tutorial
         shell: bash
 
       - name: Run tutorial
