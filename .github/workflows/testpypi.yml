@@ -69,6 +69,7 @@ jobs:
         run: |
           source dune-env/bin/activate
           export DUNE_LOG_LEVEL=${{ github.event.inputs.logLevel }}
+          export DUNEPY_DISABLE_PLOTTING=1
           cd doc/examples
           python -m nbconvert --to python coupling.ipynb
           python coupling.py
