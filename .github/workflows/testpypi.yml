@@ -24,7 +24,7 @@ jobs:
         matrix:
             os: [ubuntu-latest, macOS-latest]
             test: [core]
-            python: [3.7,3.9]
+            python: [3.9]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -69,6 +69,7 @@ jobs:
         run: |
           source dune-env/bin/activate
           export DUNE_LOG_LEVEL=${{ github.event.inputs.logLevel }}
-          python -m nbconvert --to python doc/examples/coupling.ipynb
-          python doc/examples/coupling.py
+          cd doc/examples
+          python -m nbconvert --to python coupling.ipynb
+          python coupling.py
         shell: bash
