@@ -1,6 +1,8 @@
 #ifndef DUNE_MMESH_MISC_TWISTUTILITY_HH
 #define DUNE_MMESH_MISC_TWISTUTILITY_HH
 
+#include <dune/geometry/type.hh>
+
 namespace Dune
 {
 
@@ -72,7 +74,7 @@ namespace Dune
       static inline GeometryType
       elementGeometry(const Intersection& intersection, const bool inside)
       {
-        return GeometryType( Dune::GeometryType::simplex, dim );
+        return Dune::GeometryTypes::simplex(dim);
       }
 
     private:
@@ -111,7 +113,7 @@ namespace Dune
       static inline GeometryType
       elementGeometry(const Intersection& intersection, const bool inside)
       {
-        return GeometryType( Dune::GeometryType::simplex, dim );
+        return Dune::GeometryTypes::simplex(dim);
       }
 
     private:
