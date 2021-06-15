@@ -4,4 +4,4 @@ Coupled solve
 
 .. automodule:: dune.mmesh
   :noindex:
-  :members: iterativeSolve
+  :members: iterativeSolve, monolithicSolve
