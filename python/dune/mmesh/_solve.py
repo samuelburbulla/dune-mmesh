@@ -95,7 +95,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
         iter:     maximum number of iterations
         f_tol:    objective residual two norm
         eps:      step size for finite difference
-        verbose:  1: print residuum for each iteration, 2: and for each Schur iteration
+        verbose:  1: print residuum for each iteration
 
     Returns:
         if converged
@@ -177,17 +177,17 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
     if checkResiduum():
         return True
 
-    from scipy.sparse.linalg import LinearOperator, spsolve, lgmres
+    from scipy.sparse.linalg import LinearOperator, spsolve, spilu, lgmres
 
     for i in range(1, iter):
 
         updateJacobians()
 
-        def eval(x):
-            return
+        iluA = spilu(A.as_numpy.tocsc())
+        iluD = spilu(D.as_numpy.tocsc())
 
         S = LinearOperator((n+m,n+m), lambda x: np.concatenate((A.as_numpy.dot(x[:n]) + B(x[n:]), C(x[:n]) + D.as_numpy.dot(x[n:]))))
-        M = LinearOperator((n+m, n+m), lambda x: np.concatenate((spsolve(A.as_numpy, x[:n]), spsolve(D.as_numpy, x[n:]))))
+        M = LinearOperator((n+m, n+m), lambda x: np.concatenate((iluA.solve(x[:n]), iluD.solve(x[n:]))))
 
         r = np.concatenate((f.as_numpy, g.as_numpy))
         x0 = np.concatenate((uh.as_numpy, th.as_numpy))
