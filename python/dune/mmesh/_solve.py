@@ -82,20 +82,20 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e-6, verbose=0):
+def monolithicSolve(schemes, targets, callback=None, iter=20, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method based on scipy.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
-       The Schur complement is used for the inversion of the block-wise jacobian.
 
     Args:
         schemes:  pair of schemes
         targets:  pair of discrete functions that should be solved for AND that are used in the coupling forms
         callback: update function that is called every time before solving a scheme
         iter:     maximum number of iterations
-        f_tol:    objective residual two norm
+        tol:      objective residual of iteration step in infinity norm
+        f_tol:    objective residual of function value in infinity norm
         eps:      step size for finite difference
-        verbose:  1: print residuum for each iteration
+        verbose:  1: print residuum for each newton iteration, 2: for each gmres iteration
 
     Returns:
         if converged
@@ -127,32 +127,34 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
         if callback is not None:
             callback()
 
+    from numpy.linalg import norm
+
     # Evaluate the coupling blocks by finite difference on-demand
     Bz = uh.copy()
     def B(z):
-        norm = np.sqrt(z.dot(z))
-        if norm == 0:
+        if norm(z) == 0:
             return np.zeros(n)
-        th.as_numpy[:] += z * eps / norm
+        zh = z * eps / norm(z)
+        th.as_numpy[:] += zh
         call()
         scheme(uh, Bz)
-        th.as_numpy[:] -= z * eps / norm
+        th.as_numpy[:] -= zh
         Bz.as_numpy[:] -= f.as_numpy
         Bz.as_numpy[:] /= eps
-        return Bz.as_numpy * norm
+        return Bz.as_numpy * norm(z)
 
     Cz = th.copy()
     def C(z):
-        norm = np.sqrt(z.dot(z))
-        if norm == 0:
+        if norm(z) == 0:
             return np.zeros(m)
-        uh.as_numpy[:] += z * eps / norm
+        zh = z * eps / norm(z)
+        uh.as_numpy[:] += zh
         call()
         ischeme(th, Cz)
-        uh.as_numpy[:] -= z * eps / norm
+        uh.as_numpy[:] -= zh
         Cz.as_numpy[:] -= g.as_numpy
         Cz.as_numpy[:] /= eps
-        return Cz.as_numpy * norm
+        return Cz.as_numpy * norm(z)
 
     # Evaluate
     f = uh.copy()
@@ -162,37 +164,30 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
     scheme(uh, f)
     ischeme(th, g)
 
-    i = 0
-    def checkResiduum():
-        a = f.as_numpy
-        b = g.as_numpy
-        res = np.sqrt(np.dot(a, a) + np.dot(b, b))
-
-        if verbose > 0:
-            print(" i:", i, " | f | =", res)
-
-        if res < f_tol:
-            return True
-
-    if checkResiduum():
-        return True
-
-    from scipy.sparse.linalg import LinearOperator, spsolve, spilu, lgmres
+    from scipy.sparse.linalg import LinearOperator, splu, lgmres
 
     for i in range(1, iter):
 
         updateJacobians()
 
-        iluA = spilu(A.as_numpy.tocsc())
-        iluD = spilu(D.as_numpy.tocsc())
+        iluA = splu(A.as_numpy.tocsc())
+        iluD = splu(D.as_numpy.tocsc())
 
         S = LinearOperator((n+m,n+m), lambda x: np.concatenate((A.as_numpy.dot(x[:n]) + B(x[n:]), C(x[:n]) + D.as_numpy.dot(x[n:]))))
-        M = LinearOperator((n+m, n+m), lambda x: np.concatenate((iluA.solve(x[:n]), iluD.solve(x[n:]))))
+        M = LinearOperator((n+m,n+m), lambda x: np.concatenate((iluA.solve(x[:n]), iluD.solve(x[n:]))))
 
         r = np.concatenate((f.as_numpy, g.as_numpy))
         x0 = np.concatenate((uh.as_numpy, th.as_numpy))
 
-        x, _ = lgmres(S, r, x0=x0, M=M, tol=f_tol)
+        def cb(x):
+            if verbose > 1:
+                res = S(x)-r
+                print(" |Sx-r| =", norm(res))
+
+        x, info = lgmres(S, r, x0, M=M, tol=tol, callback=cb)
+
+        if verbose > 0 and info != 0:
+            print("  GMRES not converged!")
 
         uh.as_numpy[:] -= x[:n]
         th.as_numpy[:] -= x[n:]
@@ -201,7 +196,13 @@ def monolithicSolve(schemes, targets, callback=None, iter=10, f_tol=1e-8, eps=1e
         scheme(uh, f)
         ischeme(th, g)
 
-        if checkResiduum():
+        xres = norm(x)
+        fres = max(norm(f.as_numpy), norm(g.as_numpy))
+
+        if verbose > 0:
+            print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
+
+        if xres < tol and fres < f_tol:
             return True
 
     return False
