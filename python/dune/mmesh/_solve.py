@@ -3,7 +3,7 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
-def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor=1.0, verbose=False):
+def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=None, factor=1.0, verbose=False):
     """Helper function to solve bulk and interface scheme coupled iteratively.
 
     Args:
@@ -11,12 +11,17 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
         targets:  pair of discrete functions
         callback: update function that is called every time before solving a scheme
         iter:     maximum number of iterations
-        f_tol:    objective tolerance between two iterates in two norm
+        tol:    objective tolerance between two iterates in two norm
         verbose:  print residuum for each iteration
     Note:
         The targets also must be used in the coupling forms.
         We use a vector formulation of Aitken's fix point acceleration proposed by Irons and Tuck.
     """
+    if f_tol is not None:
+        print("f_tol is deprecated, use tol instead!")
+        if tol != 1e-8:
+            tol = f_tol
+
     assert len(schemes) == 2
     assert len(targets) == 2
 
@@ -74,7 +79,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
         if verbose:
             print("{:3d}:".format(i), "[", "{:1.2e}".format(res), "]", flush=True)
 
-        if res < f_tol:
+        if res < tol:
             converged = True
             break
 
@@ -82,7 +87,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, f_tol=1e-8, factor
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=20, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0):
+def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method based on scipy.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
@@ -166,7 +171,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=20, tol=1e-8, f_tol=1e
 
     from scipy.sparse.linalg import LinearOperator, splu, lgmres
 
-    for i in range(1, iter):
+    for i in range(1, iter+1):
 
         updateJacobians()
 
@@ -184,9 +189,9 @@ def monolithicSolve(schemes, targets, callback=None, iter=20, tol=1e-8, f_tol=1e
                 res = S(x)-r
                 print(" |Sx-r| =", norm(res))
 
-        x, info = lgmres(S, r, x0, M=M, tol=tol, callback=cb)
+        x, info = lgmres(S, r, x0, maxiter=10, M=M, tol=tol, callback=cb)
 
-        if verbose > 0 and info != 0:
+        if verbose > 1 and info != 0:
             print("  GMRES not converged!")
 
         uh.as_numpy[:] -= x[:n]

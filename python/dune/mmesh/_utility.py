@@ -18,9 +18,14 @@ def interfaceIndicator(igrid, grid=None, restrict=True):
     """
     from ufl import avg
     from dune.mmesh import skeleton
-    from dune.fem.space import finiteVolume
-    space = finiteVolume(igrid)
-    one = space.interpolate(1, name="one")
+    try:
+        one = igrid.hierarchicalGrid.one
+    except:
+        from dune.fem.space import finiteVolume
+        space = finiteVolume(igrid)
+        one = space.interpolate(1, name="one")
+        igrid.hierarchicalGrid.one = one
+
     if restrict:
         return avg(skeleton(one, grid=grid))
     else:
@@ -65,11 +70,6 @@ def normals(igrid):
     Returns:
        Grid function on the interface grid.
     """
-    try:
-        return igrid.hierarchicalGrid.interfaceGrid.normals
-    except:
-        pass
-
     code="""
     #include <functional>
     template <class IGV>
