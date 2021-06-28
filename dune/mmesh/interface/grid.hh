@@ -15,7 +15,6 @@
 #include <dune/common/deprecated.hh>
 #include <dune/common/parallel/communication.hh>
 #include <dune/common/version.hh>
-#include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
 #include <dune/mmesh/grid/multiid.hh>
@@ -108,11 +107,8 @@ namespace Dune
     //! the grid implementation
     using GridImp = typename GridFamily::Traits::Grid;
 
-    #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      typedef ToUniquePtr< GridImp > GridPtrType;
-    #else
-      typedef GridImp* GridPtrType;
-    #endif
+    //! the unique pointer to the grid
+    typedef std::unique_ptr< GridImp > GridPtrType;
 
     //! the underlying hostgrid
     using HostGridType = typename MMesh::HostGridType;

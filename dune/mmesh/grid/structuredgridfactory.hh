@@ -9,7 +9,6 @@
 #include <vector>
 
 // Dune includes
-#include <dune/common/to_unique_ptr.hh>
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/grid/common/intersection.hh>
 #include <dune/grid/utility/multiindex.hh>

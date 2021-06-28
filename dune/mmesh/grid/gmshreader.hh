@@ -9,7 +9,6 @@
 #include <vector>
 
 // Dune includes
-#include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/intersection.hh>
 #include <dune/grid/io/file/gmshreader.hh>
 
@@ -26,7 +25,7 @@ namespace Dune
   {
     using Grid = Dune::MovingMesh< dim >;
 
-    static ToUniquePtr<Grid> read (const std::string& fileName, bool verbose = true, bool insertBoundarySegments = true)
+    static std::unique_ptr<Grid> read (const std::string& fileName, bool verbose = true, bool insertBoundarySegments = true)
     {
       Dune::GmshGridFactory<Grid> gmshFactory( fileName );
       return gmshFactory.grid();

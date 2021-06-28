@@ -14,7 +14,6 @@
 #include <unordered_set>
 
 // Dune includes
-#include <dune/common/to_unique_ptr.hh>
 #include <dune/geometry/referenceelements.hh>
 #include <dune/grid/common/gridfactory.hh>
 #include <dune/grid/common/boundarysegment.hh>
@@ -273,26 +272,15 @@ namespace Dune
      *  \note MMesh's grid factory provides a static method for freeing the
      *        grid (destroyGrid).
      */
-    ToUniquePtr<Grid> createGrid ()
+    std::unique_ptr<Grid> createGrid ()
     {
-      // Return pointer to grid
-    #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      return makeToUnique<Grid> (
+      return std::make_unique<Grid> (
         std::move(tr_),
         std::move(boundarySegments_),
         std::move(interfaceBoundarySegments_),
         std::move(boundaryIds_),
         std::move(interfaceSegments_)
       );
-    #else
-      return new Grid (
-        std::move(tr_),
-        std::move(boundarySegments_),
-        std::move(interfaceBoundarySegments_),
-        std::move(boundaryIds_),
-        std::move(interfaceSegments_)
-      );
-    #endif
     }
 
     /** \brief destroy a grid previously obtained from this factory

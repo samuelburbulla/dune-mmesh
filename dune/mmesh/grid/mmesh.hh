@@ -16,7 +16,6 @@
 #include <dune/common/deprecated.hh>
 #include <dune/common/parallel/communication.hh>
 #include <dune/common/version.hh>
-#include <dune/common/to_unique_ptr.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
 #include <dune/grid/common/adaptcallback.hh>
@@ -166,11 +165,8 @@ namespace Dune
     //! The grid implementation
     using GridImp = typename GridFamily::Traits::Grid;
 
-    #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      using GridPtrType = ToUniquePtr< GridImp >;
-    #else
-      using GridPtrType = GridImp*;
-    #endif
+    //! The unique pointer to the grid
+    using GridPtrType = std::unique_ptr< GridImp >;
 
     //! The leaf iterator
     using LeafIterator = typename Traits::template Codim<0>::LeafIterator;
