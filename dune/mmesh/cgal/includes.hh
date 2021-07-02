@@ -8,6 +8,8 @@
 #include <CGAL/Point_2.h>
 #include <CGAL/Point_3.h>
 #include <CGAL/Vector_3.h>
+#include <CGAL/Triangle_2.h>
+#include <CGAL/Polygon_2.h>
 #include <CGAL/circulator.h>
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/utility.h>
@@ -27,5 +29,9 @@
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 #include <CGAL/Delaunay_triangulation_cell_base_3.h>
+
+#if CGAL_INTERSECTION
+#include <CGAL/intersections.h>
+#endif
 
 #endif

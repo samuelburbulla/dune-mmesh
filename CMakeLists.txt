@@ -26,6 +26,7 @@ add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(dune)
 add_subdirectory(doc)
 add_subdirectory(cmake/modules)
+add_subdirectory(CGAL)
 
 # if Python bindings are enabled, include necessary sub directories.
 if( DUNE_ENABLE_PYTHONBINDINGS )

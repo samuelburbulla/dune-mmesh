@@ -11,12 +11,4 @@ set(HEADERS
 install(FILES ${HEADERS}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/mmesh)
 
-dune_add_library("dunemmesh"
-  mmesh.cc)
-
-#if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16")
-#    target_precompile_headers(dunemmesh
-#      PUBLIC
-#        cgal/includes.hh
-#    )
-#endif()
+dune_add_library("dunemmesh" mmesh.cc)

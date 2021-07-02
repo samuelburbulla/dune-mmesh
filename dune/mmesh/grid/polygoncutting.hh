@@ -4,13 +4,6 @@
 #include <iostream>
 #include <algorithm>
 
-// CGAL includes
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Point_2.h>
-#include <CGAL/Triangle_2.h>
-#include <CGAL/Polygon_2.h>
-#include <CGAL/intersections.h>
-
 namespace Dune
 {
   template<class Scalar, class Point>
@@ -159,7 +152,7 @@ namespace Dune
       return 0.5 * area;
     }
 
-
+#if CGAL_INTERSECTION
     template< typename Triang >
     static Scalar intersectionVolumeCGAL( const Triang& subjectTriangle,
       const Triang& clipTriangle )
@@ -205,6 +198,7 @@ namespace Dune
       // there is no intersection
       return 0;
     }
+#endif
 
   };
 }
