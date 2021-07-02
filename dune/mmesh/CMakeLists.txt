@@ -11,5 +11,4 @@ set(HEADERS
 install(FILES ${HEADERS}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/mmesh)
 
-dune_add_library("dunemmesh"
-  mmesh.cc)
+dune_add_library("dunemmesh" mmesh.cc)

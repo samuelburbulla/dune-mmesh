@@ -4,16 +4,6 @@
 #include <iostream>
 #include <algorithm>
 
-// CGAL includes
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Point_2.h>
-#include <CGAL/Triangle_2.h>
-#include <CGAL/Polygon_2.h>
-
-#if CGAL_INTERSECTION
-#include <CGAL/intersections.h>
-#endif
-
 namespace Dune
 {
   template<class Scalar, class Point>
