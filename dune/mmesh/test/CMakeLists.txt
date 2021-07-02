@@ -50,7 +50,7 @@ target_link_libraries(test-interfacegrid-3d PUBLIC "dunemmesh")
 
 if(DEFINED MPFVERSION)
   dune_add_test(NAME test-intersectionvolume-2d SOURCES test-intersectionvolume.cc)
-  set_property( TARGET test-intersectionvolume-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+  set_property( TARGET test-intersectionvolume-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;CGAL_INTERSECTION" )
   target_link_libraries(test-intersectionvolume-2d PUBLIC "dunemmesh")
 endif()
 

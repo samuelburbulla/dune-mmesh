@@ -9,7 +9,10 @@
 #include <CGAL/Point_2.h>
 #include <CGAL/Triangle_2.h>
 #include <CGAL/Polygon_2.h>
+
+#if CGAL_INTERSECTION
 #include <CGAL/intersections.h>
+#endif
 
 namespace Dune
 {
@@ -159,7 +162,7 @@ namespace Dune
       return 0.5 * area;
     }
 
-
+#if CGAL_INTERSECTION
     template< typename Triang >
     static Scalar intersectionVolumeCGAL( const Triang& subjectTriangle,
       const Triang& clipTriangle )
@@ -205,6 +208,7 @@ namespace Dune
       // there is no intersection
       return 0;
     }
+#endif
 
   };
 }
