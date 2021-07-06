@@ -25,10 +25,10 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: clone dune modules and build
+      - name: Clone dune modules and build
         run: |
           pip install scikit-build
-          ./.github/workflows/clone-modules
+          sudo ./scripts/clone-modules
 
       - uses: actions/upload-artifact@v2
         with:
@@ -91,10 +91,10 @@ jobs:
         run: |
           source dune-env/bin/activate
           pip list
-          DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=./.github/workflows/config.opts
+          DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=scripts/opts/config.opts
         shell: bash
 
-      - name: Run tutorial
+      - name: Run test
         # macOS fails with python 3.7: Symbol not found: _PyCMethod_New
         if: ${{ matrix.python == '3.9' || matrix.os == 'ubuntu-latest' }}
         run: |

@@ -65,7 +65,7 @@ jobs:
           DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=config.opts
         shell: bash
 
-      - name: Run tutorial
+      - name: Run test
         run: |
           source dune-env/bin/activate
           export DUNEPY_DISABLE_PLOTTING=1
