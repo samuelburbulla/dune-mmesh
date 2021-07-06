@@ -1,0 +1,19 @@
+modules=(
+  'core/dune-common.git'
+  'core/dune-geometry.git'
+  'core/dune-grid.git'
+  'core/dune-istl.git'
+  'core/dune-localfunctions.git'
+  'dune-fem/dune-fem.git'
+)
+mkdir dist
+mkdir repos
+cd repos
+for m in "${modules[@]}"; do
+  git clone https://gitlab.dune-project.org/$m
+done
+packaging=$PWD/dune-common/bin/dunepackaging.py
+./dune-common/bin/dunecontrol exec $packaging --onlysdist
+mv */dist/*.tar.gz ../dist
+cd ..
+rm -rf repos
