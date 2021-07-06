@@ -12,11 +12,14 @@ on:
       upload:
         description: 'upload (testpypi | pypi)'
         required: true
-        default: 'testpypi'
+        default: 'pypi'
       runtest:
         description: "Run tests (only turn this off in exceptional circumstances)"
         required: true
         default: true
+
+  schedule:
+    - cron:  '0 0 * * 0'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -33,7 +36,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: packages
-          path: dist/dune-mmesh*
+          path: dist
 
   # test packages
   test:
@@ -69,7 +72,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: packages
-          path: dist/dune-mmesh*
+          path: dist
 
       - name: Setup venv
         run: |
@@ -116,7 +119,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: packages
-          path: dist/dune-mmesh*
+          path: dist
 
       - name: Publish package to PyPI
         if: ${{ github.event.inputs.upload == 'pypi' }}
