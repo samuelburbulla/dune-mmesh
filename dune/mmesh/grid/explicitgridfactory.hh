@@ -386,11 +386,6 @@ namespace Dune
      *  allowing to specity a grid name.
      *
      *  \returns a pointer to the newly created grid
-     *
-     *  \note The caller takes responsibility of freeing the memory allocated
-     *        for the grid.
-     *  \note MMesh's grid factory provides a static method for freeing the
-     *        grid (destroyGrid).
      */
 
     std::unique_ptr<Grid> createGrid ()
@@ -427,6 +422,7 @@ namespace Dune
      *
      *  \param[in]  grid  pointer to the grid to destroy
      */
+    [[deprecated("Will be removed after next release.")]]
     static void destroyGrid ( Grid *grid )
     {
       delete grid;

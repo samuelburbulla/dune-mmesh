@@ -210,6 +210,7 @@ namespace Dune
      *
      *  \param[in]  grid  pointer to the grid to destroy
      */
+    [[deprecated("Will be removed after next release.")]]
     static void destroyGrid ( Grid *grid )
     {
       DUNE_THROW( InvalidStateException, "The interface grid cannot be destroyed, destroy the MMesh instead!" );
