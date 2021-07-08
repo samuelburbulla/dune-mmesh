@@ -169,30 +169,33 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1
     scheme(uh, f)
     ischeme(th, g)
 
-    from scipy.sparse.linalg import LinearOperator, splu, lgmres
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import LinearOperator, spsolve
 
     for i in range(1, iter+1):
 
         updateJacobians()
 
-        iluA = splu(A.as_numpy.tocsc())
-        iluD = splu(D.as_numpy.tocsc())
+        def J(x):
+            return (A.as_numpy.dot(x[:n]) + B(x[n:])).tolist() + (C(x[:n]) + D.as_numpy.dot(x[n:])).tolist()
 
-        S = LinearOperator((n+m,n+m), lambda x: np.concatenate((A.as_numpy.dot(x[:n]) + B(x[n:]), C(x[:n]) + D.as_numpy.dot(x[n:]))))
-        M = LinearOperator((n+m,n+m), lambda x: np.concatenate((iluA.solve(x[:n]), iluD.solve(x[n:]))))
+        data = []
+        row = []
+        col = []
+        v = np.zeros(n+m)
+        for k in range(n+m):
+            v[k] = 1
+            dv = J(v)
+            v[k] = 0
+            for j in range(n+m):
+                if abs(dv[j]) > 1e-14:
+                    data += [dv[j]]
+                    row += [j]
+                    col += [k]
 
+        jac = csr_matrix((data, (row, col)))
         r = np.concatenate((f.as_numpy, g.as_numpy))
-        x0 = np.concatenate((uh.as_numpy, th.as_numpy))
-
-        def cb(x):
-            if verbose > 1:
-                res = S(x)-r
-                print(" |Sx-r| =", norm(res))
-
-        x, info = lgmres(S, r, x0, maxiter=10, M=M, tol=tol, callback=cb)
-
-        if verbose > 1 and info != 0:
-            print("  GMRES not converged!")
+        x = spsolve(jac, r)
 
         uh.as_numpy[:] -= x[:n]
         th.as_numpy[:] -= x[n:]
