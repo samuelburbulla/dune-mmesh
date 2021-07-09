@@ -103,7 +103,7 @@ namespace Dune
   struct RefinementInsertionPointStruct
   {
     Point point;
-    std::size_t insertionLevel;
+    std::size_t insertionLevel = 0;
     Edge edge;
     IdType edgeId;
     VertexHandle v0, v1;
@@ -337,7 +337,7 @@ namespace Dune
     {
       const auto& facet = entity( intersection.impl().getHostIntersection() );
       std::vector<std::size_t> ids;
-      for( int i = 0; i < facet.subEntities(dim); ++i )
+      for( std::size_t i = 0; i < facet.subEntities(dim); ++i )
       {
         const auto& vertex = facet.impl().template subEntity<dim>(i);
         vertex.impl().hostEntity()->info().isInterface = true;
