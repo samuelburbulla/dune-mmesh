@@ -418,16 +418,6 @@ namespace Dune
       );
     }
 
-    /** \brief destroy a grid previously obtained from this factory
-     *
-     *  \param[in]  grid  pointer to the grid to destroy
-     */
-    [[deprecated("Will be removed after next release.")]]
-    static void destroyGrid ( Grid *grid )
-    {
-      delete grid;
-    }
-
     //! return the vertex handles
     const std::vector< Vertex_handle >& vertexHandles () const
     {
