@@ -79,7 +79,7 @@ namespace Dune
     static inline std::size_t duneFacetToCgalSecond ( const std::size_t duneFacet, const std::array< std::size_t, dim+1 >& cgalIndex )
     {
       std::size_t sum = 0;
-      for ( int k = 0; k < dim; ++k )
+      for ( std::size_t k = 0; k < dim; ++k )
         sum += cgalIndex[ ref<dim>().subEntity(duneFacet, 1, k, dim) ];
 
       static constexpr int max = (dim == 2) ? 3 : 6;
@@ -95,11 +95,11 @@ namespace Dune
 
       // invert cgalIndex
       auto duneIndex = cgalIndex;
-      for ( int k = 0; k < dim+1; ++k )
+      for ( std::size_t k = 0; k < dim+1; ++k )
         duneIndex[ cgalIndex[k] ] = k;
 
       std::size_t sum = 0;
-      for ( int k = 0; k < dim; ++k )
+      for ( std::size_t k = 0; k < dim; ++k )
         sum += duneIndex[ (i+k+1)%(dim+1) ];
 
       static const int thr = (dim == 2) ? 1 : 3;
@@ -117,7 +117,7 @@ namespace Dune
 
       // invert cgalIndex
       auto duneIndex = cgalIndex;
-      for ( int k = 0; k < dim+1; ++k )
+      for ( std::size_t k = 0; k < dim+1; ++k )
         duneIndex[ cgalIndex[k] ] = k;
 
       auto i0 = duneIndex[ i ];

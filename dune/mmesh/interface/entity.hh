@@ -407,23 +407,21 @@ namespace Dune
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity, const IdType& id)
-      : hostEntity_(hostEntity), grid_(grid)
-      , id_(id), isLeaf_(false)
+      : hostEntity_(hostEntity), id_(id), grid_(grid), isLeaf_(false)
     {}
 
     MMeshInterfaceGridEntity(const GridImp* grid, const VertexStorage& vertex)
-      : grid_(grid), vertex_(vertex)
-      , id_( /*caching id*/ IdType({42,42}) ), isLeaf_(false)
+      : id_( /*caching id*/ IdType({42,42}) ), grid_(grid), isLeaf_(false), vertex_(vertex)
     {}
 
     MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)
-      : hostEntity_(original.hostEntity_), id_(original.id_), isLeaf_(original.isLeaf_)
-      , grid_(original.grid_), vertex_(original.vertex_)
+      : hostEntity_(original.hostEntity_), id_(original.id_)
+      , grid_(original.grid_), isLeaf_(original.isLeaf_), vertex_(original.vertex_)
     {}
 
     MMeshInterfaceGridEntity(MMeshInterfaceGridEntity&& original)
-      : hostEntity_(std::move(original.hostEntity_)), id_(original.id_), isLeaf_(original.isLeaf_)
-      , grid_(original.grid_), vertex_(original.vertex_)
+      : hostEntity_(std::move(original.hostEntity_)), id_(original.id_)
+      , grid_(original.grid_), isLeaf_(original.isLeaf_), vertex_(original.vertex_)
     {}
 
     MMeshInterfaceGridEntity& operator=(const MMeshInterfaceGridEntity& original)
