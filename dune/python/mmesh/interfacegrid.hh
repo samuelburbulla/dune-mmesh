@@ -140,6 +140,13 @@ namespace Dune
           Return if intersection is part of the interface
         )doc" );
 
+        cls.def( "isInterface", [] ( Grid &self, const Vertex& vertex ) {
+          return self.isInterface( vertex );
+        },
+        R"doc(
+          Return if vertex is part of the interface
+        )doc" );
+
         cls.def( "asInterfaceEntity", [] ( Grid &self, const Intersection& intersection ) {
           return self.asInterfaceEntity( intersection );
         },
