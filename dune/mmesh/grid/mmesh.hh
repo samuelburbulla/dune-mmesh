@@ -264,9 +264,6 @@ namespace Dune
       indicator_.init(*this);
     }
 
-    //! The destructor
-    virtual ~MMesh() {}
-
     //! This pointer to derived class
     const GridImp* This() const { return static_cast<const GridImp*>(this); }
     GridImp* This() { return static_cast<GridImp*>(this); }
@@ -1675,7 +1672,7 @@ namespace Dune
     }
 
     //! Get a pointer to the interface grid
-    const std::shared_ptr<InterfaceGrid>& interfaceGridPtr()
+    const auto& interfaceGridPtr()
     {
       return interfaceGrid_;
     }

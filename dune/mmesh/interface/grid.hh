@@ -160,8 +160,6 @@ namespace Dune
       setIndices();
     }
 
-    virtual ~MMeshInterfaceGrid() {};
-
     /** \brief Return maximum level defined in this grid.
      *
      * Levels are numbered 0 ... maxlevel with 0 the coarsest level.
