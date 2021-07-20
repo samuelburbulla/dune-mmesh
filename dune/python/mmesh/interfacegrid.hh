@@ -81,7 +81,7 @@ namespace Dune
         using Intersection = typename Grid::Intersection;
         using InterfaceEntity = typename Grid::InterfaceEntity;
         using InterfaceGrid = typename Grid::InterfaceGrid;
-        using InterfaceVertex = typename InterfaceGrid::template Codim< InterfaceGrid::dimension >::Entity;;
+        using InterfaceVertex = typename InterfaceGrid::template Codim< InterfaceGrid::dimension >::Entity;
         using FieldVector = Dune::FieldVector< double, d >;
 
         cls.def( "preAdapt", [] ( Grid &self ) {

@@ -1718,7 +1718,7 @@ namespace Dune
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
-    std::shared_ptr<InterfaceGrid> interfaceGrid_;
+    std::unique_ptr<InterfaceGrid> interfaceGrid_;
 
     std::vector<RefinementInsertionPoint> insert_;
     std::unordered_set< IdType > inserted_;
