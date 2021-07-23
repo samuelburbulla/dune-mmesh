@@ -120,46 +120,48 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1
         scheme.solve(target=uh)
         return
 
-    from dune.fem.operator import linear as linearOperator
-    A = linearOperator(scheme)
-    D = linearOperator(ischeme)
-
-    def updateJacobians():
-        scheme.jacobian(uh, A)
-        ischeme.jacobian(th, D)
-
     def call():
         if callback is not None:
             callback()
 
     from numpy.linalg import norm
 
-    # Evaluate the coupling blocks by finite difference on-demand
-    Bz = uh.copy()
-    def B(z):
-        if norm(z) == 0:
-            return np.zeros(n)
-        zh = z * eps / norm(z)
-        th.as_numpy[:] += zh
-        call()
-        scheme(uh, Bz)
-        th.as_numpy[:] -= zh
-        Bz.as_numpy[:] -= f.as_numpy
-        Bz.as_numpy[:] /= eps
-        return Bz.as_numpy * norm(z)
+    python = False
+    if python:
+        from dune.fem.operator import linear as linearOperator
+        A = linearOperator(scheme)
+        D = linearOperator(ischeme)
 
-    Cz = th.copy()
-    def C(z):
-        if norm(z) == 0:
-            return np.zeros(m)
-        zh = z * eps / norm(z)
-        uh.as_numpy[:] += zh
-        call()
-        ischeme(th, Cz)
-        uh.as_numpy[:] -= zh
-        Cz.as_numpy[:] -= g.as_numpy
-        Cz.as_numpy[:] /= eps
-        return Cz.as_numpy * norm(z)
+        def updateJacobians():
+            scheme.jacobian(uh, A)
+            ischeme.jacobian(th, D)
+
+        # Evaluate the coupling blocks by finite difference on-demand
+        Bz = uh.copy()
+        def B(z):
+            if norm(z) == 0:
+                return np.zeros(n)
+            zh = z * eps / norm(z)
+            th.as_numpy[:] += zh
+            call()
+            scheme(uh, Bz)
+            th.as_numpy[:] -= zh
+            Bz.as_numpy[:] -= f.as_numpy
+            Bz.as_numpy[:] /= eps
+            return Bz.as_numpy * norm(z)
+
+        Cz = th.copy()
+        def C(z):
+            if norm(z) == 0:
+                return np.zeros(m)
+            zh = z * eps / norm(z)
+            uh.as_numpy[:] += zh
+            call()
+            ischeme(th, Cz)
+            uh.as_numpy[:] -= zh
+            Cz.as_numpy[:] -= g.as_numpy
+            Cz.as_numpy[:] /= eps
+            return Cz.as_numpy * norm(z)
 
     # Evaluate
     f = uh.copy()
@@ -169,43 +171,75 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1
     scheme(uh, f)
     ischeme(th, g)
 
-    from scipy.sparse import csr_matrix
-    from scipy.sparse.linalg import LinearOperator, spsolve
+    if not python:
+        # Load C++ jacobian implementation
+        import hashlib
+        from dune.generator import Constructor
+        from dune.generator.generator import SimpleGenerator
+
+        typeName = "Dune::Python::MMesh::Jacobian< " + scheme._typeName + ", " \
+            + ischeme._typeName + ", " + uh._typeName + ", " + th._typeName + " >"
+        includes = scheme._includes + ischeme._includes + ["dune/python/mmesh/jacobian.hh"]
+        moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
+        constructor = Constructor(['const '+scheme._typeName+'& scheme','const '+ischeme._typeName+' &ischeme', 'const '+uh._typeName+' &uh', 'const '+th._typeName+' &th'],
+                                  ['return new ' + typeName + '( scheme, ischeme, uh, th );'],
+                                  ['pybind11::keep_alive< 1, 2 >()', 'pybind11::keep_alive< 1, 3 >()', 'pybind11::keep_alive< 1, 4 >()', 'pybind11::keep_alive< 1, 5 >()'])
+
+        generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
+        module = generator.load(includes, typeName, moduleName, constructor)
+        jacobian = module.Jacobian(scheme, ischeme, uh, th)
+
+        ux = uh.copy()
+        tx = th.copy()
 
     for i in range(1, iter+1):
 
-        updateJacobians()
+        if python:
+            updateJacobians()
 
-        def J(x):
-            return (A.as_numpy.dot(x[:n]) + B(x[n:])).tolist() + (C(x[:n]) + D.as_numpy.dot(x[n:])).tolist()
+            def J(x):
+                return (A.as_numpy.dot(x[:n]) + B(x[n:])).tolist() + (C(x[:n]) + D.as_numpy.dot(x[n:])).tolist()
 
-        data = []
-        row = []
-        col = []
-        v = np.zeros(n+m)
-        for k in range(n+m):
-            v[k] = 1
-            dv = J(v)
-            v[k] = 0
-            for j in range(n+m):
-                if abs(dv[j]) > 1e-14:
-                    data += [dv[j]]
-                    row += [j]
-                    col += [k]
+            data = []
+            row = []
+            col = []
+            v = np.zeros(n+m)
+            for k in range(n+m):
+                v[k] = 1
+                dv = J(v)
+                v[k] = 0
+                for j in range(n+m):
+                    if abs(dv[j]) > 1e-14:
+                        data += [dv[j]]
+                        row += [j]
+                        col += [k]
 
-        jac = csr_matrix((data, (row, col)))
-        r = np.concatenate((f.as_numpy, g.as_numpy))
-        x = spsolve(jac, r)
+            from scipy.sparse import csr_matrix
+            jac = csr_matrix((data, (row, col)))
 
-        uh.as_numpy[:] -= x[:n]
-        th.as_numpy[:] -= x[n:]
+            r = np.concatenate((f.as_numpy, g.as_numpy))
+
+            from scipy.sparse.linalg import spsolve
+            x = spsolve(jac, r)
+
+            uh.as_numpy[:] -= x[:n]
+            th.as_numpy[:] -= x[n:]
+            xres = norm(x)
+
+        if not python:
+            jacobian.update(uh, th)
+            jacobian.solve(f, g, ux, tx)
+
+            uh -= ux
+            th -= tx
+            xres = np.sqrt(norm(ux.as_numpy)**2 + norm(tx.as_numpy)**2)
+
 
         call()
         scheme(uh, f)
         ischeme(th, g)
 
-        xres = norm(x)
-        fres = max(norm(f.as_numpy), norm(g.as_numpy))
+        fres = np.sqrt(norm(f.as_numpy)**2 + norm(g.as_numpy)**2)
 
         if verbose > 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
