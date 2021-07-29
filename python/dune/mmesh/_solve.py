@@ -87,7 +87,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0):
+def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0, python=False):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method based on scipy.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
@@ -126,7 +126,6 @@ def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1
 
     from numpy.linalg import norm
 
-    python = False
     if python:
         from dune.fem.operator import linear as linearOperator
         A = linearOperator(scheme)
