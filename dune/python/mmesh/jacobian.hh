@@ -134,7 +134,7 @@ namespace Dune
           std::size_t n = f.size();
           std::size_t m = g.size();
 
-          Matrix M (n+m, n+m, 10, 0.1, Matrix::implicit);
+          Matrix M (n+m, n+m, 10, 0.4, Matrix::implicit);
           Vector x(n+m), b(n+m);
 
           auto addBlock = [&M](const auto& block, std::size_t row0, std::size_t col0)
@@ -146,8 +146,7 @@ namespace Dune
 
             for (std::size_t i = 0; i < row.size()-1; ++i)
               for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                if (std::abs(val[j]) > std::numeric_limits<double>::epsilon())
-                  M.entry(row0 + i, col0 + col[j]) = val[j];
+                M.entry(row0 + i, col0 + col[j]) = val[j];
           };
 
           addBlock(A_, 0, 0);
@@ -295,6 +294,9 @@ namespace Dune
           typedef typename JacobianOperator::DomainSpaceType  DomainSpaceType;
           typedef typename JacobianOperator::RangeSpaceType   RangeSpaceType;
 
+          typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
+          typedef typename RangeGridFunction::DiscreteFunctionSpaceType DiscreteFunctionSpaceType;
+
           const auto& gridPart = t.gridPart();
           const auto& grid = gridPart.grid();
           const auto& mmesh = grid.getMMesh();
@@ -302,55 +304,91 @@ namespace Dune
           NeighborInterfaceStencil< DomainSpaceType, RangeSpaceType > stencil( B.domainSpace(), B.rangeSpace() );
           B.reserve( stencil );
 
-          auto F = u;
-          scheme(u, F);
-          auto dF = u;
+          auto dFIn = u;
+          auto dFOut = u;
+
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FTmpIn( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FTmpOut( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dFTmpIn( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dFTmpOut( u.space() );
 
           Dune::Fem::MutableLocalFunction< DomainGridFunction > tLocal( t );
 
-          for( const auto &outside : elements( gridPart, Partitions::interiorBorder ) )
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > uInside( u );
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > uOutside( u );
+
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalIn( dFIn );
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalOut( dFOut );
+
+          TemporaryLocalMatrixType localMatrixIn( B.domainSpace(), B.rangeSpace() );
+          TemporaryLocalMatrixType localMatrixOut( B.domainSpace(), B.rangeSpace() );
+
+          for( const auto &interface : elements( gridPart, Partitions::interiorBorder ) )
           {
-            tLocal.bind( outside );
+            tLocal.bind( interface );
             auto& tDof = tLocal.localDofVector();
 
-            double eps = 1e-8;
+            const auto& intersection = mmesh.asIntersection( interface );
+
+            const auto& inside = intersection.inside();
+            const auto& outside = intersection.outside();
+
+            FTmpIn.bind( inside );
+            FTmpOut.bind( outside );
+
+            dFTmpIn.bind( inside );
+            dFTmpOut.bind( outside );
+
+            uInside.bind( inside );
+            uOutside.bind( outside );
+
+            localMatrixIn.init(interface, inside);
+            localMatrixOut.init(interface, outside);
+
+            localMatrixIn.clear();
+            localMatrixOut.clear();
+
+            FTmpIn.clear();
+            FTmpOut.clear();
+            scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, FTmpIn, FTmpOut );
+
+            static const double eps = 1e-8;
             for (std::size_t i = 0; i < tDof.size(); ++i)
             {
+              dFIn.clear();
+              dFOut.clear();
+
+              dFTmpIn.clear();
+              dFTmpOut.clear();
+
+              dFIn.addLocalDofs( inside, FTmpIn.localDofVector() );
+              dFOut.addLocalDofs( outside, FTmpOut.localDofVector() );
+
+              dFIn *= -1.;
+              dFOut *= -1.;
+
               tDof[ i ] += eps;
-              scheme(u, dF); // TODO: we should do this only locally
+              scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, dFTmpIn, dFTmpOut );
               tDof[ i ] -= eps;
 
-              dF -= F;
-              dF /= eps;
+              dFIn.addLocalDofs( inside, dFTmpIn.localDofVector() );
+              dFOut.addLocalDofs( outside, dFTmpOut.localDofVector() );
 
-              const auto& intersection = mmesh.asIntersection( outside );
-              std::array<decltype(intersection.inside()), 2> bulkElements {{ intersection.inside(), intersection.outside() }};
-              for (const auto& inside : bulkElements)
-              {
-                Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocal( dF );
-                dFLocal.bind( inside );
+              dFIn /= eps;
+              dFOut /= eps;
 
-                typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
-                TemporaryLocalMatrixType localMatrix( B.domainSpace(), B.rangeSpace() );
-                localMatrix.init(outside, inside);
-// ---
-                // scheme.fullOperator().addInteriorIntegral( tOutside, wInside );
-                //
+              dFLocalIn.bind( inside );
+              dFLocalOut.bind( outside );
 
-                //
-                // Dune::Fem::ConstLocalFunction< GridFunction > uInside( u );
-                //
-                // addSkeletonIntegral( intersection, uInside, uOutside, wInside, wOutside );
-                //
-                // f2.addLocalDofs( outside, w.localDofVector() );
-                //
-// ---
-                for (std::size_t j = 0; j < dFLocal.localDofVector().size(); ++j)
-                  localMatrix.set(j, i, dFLocal[j]);
+              for (std::size_t j = 0; j < dFLocalIn.localDofVector().size(); ++j)
+                localMatrixIn.set(j, i, dFLocalIn[j]);
 
-                B.addLocalMatrix( outside, inside, localMatrix );
-              }
+              for (std::size_t j = 0; j < dFLocalOut.localDofVector().size(); ++j)
+                localMatrixOut.set(j, i, dFLocalOut[j]);
             }
+
+            B.addLocalMatrix( interface, inside, localMatrixIn );
+            B.addLocalMatrix( interface, outside, localMatrixOut );
           }
           B.compress();
         }

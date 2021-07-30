@@ -87,7 +87,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=1e-8, eps=1e-8, verbose=0, python=False):
+def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1e-8, verbose=0, python=False):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method based on scipy.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
