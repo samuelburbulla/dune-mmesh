@@ -78,19 +78,6 @@ namespace Dune
         }
       };
 
-      template<class Matrix>
-      void printMatrix(Matrix& M)
-      {
-        auto crs = M.exportCRS();
-        const auto& val = std::get<0>(crs);
-        const auto& col = std::get<1>(crs);
-        const auto& row = std::get<2>(crs);
-
-        for (std::size_t i = 0; i < row.size()-1; ++i)
-          for (std::size_t j = row[i]; j < row[i+1]; ++j)
-            std::cout << "(" << i << ", " << col[j] << ") -> " << val[j] << std::endl;
-      }
-
       template< class Sch, class ISch, class Sol, class ISol >
       class Jacobian
       {
@@ -107,6 +94,9 @@ namespace Dune
         using CType = Dune::Fem::SparseRowLinearOperator<Solution, ISolution, SparseMatrix>;
         using DType = typename IScheme::JacobianOperatorType;
 
+        typedef typename AType::DomainSpaceType BulkSpaceType;
+        typedef typename DType::DomainSpaceType InterfaceSpaceType;
+
         Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th )
          : scheme_(scheme), ischeme_(ischeme),
            A_( "A", uh.space(), uh.space() ),
@@ -115,15 +105,23 @@ namespace Dune
            D_( "D", th.space(), th.space() )
         {}
 
+        void init()
+        {
+          NeighborInterfaceStencil< InterfaceSpaceType, BulkSpaceType > stencilB( B_.domainSpace(), B_.rangeSpace() );
+          B_.clear();
+          B_.reserve( stencilB );
+
+          InterfaceNeighborStencil< BulkSpaceType, InterfaceSpaceType > stencilC( C_.domainSpace(), C_.rangeSpace() );
+          C_.clear();
+          C_.reserve( stencilC );
+        }
+
         void update( const Solution &uh, const ISolution &th )
         {
           scheme_.jacobian(uh, A_);
           ischeme_.jacobian(th, D_);
-
-          B_.clear();
-          C_.clear();
-          assembleB(scheme_, th, uh, B_);
-          assembleC(ischeme_, uh, th, C_);
+          assembleB(scheme_, th, uh);
+          assembleC(ischeme_, uh, th);
         }
 
         void solve( const Solution &f, const ISolution &g, Solution& u, ISolution& t )
@@ -134,7 +132,8 @@ namespace Dune
           std::size_t n = f.size();
           std::size_t m = g.size();
 
-          Matrix M (n+m, n+m, 10, 0.4, Matrix::implicit);
+          std::size_t nz = A_.exportMatrix().maxNzPerRow() + B_.exportMatrix().maxNzPerRow();
+          Matrix M (n+m, n+m, nz, 0.1, Matrix::implicit);
           Vector x(n+m), b(n+m);
 
           auto addBlock = [&M](const auto& block, std::size_t row0, std::size_t col0)
@@ -146,7 +145,8 @@ namespace Dune
 
             for (std::size_t i = 0; i < row.size()-1; ++i)
               for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                M.entry(row0 + i, col0 + col[j]) = val[j];
+                if (std::abs(val[j]) > std::numeric_limits<double>::epsilon())
+                  M.entry(row0 + i, col0 + col[j]) = val[j];
           };
 
           addBlock(A_, 0, 0);
@@ -156,14 +156,13 @@ namespace Dune
 
           M.compress();
 
-          Dune::UMFPack<Matrix> solver(M);
-          Dune::InverseOperatorResult res;
-
           for (std::size_t i = 0; i < n; ++i)
             b[i] = f.leakPointer()[i];
           for (std::size_t i = 0; i < m; ++i)
             b[i+n] = g.leakPointer()[i];
 
+          Dune::UMFPack<Matrix> solver(M);
+          Dune::InverseOperatorResult res;
           solver.apply(x, b, res);
           solver.free();
 
@@ -171,128 +170,15 @@ namespace Dune
             u.leakPointer()[i] = x[i];
           for (std::size_t i = 0; i < t.size(); ++i)
             t.leakPointer()[i] = x[i+n];
-
-          /*
-          std::size_t n = u.size();
-          std::size_t m = t.size();
-
-          auto& A = A_.exportMatrix();
-          auto& B = B_.exportMatrix();
-          auto& C = C_.exportMatrix();
-
-          Fem::UMFPACKInverseOperator<ISolution, typename DType::MatrixType> Dinv;
-          Dinv.bind(D_);
-
-          auto ei = u;
-          ei.clear();
-
-          auto ci = t;
-          auto di = t;
-
-          Fem::SparseRowMatrix<double, int> DinvC;
-          DinvC.reserve(m, n, 10);
-
-          for (std::size_t i = 0; i < ei.size(); ++i)
-          {
-            ei.leakPointer()[i] = 1.;
-            C.apply(ei, ci);
-
-            Dinv(ci, di);
-
-            for (std::size_t j = 0; j < C.rows(); ++j)
-            {
-              const auto& dij = di.leakPointer()[j];
-              if (std::abs(dij) > std::numeric_limits<double>::epsilon())
-                DinvC.set(j, i, dij);
-            }
-            ei.leakPointer()[i] = 0.;
-          }
-          DinvC.compress();
-
-          Fem::SparseRowMatrix<double, int> BDinvC;
-          BDinvC.reserve(n, n, 10);
-
-          {
-            auto crs = B.exportCRS();
-            const auto& val = std::get<0>(crs);
-            const auto& col = std::get<1>(crs);
-            const auto& row = std::get<2>(crs);
-
-            // BDinvC = B * DinvC
-            for (std::size_t i = 0; i < row.size()-1; ++i)
-              for (std::size_t j = row[i]; j < row[i+1]; ++j)
-              {
-                auto d = DinvC.get(col[j], i);
-                if (std::abs(val[j] * d) > std::numeric_limits<double>::epsilon())
-                  BDinvC.add(i, col[j], val[j] * d);
-              }
-            BDinvC.compress();
-          }
-
-
-          AType SOp("S", u.space(), u.space());
-
-          auto& S = SOp.exportMatrix();
-          S.reserve(n, n, A.maxNzPerRow() + BDinvC.maxNzPerRow());
-
-          {
-            auto crs = A.exportCRS();
-            const auto& val = std::get<0>(crs);
-            const auto& col = std::get<1>(crs);
-            const auto& row = std::get<2>(crs);
-
-            // S = A
-            for (std::size_t i = 0; i < row.size()-1; ++i)
-              for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                S.add(i, col[j], val[j]);
-          }
-
-          {
-            auto crs = BDinvC.exportCRS();
-            const auto& val = std::get<0>(crs);
-            const auto& col = std::get<1>(crs);
-            const auto& row = std::get<2>(crs);
-
-            // S -= BDinvC
-            for (std::size_t i = 0; i < row.size()-1; ++i)
-              for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                S.add(i, col[j], -val[j]);
-          }
-          S.compress();
-
-
-          Fem::UMFPACKInverseOperator<Solution, typename AType::MatrixType> Sinv;
-          Sinv.bind(SOp);
-
-          auto Dinvg = g;
-          Dinv(g, Dinvg);
-
-          auto BDinvg = u;
-          B(Dinvg, BDinvg);
-
-          auto fBDinvg = f;
-          fBDinvg -= BDinvg;
-
-          Sinv(fBDinvg, u);
-
-          auto Cu = t;
-          C.apply(u, Cu);
-          auto gCu = g;
-          gCu -= Cu;
-          Dinv(gCu, t);
-
-          Dinv.finalize();
-          Sinv.finalize();
-          */
         }
 
       private:
 
-        template< class Scheme, class DomainGridFunction, class RangeGridFunction, class JacobianOperator >
-        void assembleB (const Scheme &scheme, const DomainGridFunction &t, const RangeGridFunction &u, JacobianOperator &B) const
+        template< class Scheme, class DomainGridFunction, class RangeGridFunction >
+        void assembleB (const Scheme &scheme, const DomainGridFunction &t, const RangeGridFunction &u)
         {
-          typedef typename JacobianOperator::DomainSpaceType  DomainSpaceType;
-          typedef typename JacobianOperator::RangeSpaceType   RangeSpaceType;
+          typedef InterfaceSpaceType DomainSpaceType;
+          typedef BulkSpaceType      RangeSpaceType;
 
           typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
           typedef typename RangeGridFunction::DiscreteFunctionSpaceType DiscreteFunctionSpaceType;
@@ -300,9 +186,6 @@ namespace Dune
           const auto& gridPart = t.gridPart();
           const auto& grid = gridPart.grid();
           const auto& mmesh = grid.getMMesh();
-
-          NeighborInterfaceStencil< DomainSpaceType, RangeSpaceType > stencil( B.domainSpace(), B.rangeSpace() );
-          B.reserve( stencil );
 
           auto dFIn = u;
           auto dFOut = u;
@@ -320,8 +203,8 @@ namespace Dune
           Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalIn( dFIn );
           Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalOut( dFOut );
 
-          TemporaryLocalMatrixType localMatrixIn( B.domainSpace(), B.rangeSpace() );
-          TemporaryLocalMatrixType localMatrixOut( B.domainSpace(), B.rangeSpace() );
+          TemporaryLocalMatrixType localMatrixIn( B_.domainSpace(), B_.rangeSpace() );
+          TemporaryLocalMatrixType localMatrixOut( B_.domainSpace(), B_.rangeSpace() );
 
           for( const auto &interface : elements( gridPart, Partitions::interiorBorder ) )
           {
@@ -387,26 +270,23 @@ namespace Dune
                 localMatrixOut.set(j, i, dFLocalOut[j]);
             }
 
-            B.addLocalMatrix( interface, inside, localMatrixIn );
-            B.addLocalMatrix( interface, outside, localMatrixOut );
+            B_.addLocalMatrix( interface, inside, localMatrixIn );
+            B_.addLocalMatrix( interface, outside, localMatrixOut );
           }
-          B.compress();
+          B_.compress();
         }
 
-        template< class Scheme, class DomainGridFunction, class RangeGridFunction, class JacobianOperator >
-        void assembleC (const Scheme &ischeme, const DomainGridFunction &u, const RangeGridFunction &t, JacobianOperator &C) const
+        template< class Scheme, class DomainGridFunction, class RangeGridFunction >
+        void assembleC (const Scheme &ischeme, const DomainGridFunction &u, const RangeGridFunction &t)
         {
-          typedef typename JacobianOperator::DomainSpaceType  DomainSpaceType;
-          typedef typename JacobianOperator::RangeSpaceType   RangeSpaceType;
+          typedef BulkSpaceType      DomainSpaceType;
+          typedef InterfaceSpaceType RangeSpaceType;
 
           typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
           typedef typename RangeGridFunction::DiscreteFunctionSpaceType DiscreteFunctionSpaceType;
 
           const auto& gridPart = u.gridPart();
           const auto& grid = gridPart.grid();
-
-          InterfaceNeighborStencil< DomainSpaceType, RangeSpaceType > stencil( C.domainSpace(), C.rangeSpace() );
-          C.reserve( stencil );
 
           auto dG = t;
 
@@ -418,7 +298,7 @@ namespace Dune
           Dune::Fem::ConstLocalFunction< RangeGridFunction > tInterface( t );
           Dune::Fem::ConstLocalFunction< RangeGridFunction > dGLocal( dG );
 
-          TemporaryLocalMatrixType localMatrix( C.domainSpace(), C.rangeSpace() );
+          TemporaryLocalMatrixType localMatrix( C_.domainSpace(), C_.rangeSpace() );
 
           for( const auto &element : elements( gridPart, Partitions::interiorBorder ) )
           {
@@ -463,11 +343,11 @@ namespace Dune
                     localMatrix.set(j, i, dGLocal[j]);
                 }
 
-                C.addLocalMatrix( element, interface, localMatrix );
+                C_.addLocalMatrix( element, interface, localMatrix );
               }
             }
           }
-          C.compress();
+          C_.compress();
         }
 
         const Scheme& scheme_;
@@ -484,6 +364,14 @@ namespace Dune
       {
         using Solution = typename Jacobian::Solution;
         using ISolution = typename Jacobian::ISolution;
+
+        cls.def( "init", [] ( Jacobian &self ) {
+            self.init();
+          },
+          R"doc(
+            Initialize the mixed-dimensional jacobian.
+          )doc"
+        );
 
         cls.def( "update", [] ( Jacobian &self, const Solution& uh, const ISolution& th ) {
             self.update(uh, th);

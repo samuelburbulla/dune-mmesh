@@ -187,6 +187,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
         generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
         module = generator.load(includes, typeName, moduleName, constructor)
         jacobian = module.Jacobian(scheme, ischeme, uh, th)
+        jacobian.init();
 
         ux = uh.copy()
         tx = th.copy()
