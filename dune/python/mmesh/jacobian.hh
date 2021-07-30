@@ -342,8 +342,8 @@ namespace Dune
             uInside.bind( inside );
             uOutside.bind( outside );
 
-            localMatrixIn.init(interface, inside);
-            localMatrixOut.init(interface, outside);
+            localMatrixIn.init( interface, inside );
+            localMatrixOut.init( interface, outside );
 
             localMatrixIn.clear();
             localMatrixOut.clear();
@@ -399,51 +399,71 @@ namespace Dune
           typedef typename JacobianOperator::DomainSpaceType  DomainSpaceType;
           typedef typename JacobianOperator::RangeSpaceType   RangeSpaceType;
 
+          typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
+          typedef typename RangeGridFunction::DiscreteFunctionSpaceType DiscreteFunctionSpaceType;
+
           const auto& gridPart = u.gridPart();
           const auto& grid = gridPart.grid();
 
           InterfaceNeighborStencil< DomainSpaceType, RangeSpaceType > stencil( C.domainSpace(), C.rangeSpace() );
           C.reserve( stencil );
 
-          auto G = t;
-          ischeme(t, G);
           auto dG = t;
+
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > GTmp( t.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dGTmp( t.space() );
 
           Dune::Fem::MutableLocalFunction< DomainGridFunction > uLocal( u );
 
-          for( const auto &outside : elements( gridPart, Partitions::interiorBorder ) )
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > tInterface( t );
+          Dune::Fem::ConstLocalFunction< RangeGridFunction > dGLocal( dG );
+
+          TemporaryLocalMatrixType localMatrix( C.domainSpace(), C.rangeSpace() );
+
+          for( const auto &element : elements( gridPart, Partitions::interiorBorder ) )
           {
-            for( const auto& intersection : intersections( gridPart, outside ) )
+            for( const auto& intersection : intersections( gridPart, element ) )
             {
-              if( intersection.neighbor() && grid.isInterface( intersection ) )
+              if( grid.isInterface( intersection ) )
               {
-                uLocal.bind( outside );
+                const auto& interface = grid.asInterfaceEntity( intersection );
+
+                uLocal.bind( element );
                 auto& uDof = uLocal.localDofVector();
 
-                double eps = 1e-8;
+                GTmp.bind( interface );
+                dGTmp.bind( interface );
+                tInterface.bind( interface );
+
+                localMatrix.init( element, interface );
+                localMatrix.clear();
+
+                GTmp.clear();
+                ischeme.fullOperator().impl().addInteriorIntegral( tInterface, GTmp );
+
+                static const double eps = 1e-8;
                 for (std::size_t i = 0; i < uDof.size(); ++i)
                 {
+                  dG.clear();
+                  dGTmp.clear();
+
+                  dG.addLocalDofs( interface, GTmp.localDofVector() );
+                  dG *= -1.;
+
                   uDof[ i ] += eps;
-                  ischeme(t, dG); // TODO: we should do this only locally
+                  ischeme.fullOperator().impl().addInteriorIntegral( tInterface, dGTmp );
                   uDof[ i ] -= eps;
 
-                  dG -= G;
+                  dG.addLocalDofs( interface, dGTmp.localDofVector() );
                   dG /= eps;
 
-                  const auto& inside = grid.asInterfaceEntity( intersection );
-
-                  Dune::Fem::ConstLocalFunction< RangeGridFunction > dGLocal( dG );
-                  dGLocal.bind( inside );
-
-                  typedef Fem::TemporaryLocalMatrix< DomainSpaceType, RangeSpaceType > TemporaryLocalMatrixType;
-                  TemporaryLocalMatrixType localMatrix( C.domainSpace(), C.rangeSpace() );
-                  localMatrix.init(outside, inside);
+                  dGLocal.bind( interface );
 
                   for (std::size_t j = 0; j < dGLocal.localDofVector().size(); ++j)
                     localMatrix.set(j, i, dGLocal[j]);
-
-                  C.addLocalMatrix( outside, inside, localMatrix );
                 }
+
+                C.addLocalMatrix( element, interface, localMatrix );
               }
             }
           }
