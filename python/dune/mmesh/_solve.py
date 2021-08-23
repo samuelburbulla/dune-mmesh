@@ -180,13 +180,13 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
             + ischeme._typeName + ", " + uh._typeName + ", " + th._typeName + " >"
         includes = scheme._includes + ischeme._includes + ["dune/python/mmesh/jacobian.hh"]
         moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
-        constructor = Constructor(['const '+scheme._typeName+'& scheme','const '+ischeme._typeName+' &ischeme', 'const '+uh._typeName+' &uh', 'const '+th._typeName+' &th'],
-                                  ['return new ' + typeName + '( scheme, ischeme, uh, th );'],
+        constructor = Constructor(['const '+scheme._typeName+'& scheme','const '+ischeme._typeName+' &ischeme', 'const '+uh._typeName+' &uh', 'const '+th._typeName+' &th', 'const std::function<void()> &callback'],
+                                  ['return new ' + typeName + '( scheme, ischeme, uh, th, callback );'],
                                   ['pybind11::keep_alive< 1, 2 >()', 'pybind11::keep_alive< 1, 3 >()', 'pybind11::keep_alive< 1, 4 >()', 'pybind11::keep_alive< 1, 5 >()'])
 
         generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
         module = generator.load(includes, typeName, moduleName, constructor)
-        jacobian = module.Jacobian(scheme, ischeme, uh, th)
+        jacobian = module.Jacobian(scheme, ischeme, uh, th, call)
         jacobian.init();
 
         ux = uh.copy()

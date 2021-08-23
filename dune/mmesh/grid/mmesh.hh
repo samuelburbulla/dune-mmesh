@@ -260,7 +260,7 @@ namespace Dune
       globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
       setIndices();
 
-      interfaceGrid_ = std::make_unique<InterfaceGrid>( This(), interfaceBoundarySegments );
+      interfaceGrid_ = std::make_shared<InterfaceGrid>( This(), interfaceBoundarySegments );
       indicator_.init(*this);
     }
 
@@ -1718,7 +1718,7 @@ namespace Dune
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
-    std::unique_ptr<InterfaceGrid> interfaceGrid_;
+    std::shared_ptr<InterfaceGrid> interfaceGrid_;
 
     std::vector<RefinementInsertionPoint> insert_;
     std::unordered_set< IdType > inserted_;

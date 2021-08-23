@@ -97,12 +97,13 @@ namespace Dune
         typedef typename AType::DomainSpaceType BulkSpaceType;
         typedef typename DType::DomainSpaceType InterfaceSpaceType;
 
-        Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th )
+        Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th, const std::function<void()> &callback )
          : scheme_(scheme), ischeme_(ischeme),
            A_( "A", uh.space(), uh.space() ),
            B_( "B", th.space(), uh.space() ),
            C_( "C", uh.space(), th.space() ),
-           D_( "D", th.space(), th.space() )
+           D_( "D", th.space(), th.space() ),
+           callback_(callback)
         {}
 
         void init()
@@ -255,6 +256,7 @@ namespace Dune
               dFOut *= -1.;
 
               tDof[ i ] += eps;
+              callback_();
               scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, dFTmpIn, dFTmpOut );
               tDof[ i ] -= eps;
 
@@ -335,6 +337,7 @@ namespace Dune
                   dG *= -1.;
 
                   uDof[ i ] += eps;
+                  callback_();
                   ischeme.fullOperator().impl().addInteriorIntegral( tInterface, dGTmp );
                   uDof[ i ] -= eps;
 
@@ -360,6 +363,7 @@ namespace Dune
         BType B_;
         CType C_;
         DType D_;
+        const std::function<void()> callback_;
       };
 
 
