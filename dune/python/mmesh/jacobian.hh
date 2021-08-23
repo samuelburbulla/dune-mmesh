@@ -120,7 +120,11 @@ namespace Dune
         {
           scheme_.jacobian(uh, A_);
           ischeme_.jacobian(th, D_);
+
+          B_.clear();
           assembleB(scheme_, th, uh);
+
+          C_.clear();
           assembleC(ischeme_, uh, th);
         }
 
