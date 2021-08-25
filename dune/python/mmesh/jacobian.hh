@@ -11,6 +11,7 @@
 #include <sstream>
 #include <type_traits>
 
+#include <dune/istl/umfpack.hh>
 #include <dune/fem/operator/linear/spoperator.hh>
 
 #include <dune/python/pybind11/functional.h>
