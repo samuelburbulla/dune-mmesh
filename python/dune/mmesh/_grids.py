@@ -101,6 +101,9 @@ def mmesh(constructor, dimgrid=None, **parameters):
 
     gridView = gridModule.LeafGrid(gridModule.reader(constructor))
 
+    interfaceGrid = lambda self: self.interfaceHierarchicalGrid.leafView
+    gridModule.HierarchicalGrid.interfaceGrid = property(interfaceGrid)
+
     return gridView
 
 grid_registry = {

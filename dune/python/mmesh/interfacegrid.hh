@@ -47,7 +47,7 @@ namespace Dune
 
         cls.def_property_readonly( "bulkGrid", [] ( const Grid &grid ) {
             return grid.getMMesh().leafGridView();
-          }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
+          },
           R"doc(
             Obtain bulk grid of the MMesh
 
@@ -67,13 +67,13 @@ namespace Dune
 
         using Grid = Dune::MovingMesh< d >;
 
-        cls.def_property_readonly( "interfaceGrid", [] ( const Grid &grid ) {
-            return grid.interfaceGrid().leafGridView();
+        cls.def_property_readonly( "interfaceHierarchicalGrid", [] ( const Grid &grid ) -> const auto & {
+            return grid.interfaceGrid();
           }, pybind11::return_value_policy::reference, pybind11::keep_alive< 0, 1 >(),
           R"doc(
-            Obtain interface grid of the MMesh
+            Obtain interface hierarchical grid of the MMesh
 
-            Returns:  interface grid
+            Returns:  interface hierarchical grid
           )doc" );
 
         using Element = typename Grid::template Codim< 0 >::Entity;
