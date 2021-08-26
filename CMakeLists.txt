@@ -27,8 +27,7 @@ add_subdirectory(dune)
 add_subdirectory(doc)
 add_subdirectory(cmake/modules)
 install(DIRECTORY "CGAL"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/CGAL"
-        FILES_MATCHING PATTERN "*.h"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 # if Python bindings are enabled, include necessary sub directories.
