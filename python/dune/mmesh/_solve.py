@@ -8,11 +8,15 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
     Args:
         schemes:  pair of schemes
-        targets:  pair of discrete functions
+        targets:  pair of discrete functions that should be solved for AND that are used in the coupling forms
         callback: update function that is called every time before solving a scheme
         iter:     maximum number of iterations
-        tol:    objective tolerance between two iterates in two norm
+        tol:      objective tolerance between two iterates in two norm
         verbose:  print residuum for each iteration
+
+    Returns:
+        if converged and number of iterations
+
     Note:
         The targets also must be used in the coupling forms.
         We use a vector formulation of Aitken's fix point acceleration proposed by Irons and Tuck.
@@ -89,7 +93,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1e-8, verbose=0, python=False):
     """Helper function to solve bulk and interface scheme coupled monolithically.
-       A newton method based on scipy.
+       A newton method assembling the underlying jacobian matrix.
        The coupling jacobian blocks are evalutaed by finite difference on demand.
 
     Args:
@@ -97,10 +101,11 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
         targets:  pair of discrete functions that should be solved for AND that are used in the coupling forms
         callback: update function that is called every time before solving a scheme
         iter:     maximum number of iterations
-        tol:      objective residual of iteration step in infinity norm
-        f_tol:    objective residual of function value in infinity norm
-        eps:      step size for finite difference
-        verbose:  1: print residuum for each newton iteration, 2: for each gmres iteration
+        tol:      objective residual of iteration step in two norm
+        f_tol:    objective residual of function value in two norm
+        eps:      step size for finite difference (only for python version)
+        verbose:  1: print residuum for each newton iteration, 2: print details
+        python:   use the python implementation
 
     Returns:
         if converged

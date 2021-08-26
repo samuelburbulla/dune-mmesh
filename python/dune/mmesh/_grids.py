@@ -18,7 +18,7 @@ def mmesh(constructor, dimgrid=None, **parameters):
     """Create an MMesh grid.
 
     Args:
-        constructor: Grid constructor, e.g. (dune.grid.reader.gmsh, 'grid.msh').
+        constructor: Grid constructor, e.g. (dune.grid.reader.gmsh, 'grid.msh') or dune.grid.cartesianDomain([0,0],[1,1],[10,10]).
         dimgrid (int, optional): The world dimension (must be 2 or 3). Might be guessed by constructor.
         **parameters: Additional parameters.
 

@@ -5,8 +5,7 @@ Installation
 ************
 
 In order to install and use Dune-MMesh you need
-a recent C++ compiler (at least C++17 compatible), Python (3.7 or later)
-and `CGAL <https://www.cgal.org>`_ (5.1 or later).
+a recent C++ compiler (at least C++17 compatible) and Python (3.7 or later).
 There are two ways of installing Dune-MMesh.
 
 Using Pip
@@ -39,6 +38,8 @@ It also enables git support if you want to contribute.
 1. Clone the Dune modules `dune-common <https://gitlab.dune-project.org/core/dune-common.git>`_,
 `dune-geometry <https://gitlab.dune-project.org/core/dune-geometry.git>`_,
 `dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_,
+`dune-istl <https://gitlab.dune-project.org/core/dune-istl.git>`_,
+`dune-localfunctions <https://gitlab.dune-project.org/core/dune-localfunctions.git>`_,
 `dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_
 and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>`_.
 
