@@ -81,8 +81,8 @@ def normals(igrid):
     """
     import dune.ufl
     from dune.fem.function import cppFunction
-    n_p = cppFunction(igrid, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, True])
-    n_m = cppFunction(igrid, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, False])
+    n_p = cppFunction(igrid, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, False])
+    n_m = cppFunction(igrid, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, True])
     predefined = {}
     predefined[n_p('+')] = n_p
     predefined[n_p('-')] = n_m
