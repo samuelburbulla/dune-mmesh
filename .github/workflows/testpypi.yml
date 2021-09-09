@@ -71,10 +71,7 @@ jobs:
         run: |
           source dune-env/bin/activate
           export DUNEPY_DISABLE_PLOTTING=1
-          cd doc/examples
-          python -m nbconvert --to python coupling.ipynb
-          cd grids
-          python horizontal.py
-          cd ..
-          python coupling.py
+          cd scripts
+          python ../doc/examples/grids/horizontal.py
+          python test.py
         shell: bash
