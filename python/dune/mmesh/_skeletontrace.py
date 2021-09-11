@@ -37,12 +37,13 @@ def skeleton(interfaceFunction, grid=None):
     return skeleton
 
 
-def trace(bulkFunction, igrid=None):
+def trace(bulkFunction, igrid=None, restrictTo=None):
     """Return the trace representation of a discrete function on the bulk grid.
 
     Args:
         bulkFunction: The discrete function on the bulk grid.
         igrid (InterfaceGrid, optional): The interface grid.
+        restrictTo: already restrict the trace to '+' or '-' side
 
     Returns:
         Trace representation of a given interface function.
@@ -68,9 +69,16 @@ def trace(bulkFunction, igrid=None):
     import dune.ufl
     trace_p = dune.ufl.GridFunction(traces["in"])
     trace_m = dune.ufl.GridFunction(traces["out"])
+
+    if restrictTo is not None:
+        if not restrictTo in ['+', '-']:
+            raise Exception("restrictTo must be either '+' or '-'")
+        return trace_p if restrictTo == '+' else trace_m
+
     if bulkFunction.scalar:
         trace_p = trace_p.toVectorCoefficient()
         trace_m = trace_m.toVectorCoefficient()
+
     trace = trace_p
     predefined = {}
     predefined[trace('+')]                     = trace_p

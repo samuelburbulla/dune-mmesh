@@ -61,34 +61,31 @@ def domainMarker(grid):
     fvspace = finiteVolume(grid)
     return fvspace.interpolate(cppfunc, name="domainMarker")
 
+
 def normals(igrid):
     """Return normal vectors to the interface grid elements.
 
     Args:
-       igrid: The interface grid.
+        igrid: The interface grid.
 
     Returns:
-       Grid function on the interface grid.
+        Grid function on the interface grid. Coincides with n('+') of the bulk facet normal.
     """
     code="""
     #include <functional>
     template <class IGV>
-    auto normal(const IGV &igv, bool minus=false) {
-      return [&igv, minus] (const auto& entity, const auto& xLocal) mutable -> auto {
-        return igv.grid().getMMesh().asIntersection( entity ).centerUnitOuterNormal() * (minus ? -1.0 : 1.0);
+    auto normal(const IGV &igv) {
+      return [&igv] (const auto& entity, const auto& xLocal) mutable -> auto {
+        return igv.grid().getMMesh().asIntersection( entity ).centerUnitOuterNormal();
       };
     }
     """
     import dune.ufl
     from dune.fem.function import cppFunction
-    n_p = cppFunction(igrid, name="normal_p", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, False])
-    n_m = cppFunction(igrid, name="normal_m", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid, True])
-    predefined = {}
-    predefined[n_p('+')] = n_p
-    predefined[n_p('-')] = n_m
-    n_p.predefined = predefined
-    return n_p
-
+    from dune.fem.space import finiteVolume
+    cppFunc = cppFunction(igrid, name="normal", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid])
+    fvspace = finiteVolume(igrid, dimRange=igrid.dimension+1)
+    return fvspace.interpolate(cppFunc, name="normal")
 
 def edgeMovement(grid, shifts):
     """Return linear interpolation of vertex shifts.
