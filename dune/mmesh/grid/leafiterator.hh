@@ -39,6 +39,10 @@ namespace Dune
 
     typedef typename GridImp::template Codim<0>::Entity Entity;
 
+    explicit MMeshLeafIteratorImp() :
+      mMesh_(nullptr)
+    {}
+
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_faces_begin())
@@ -186,6 +190,10 @@ namespace Dune
     enum {codimension = 0};
 
     typedef typename GridImp::template Codim<0>::Entity Entity;
+
+    explicit MMeshLeafIteratorImp() :
+      mMesh_(nullptr)
+    {}
 
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
