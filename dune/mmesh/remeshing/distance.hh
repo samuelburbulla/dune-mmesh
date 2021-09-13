@@ -39,9 +39,7 @@ public:
     //! Constructor with grid reference
     Distance(const Grid& grid)
      : grid_( &grid )
-    {
-      update();
-    }
+    {}
 
     //! Assignment
     ThisType& operator=(const ThisType& original)
@@ -58,6 +56,11 @@ public:
       distances_.resize( indexSet().size(dim) );
       std::fill( distances_.begin(), distances_.end(), 1e100 );
 
+      std::vector<GlobalCoordinate> ivertices;
+      ivertices.reserve( grid_->interfaceGrid().size(dim-1) );
+      for ( const auto& ivertex : vertices( grid_->interfaceGrid().leafGridView() ) )
+        ivertices.push_back( ivertex.geometry().center() );
+
       for ( const auto& vertex : vertices( grid_->leafGridView() ) )
       {
         const auto& idx = indexSet().index( vertex );
@@ -68,9 +71,9 @@ public:
           continue;
         }
 
-        for ( const auto& ivertex : vertices( grid_->interfaceGrid().leafGridView() ) )
+        for ( const auto& ivertex : ivertices )
         {
-          ctype dist = (ivertex.geometry().center() - vertex.geometry().center()).two_norm();
+          ctype dist = (ivertex - vertex.geometry().center()).two_norm();
           distances_[ idx ] = std::min( distances_[ idx ], dist );
         }
       }

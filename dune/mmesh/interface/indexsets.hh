@@ -48,6 +48,7 @@ namespace Dune
        : grid_(leafIndexSet.grid_),
          sizeOfCodim_(leafIndexSet.sizeOfCodim_),
          indexMap_(leafIndexSet.indexMap_),
+         edgeIndexMap_(leafIndexSet.edgeIndexMap_),
          vertexIndices_(leafIndexSet.vertexIndices_)
     {}
 
