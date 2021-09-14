@@ -65,3 +65,19 @@ target_link_libraries(test-curvature-3d PUBLIC "dunemmesh")
 dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
 set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-femadaptation-dg PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-threading SOURCES test-threading.cc)
+set_property(TARGET test-threading APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+target_link_libraries(test-threading PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-threading-interface SOURCES test-threading.cc)
+set_property(TARGET test-threading-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+target_link_libraries(test-threading-interface PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-threading-3d SOURCES test-threading.cc)
+set_property(TARGET test-threading-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+target_link_libraries(test-threading-3d PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
+set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
+target_link_libraries(test-threading-interface-3d PUBLIC "dunemmesh")

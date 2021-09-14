@@ -579,7 +579,7 @@ namespace Dune
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {
-      static std::vector<std::size_t> ids( dimensionworld );
+      std::vector<std::size_t> ids( dimensionworld );
       for( int i = 0; i < dimensionworld; ++i )
         ids[ i ] = entity.first->vertex((entity.second+i+1)%(dimensionworld+1))->info().id;
       std::sort(ids.begin(), ids.end());
