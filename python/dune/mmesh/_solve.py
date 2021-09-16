@@ -3,7 +3,7 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
-def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=None, factor=1.0, verbose=False):
+def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=None, verbose=False):
     """Helper function to solve bulk and interface scheme coupled iteratively.
 
     Args:
