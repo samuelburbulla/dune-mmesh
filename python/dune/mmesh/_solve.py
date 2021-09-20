@@ -78,6 +78,9 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
         if np.dot(D2b, D2b) != 0:
             v.as_numpy[:] -= np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
 
+        if callback is not None:
+            callback()
+
         res = residuum(u.as_numpy - a.as_numpy, v.as_numpy - b.as_numpy)
 
         if verbose:
