@@ -90,7 +90,13 @@ from dune.mmesh import monolithicSolve, interfaceIndicator
 from dune.fem.space import dglagrange
 from dune.ufl import Constant
 
-space = dglagrange(gridView, order=3)
+from dune.fem.view import geometryGridView
+from dune.fem.function import uflFunction
+x = SpatialCoordinate(triangle)
+gridFunction = uflFunction(gridView, ufl=x, order=1, name="transform")
+geoGrid = geometryGridView(gridFunction)
+
+space = dglagrange(geoGrid, order=3)
 u = TrialFunction(space)
 v = TestFunction(space)
 
@@ -101,7 +107,7 @@ iv = TestFunction(ispace)
 uh = space.interpolate(0, name="solution")
 iuh = ispace.interpolate(0, name="isolution")
 
-I = interfaceIndicator(igridView)
+I = interfaceIndicator(igridView, grid=geoGrid)
 n = FacetNormal(space)
 n_g = FacetNormal(ispace)
 beta = Constant(1e2, name="beta")
@@ -114,8 +120,8 @@ a -= dot(dot(avg(grad(u)), n('+')), jump(v)) * (1-I)*dS
 a += beta * inner(u - 0, v) * ds
 a -= dot(dot(grad(u), n), v) * ds
 
-a += -(skeleton(iuh) - u)('+') / omega * v('+') * I*dS
-a += -(skeleton(iuh) - u)('-') / omega * v('-') * I*dS
+a += -(skeleton(iuh, grid=geoGrid) - u)('+') / omega * v('+') * I*dS
+a += -(skeleton(iuh, grid=geoGrid) - u)('-') / omega * v('-') * I*dS
 
 
 ia  = inner(grad(iu), grad(iv)) * dx

@@ -28,6 +28,33 @@ namespace Dune
     namespace MMesh
     {
 
+      //! Convert intersection if gridPart is wrapped, e.g. geometryGridPart
+      template< class GridPart, class Intersection >
+      const auto convert( const GridPart& gridPart, const Intersection& intersection, int )
+      {
+        const auto inside = gridPart.convert(intersection.inside());
+        const auto outside = gridPart.convert(intersection.outside());
+
+        for (auto is : intersections(gridPart, inside))
+          if (is.outside() == outside)
+            return is;
+      }
+
+      //! Default (trivial) convert
+      template< class GridPart, class Intersection >
+      const auto convert( const GridPart& gridPart, const Intersection& intersection, char )
+      {
+        return intersection;
+      }
+
+      //! Give preference to the non-trivial version
+      template< class GridPart, class Intersection >
+      const auto convert( const GridPart& gridPart, const Intersection& intersection )
+      {
+        return convert(gridPart, intersection, 0);
+      }
+
+
       /** \class NeighborInterfaceStencil
        *  \brief Stencil contaning the entries (ien,en) for all interface entities ien
        *         and adjacent bulk entities en.
@@ -44,7 +71,7 @@ namespace Dune
           const auto& mmesh = gridPart.grid().getMMesh();
           for( const auto& entity : elements(gridPart, Partition{}) )
           {
-            const auto& intersection = mmesh.asIntersection( entity );
+            const auto intersection = convert(rSpace.gridPart(), mmesh.asIntersection( entity ));
 
             BaseType::fill(entity, intersection.inside());
             BaseType::fill(entity, intersection.outside());
@@ -98,12 +125,14 @@ namespace Dune
         typedef typename AType::DomainSpaceType BulkSpaceType;
         typedef typename DType::DomainSpaceType InterfaceSpaceType;
 
-        Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th, const std::function<void()> &callback )
+        Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th,
+          const double eps, const std::function<void()> &callback )
          : scheme_(scheme), ischeme_(ischeme),
            A_( "A", uh.space(), uh.space() ),
            B_( "B", th.space(), uh.space() ),
            C_( "C", uh.space(), th.space() ),
            D_( "D", th.space(), th.space() ),
+           eps_(eps),
            callback_(callback)
         {}
 
@@ -217,7 +246,7 @@ namespace Dune
             tLocal.bind( interface );
             auto& tDof = tLocal.localDofVector();
 
-            const auto& intersection = mmesh.asIntersection( interface );
+            const auto intersection = convert(u.gridPart(), mmesh.asIntersection( interface ));
 
             const auto& inside = intersection.inside();
             const auto& outside = intersection.outside();
@@ -241,7 +270,6 @@ namespace Dune
             FTmpOut.clear();
             scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, FTmpIn, FTmpOut );
 
-            static const double eps = 1e-8;
             for (std::size_t i = 0; i < tDof.size(); ++i)
             {
               dFIn.clear();
@@ -256,16 +284,16 @@ namespace Dune
               dFIn *= -1.;
               dFOut *= -1.;
 
-              tDof[ i ] += eps;
+              tDof[ i ] += eps_;
               callback_();
               scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, dFTmpIn, dFTmpOut );
-              tDof[ i ] -= eps;
+              tDof[ i ] -= eps_;
 
               dFIn.addLocalDofs( inside, dFTmpIn.localDofVector() );
               dFOut.addLocalDofs( outside, dFTmpOut.localDofVector() );
 
-              dFIn /= eps;
-              dFOut /= eps;
+              dFIn /= eps_;
+              dFOut /= eps_;
 
               dFLocalIn.bind( inside );
               dFLocalOut.bind( outside );
@@ -328,7 +356,6 @@ namespace Dune
                 GTmp.clear();
                 ischeme.fullOperator().impl().addInteriorIntegral( tInterface, GTmp );
 
-                static const double eps = 1e-8;
                 for (std::size_t i = 0; i < uDof.size(); ++i)
                 {
                   dG.clear();
@@ -337,13 +364,13 @@ namespace Dune
                   dG.addLocalDofs( interface, GTmp.localDofVector() );
                   dG *= -1.;
 
-                  uDof[ i ] += eps;
+                  uDof[ i ] += eps_;
                   callback_();
                   ischeme.fullOperator().impl().addInteriorIntegral( tInterface, dGTmp );
-                  uDof[ i ] -= eps;
+                  uDof[ i ] -= eps_;
 
                   dG.addLocalDofs( interface, dGTmp.localDofVector() );
-                  dG /= eps;
+                  dG /= eps_;
 
                   dGLocal.bind( interface );
 
@@ -364,9 +391,9 @@ namespace Dune
         BType B_;
         CType C_;
         DType D_;
+        const double eps_;
         const std::function<void()> callback_;
       };
-
 
       template< class Jacobian, class... options >
       inline static auto registerJacobian ( pybind11::handle scope, pybind11::class_< Jacobian, options... > cls )
