@@ -120,8 +120,8 @@ a -= dot(dot(avg(grad(u)), n('+')), jump(v)) * (1-I)*dS
 a += beta * inner(u - 0, v) * ds
 a -= dot(dot(grad(u), n), v) * ds
 
-a += -(skeleton(iuh, grid=geoGrid) - u)('+') / omega * v('+') * I*dS
-a += -(skeleton(iuh, grid=geoGrid) - u)('-') / omega * v('-') * I*dS
+a += -(skeleton(iuh, grid=geoGrid)('+') - u('-')) / omega * v('+') * I*dS
+a += -(skeleton(iuh, grid=geoGrid)('+') - u('-')) / omega * v('-') * I*dS
 
 
 ia  = inner(grad(iu), grad(iv)) * dx
