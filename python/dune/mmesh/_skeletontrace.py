@@ -21,7 +21,7 @@ def skeleton(interfaceFunction, grid=None):
     if grid == None:
         grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
 
-    includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
+    includes = ["dune/python/mmesh/pyskeletontrace.hh"]
     includes += interfaceFunction._includes + grid._includes
     generator = SimpleGenerator("SkeletonGF", "Dune::Fem")
 
@@ -53,8 +53,8 @@ def trace(bulkFunction, igrid=None, restrictTo=None):
       igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
 
     traces = {}
-    includes = ["dune/mmesh/misc/pyskeletontrace.hh"]
-    includes += bulkFunction._includes
+    includes = ["dune/python/mmesh/pyskeletontrace.hh"]
+    includes += bulkFunction._includes + igrid._includes
     generator = SimpleGenerator(["TraceGF","TraceGF"], "Dune::Fem", pythonname=["TraceGFP","TraceGFM"])
     typeName = []
     for side in [ "in", "out" ]:
