@@ -38,6 +38,7 @@ namespace Dune
         for (auto is : intersections(gridPart, inside))
           if (is.outside() == outside)
             return is;
+        DUNE_THROW(InvalidStateException, "Intersection not found!");
       }
 
       //! Default (trivial) convert
