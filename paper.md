@@ -29,14 +29,13 @@ bibliography: paper.bib
 
 # Summary
 
-Dune-MMesh is an implementation of the DUNE @BBD+21 grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL @CGAL triangulations supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem @DNK20 that demonstrate the versatile applicability of Dune-MMesh.
+Dune-MMesh is an implementation of the DUNE [@BBD+21] grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL triangulations [@CGAL] supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem [@DNK20] that demonstrate the versatile applicability of Dune-MMesh.
 
 # Statement of need
 
 In many technical applications, in particular in the field of fluid dynamics, comparably thin physical interfaces can have a large impact on the overall behaviour of a modeled system. For instance, interfaces occur as separating layer between fluid phases in multiphase flows, in fluid- structure interaction and fluid-solid phase change. Even fractures in porous media can be modeled by lower-dimensional surfaces. Oftentimes, these interfaces move over time and the processes become free-boundary value problems.
-The grid implementation Dune-MMesh aims at providing numerical capabilities for grid based methods to model interface-driven processes within the DUNE framework. Essentially, it consists of two things:
-1. A triangulation based on CGAL where a set of facets is considered as interface and
-2. the possibility to re-mesh the triangulation when necessary.
+
+The grid implementation Dune-MMesh aims at providing numerical capabilities for grid based methods to model interface-driven processes within the DUNE framework. Essentially, it consists of two things: A triangulation based on CGAL where a set of facets is considered as interface and the possibility to re-mesh the triangulation when necessary.
 These two ingredients enable many new possibilities within the DUNE framework. First, the representation of some grid facets as an interface makes Dune-MMesh a useful tool for the implementation of mixed-dimensional models. Second, the inevitable non-hierarchical adaptation
 complements the existing grid implementations within the DUNE framework and allows for unprecedent flexibility of grid adaptation.
 
@@ -282,13 +281,13 @@ monolithicSolve(schemes=(scheme, ischeme), targets=(sol, isol), callback=None, i
 
 # Examples
 
-We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh @GR09.
+We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh [@GR09].
 
-![Finite volume moving mesh method to track a discontinuity @CMR+18\label{fig:fvmm}](img/fvmm.png)
+![Finite volume moving mesh method to track a discontinuity [@CMR+18]\label{fig:fvmm}](img/fvmm.png)
 
 ![Mixed-dimensional model of poro-elasticity.\label{fig:poro}](img/poro.png)
 
-![Two-phase Navier-Stokes equation @GBK20.\label{fig:navierstokes}](img/navierstokes.png)
+![Two-phase Navier-Stokes equation [@GBK20].\label{fig:navierstokes}](img/navierstokes.png)
 
 
 # Acknowledgements
