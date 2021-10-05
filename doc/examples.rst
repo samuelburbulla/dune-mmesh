@@ -16,6 +16,7 @@ We implemented a few examples to display how Dune-MMesh can be used in different
   examples/poroelasticity
   examples/twophase
 
+All examples can be found in the directory `doc/examples` as IPython notebooks.
 
 Some examples for the creation of grid files can be found in :ref:`grids`.
 

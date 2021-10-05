@@ -4,8 +4,8 @@
 Installation
 ************
 
-In order to install and use Dune-MMesh you need
-a recent C++ compiler (at least C++17 compatible) and Python (3.7 or later).
+In order to install and use Dune-MMesh you need a recent C++ compiler (at least C++17 compatible), Python (3.7 or later), CMake (3.13 or later) and Boost (1.66 or later).
+
 There are two ways of installing Dune-MMesh.
 
 Using Pip
@@ -59,3 +59,12 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
 
   ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
   ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts make install_python
+
+3. Configure the automatically generated dune-py module by calling
+
+.. code-block:: bash
+
+  ./dune-common/bin/setup-dunepy.py --opts=dune-mmesh/cmake/config.opts
+
+Remark that this generated dune-py module is used to perform the just-in-time compilation that is used for
+the python bindings of DUNE.
