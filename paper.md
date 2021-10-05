@@ -29,7 +29,7 @@ bibliography: paper.bib
 
 # Summary
 
-Dune-MMesh is an implementation of the DUNE [@BBD+21] grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL triangulations [@CGAL] supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem [@DNK20] that demonstrate the versatile applicability of Dune-MMesh.
+Dune-MMesh is an implementation of the DUNE [@BBD+21] grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL triangulations [@CGAL] supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. Various examples based on the python bindings of the discretization module dune-fem [@DNK20] have been implemented that demonstrate the versatile applicability of Dune-MMesh.
 
 # Statement of need
 
@@ -46,7 +46,6 @@ In its core, Dune-MMesh is a wrapper of CGAL Triangulations in $\mathbb{R}^d, d 
 
 A CGAL triangulation is a set of simplicial cells and vertices.
 Each cell gives access to its $d+1$ incident vertices and its $d+1$ adjacent cells.
-Each vertex gives access to one of its incident cells.
 The $d+1$ vertices are indexed with $0, 1, \dots, d$ in positive orientation being defined by the orientation of
 the underlying Euclidian space $\mathbb{R}^d$.
 The neighbors of a cell are also indexed with $0, 1, \dots, d$ in such a way
@@ -59,7 +58,7 @@ two indices $i$ and $j$ that indicate the two vertices of the edge.
 
 ![CGAL representation of cells and differing Dune numbering in brackets.\label{fig:wrapper}](img/wrapper.png)
 
-In order to match the Dune grid interface we have to follow the reference element numbering, cf. Figure \ref{fig:wrapper}.
+In order to match the Dune grid interface follow the reference element numbering, cf. Figure \ref{fig:wrapper}.
 Fortunately, the vertex numbering of cells can be retained, buy each facet $i$ of the CGAL representation corresponds to the codim-1 subentity $d-i$ in the Dune reference element.
 For the representation of Dune intersections we can directly use CGAL's cell-index representation of facets
 which is already equipped with an orientation.
@@ -73,23 +72,13 @@ Consider a domain $\Omega \subset \mathbb{R}^d, d \in \{2,3\},$ that includes a
 $(d-1)$-dimensional interface $\Gamma \subset \Omega$, as depicted in Figure \ref{fig:triangulation}.
 We assume the domain is triangulated conforming to the interface $\Gamma$.
 
-![A domain with a T-shaped interface and an example for a conforming triangulation.\label{fig:triangulation}](img/triangulation.png)
+![A domain with a T-shaped interface and an example for a conforming triangulation.\label{fig:triangulation}](img/triangulation.png){ width=80% }
 
-Let us denote this triangulation by $\mathcal{T}$ and the set of facets by $\mathcal{F}$.
-Due to conforming meshing, there exists a subset of facets $\mathcal{F}_\Gamma \subset \mathcal{F}$
-that belong to the interface $\Gamma$.
-Therefore, these facets in $\mathcal{F}_\Gamma$ can also be interpreted as a triangulation of a surface.
-We call this surface triangulation the \emph{interface grid} and denote it by $\mathcal{T}_\Gamma$.
-
-Dune-MMesh features a second implementation of the Dune grid interface that represents the interface triangulation $\mathcal{T}_\Gamma$.
-Therefore, facets have to be marked as belonging to the interface - usually this is done when parsing a .msh file.
-
+Dune-MMesh features a second implementation of the Dune grid interface that represents the interface triangulation.
 The interface grid can be used like any other Dune grid as it implements all necessary functionality.
 
 A codim-0 entity of the interface grid is represented by a CGAL cell-index pair as used for the codim-1 entities of the wrapper implementation.
-This representation is made unique by taking the representation where the cell has the lower index - which is also considered to be the positive side of the facet.
-
-The interface grid also supports networks. For this purpose, the intersection iterator returns all common intersections with
+This representation is made unique by taking the representation where the cell has the lower index. The interface grid also supports networks. For this purpose, the intersection iterator returns all common intersections with
 adjacent cells, cf. Figure \ref{fig:junction}.
 
 ![Outer normals at junctions.\label{fig:junction}](img/junction.png){ width=30% }
@@ -105,16 +94,11 @@ Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial d
 ### Moving Vertices
 
 Dune-MMesh allows the movement of interface vertices (or all grid vertices) by a predescribed movement.
-
 For this, we assume that movement is given by the shift of vertices.
-This movement can be performed by simply changing the coordinates of the vertices.
 
 ![Moving the interface.\label{fig:moving}](img/moving.png){ width=30% }
-![Marking elements. Green: refine. Red: coarsen.\label{fig:mark}](img/mark.png){ width=30% }
 
-Remark that moving vertices might lead to degeneration of the triangulation, i.e. cells can have non-positive volume.
-To prevent that, Dune-MMesh is equipped with remeshing routines we describe in the following.
-
+To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with remeshing routines.
 
 ### Adaptation
 
@@ -123,12 +107,14 @@ Adaption in DUNE is usually hierarchical by definition and the adaptation proced
 1. Mark: Grid elements are marked for coarsening or refinement.
 2. Adapt: The elements are adapted due to their markers and discrete functions are restricted or prolongated.
 
+![Marking elements. Green: refine. Red: coarsen.\label{fig:mark}](img/mark.png){ width=30% }
+
 In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is inavoidable.
 However, we will try to follow the general DUNE approach and separate the adaptation into two stages.
 
 __1. Mark__
 
-Dune-MMesh provides some utility functions to mark cells either in expectation of a movement of vertices or regarding their current geometrical properties. However, one can also use a proprietary procedure marking elements manually, or one can insert and remove vertices directly.
+Dune-MMesh provides some utility functions to mark cells either in expectation of a movement of vertices or regarding to their current geometrical properties. However, one can also use a proprietary procedure marking elements manually, or one can insert and remove vertices directly.
 
 __2. Adapt__
 
@@ -136,20 +122,20 @@ After marking elements the `adapt` routine performs the actual adaptation proces
 The adaptation is performed by insertion and removal of points.
 
 ![Inserting and removing points.\label{fig:adapt}](img/adapt.png){ width=30% }
-![Connected components.\label{fig:conncomp}](img/conncomp.png){ width=30% }
 
 In each element that is marked for refinement the refinement is done via bisection of the longest edge, cf. Figure \ref{fig:adapt}.
-In all elements marked for coarsening, one vertex is removed.
-Here, the vertex incident to the shortest edges of the cell is chosen, but we give priority on non-interface and non-boundary vertices.
-
+In all elements marked for coarsening, the least important vertex is removed.
 When a vertex is removed, the resulting star-shaped hole is re-triangulated with respect to the interface.
+
+![Connected components.\label{fig:conncomp}](img/conncomp.png){ width=30% }
+
 For the purpose of projection, we introduce \emph{connected components}, see Figure \ref{fig:conncomp}.
+A conservative projection of discrete functions can be performed by computing a cut-set triangulation
+to generate agglomerated quadrature rules.
 
 ![Non-hierarchic projection with cut-set triangulation.\label{fig:projection}](img/projection.png)
 
-A conservative projection of discrete functions can be performed by computing a cut-set triangulation
-which enables evaluation with agglomerated quadrature rules on triangles.
-Here, we prolong from an old cell onto such a cut triangle and prolong onto the new cell, cf. Figure \ref{fig:projection}.
+We prolong from an old cell onto a cut triangle and prolong onto the new cell, cf. Figure \ref{fig:projection}.
 This whole projection is performed under the hood and just assumes that you use the callback adaptation in dune-fem.
 We use a similar concept on the interface grid that enables projection of discrete functions on the interface.
 
@@ -159,7 +145,7 @@ We use a similar concept on the interface grid that enables projection of discre
 Dune-MMesh exports both traces of bulk discrete functions on the interface and skeleton representations of interface discrete functions on bulk edges.
 
 The trace is a discrete function on the interface grid that evaluates a given bulk discrete function.
-It can be restricted to positive ('+') or negative side ('-') and it might be used in UFL forms.
+It can be restricted to both side of the interface and might be used in UFL forms.
 
 Analogously, the skeleton function is a discrete function that returns the interface's discrete function values on interface bulk facets.
 
@@ -167,12 +153,11 @@ Both `trace` and `skeleton` can be used to couple bulk and interface problems.
 
 # Coupled solve
 
-We provide two helper functions to solve bulk and interface schemes in a coupled way. Remark that for both methods the target discrete functions must be used in the coupling forms.
+We provide two helper functions to solve bulk and interface schemes in a coupled way.
 
-The first method `iterativeSolve` uses an iterative solution strategy with a vector formulation of Aitken's fix point acceleration. The method
-alternately solves both passed schemes until the residuum (measured in two norm between two iterates) is below an objective tolerance.
+The first method `iterativeSolve` uses an iterative solution strategy which alternately solves both passed schemes until the two norm between two iterates is below an objective tolerance.
 
-The second helper function `monolithicSolve` solves a bulk and interface scheme coupled monolithically.
+The second helper function `monolithicSolve` solves bulk and interface scheme coupled monolithically.
 A newton method is implemented assembling the underlying jacobian matrix where the coupling jacobian blocks are evaluated by finite differences.
 
 # Examples
