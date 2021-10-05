@@ -46,28 +46,28 @@ The concepts behind Dune-MMesh can be split into three main parts: the CGAL wrap
 
 ## CGAL Wrapper
 
-In its core, Dune-MMesh is a wrapper of CGAL Triangulations in \(\mathbb{R}^d, d = 2, 3,\)
+In its core, Dune-MMesh is a wrapper of CGAL Triangulations in $\mathbb{R}^d, d = 2, 3,$
 that implements the Dune grid interface.
 Therefore, it is essential to understand how CGAL triangulation objects are translated into Dune entities.
 
 First of all, a CGAL triangulation is a set of simplicial cells and vertices.
-Each cell gives access to its \(d+1\) incident vertices and its \(d+1\) adjacent cells.
+Each cell gives access to its $d+1$ incident vertices and its $d+1$ adjacent cells.
 Each vertex gives access to one of its incident cells.
-The \(d+1\) vertices are indexed with \(0, 1, \dots, d\) in positive orientation being defined by the orientation of
-the underlying Euclidian space \(\mathbb{R}^d\).
-The neighbors of a cell are also indexed with \(0, 1, \dots, d\) in such a way
+The $d+1$ vertices are indexed with $0, 1, \dots, d$ in positive orientation being defined by the orientation of
+the underlying Euclidian space $\mathbb{R}^d$.
+The neighbors of a cell are also indexed with $0, 1, \dots, d$ in such a way
 that the neighbor is opposite to the vertex with the same index.
-Facets are not explicitly represented: a facet is given by the pair of a cell \(c\)
-and an index \(i\). Here, the facet \(i\) of cell \(c\) is the facet of \(c\) that is
-opposite to the vertex with index \(i\). Remark that a facet has two implicit representations.
-For \(d=3\), edges are represented by triples of a cell \(c\) and
-two indices \(i\) and \(j\) that indicate the two vertices of the edge.
+Facets are not explicitly represented: a facet is given by the pair of a cell $c$
+and an index $i$. Here, the facet $i$ of cell $c$ is the facet of $c$ that is
+opposite to the vertex with index $i$. Remark that a facet has two implicit representations.
+For $d=3$, edges are represented by triples of a cell $c$ and
+two indices $i$ and $j$ that indicate the two vertices of the edge.
 
 ![CGAL representation of cells and differing Dune numbering in brackets.\label{fig:wrapper}](img/wrapper.png)
 
 In order to match the Dune grid interface we have to follow the reference element numbering, cf. Firgure \ref{fig:wrapper}.
 Fortunately, the vertex numbering of cells can be retained.
-However, each facet \(i\) of the CGAL representation corresponds to the codim-1 subentity \(d-i\) in the Dune reference element.
+However, each facet $i$ of the CGAL representation corresponds to the codim-1 subentity $d-i$ in the Dune reference element.
 For the representation of Dune intersections we can directly use CGAL's cell-index representation of facets
 which is already equipped with an orientation.
 With this reference mapping all geometry and sub-entity objects of the Dune grid interface can be specified.
@@ -82,9 +82,9 @@ Each higher dimensional entity's id is defined by the sorted tuple of correspond
 
 As CGAL vertices and cells allow to append data (called: \emph{info}) to the objects, we can store and access the vertex ids directly within the vertex objects.
 Entity indices are consecutively distributed at grid creation (or after adaptation) and also can be stored in the corresponding cell or vertex info.
-For entities of codimensions different than \(0\) and \(d\), an id-index mapping is used.
+For entities of codimensions different than $0$ and $d$, an id-index mapping is used.
 
-The geometrical representation of entities that are not intrinsically CGAL entities (i.e., codimensions \(1,...,d-1\)) is made unique
+The geometrical representation of entities that are not intrinsically CGAL entities (i.e., codimensions $1,...,d-1$) is made unique
 by an ascending order of vertex ids. In additon, this prevents twists of intersections and we obtain a twist free grid implementation.
 
 We extend the above described concepts of wrapping the CGAL triangulation to export a set of facets as interface grid.
@@ -92,19 +92,19 @@ We extend the above described concepts of wrapping the CGAL triangulation to exp
 
 ## Interface Grid
 
-Consider a domain \(\Omega \subset \mathbb{R}^d, d \in \{2,3\},\) that includes a
-\((d-1)\)-dimensional interface \(\Gamma \subset \Omega\), as depicted in Figure \ref{fig:triangulation}.
-We assume the domain is triangulated conforming to the interface \(\Gamma\).
+Consider a domain $\Omega \subset \mathbb{R}^d, d \in \{2,3\},$ that includes a
+$(d-1)$-dimensional interface $\Gamma \subset \Omega$, as depicted in Figure \ref{fig:triangulation}.
+We assume the domain is triangulated conforming to the interface $\Gamma$.
 
 ![A domain with a T-shaped interface and an example for a conforming triangulation.\label{fig:triangulation}](img/triangulation.png)
 
-Let us denote this triangulation by \(\mathcal{T}\) and the set of facets by \(\mathcal{F}\).
-Due to conforming meshing, there exists a subset of facets \(\mathcal{F}_\Gamma \subset \mathcal{F}\)
-that belong to the interface \(\Gamma\).
-Therefore, these facets in \(\mathcal{F}_\Gamma\) can also be interpreted as a triangulation of a surface.
-We call this surface triangulation the \emph{interface grid} and denote it by \(\mathcal{T}_\Gamma\).
+Let us denote this triangulation by $\mathcal{T}$ and the set of facets by $\mathcal{F}$.
+Due to conforming meshing, there exists a subset of facets $\mathcal{F}_\Gamma \subset \mathcal{F}$
+that belong to the interface $\Gamma$.
+Therefore, these facets in $\mathcal{F}_\Gamma$ can also be interpreted as a triangulation of a surface.
+We call this surface triangulation the \emph{interface grid} and denote it by $\mathcal{T}_\Gamma$.
 
-Dune-MMesh features a second implementation of the Dune grid interface that represents the interface triangulation \(\mathcal{T}_\Gamma\).
+Dune-MMesh features a second implementation of the Dune grid interface that represents the interface triangulation $\mathcal{T}_\Gamma$.
 Therefore, facets have to be marked as belonging to the interface - usually this is done when parsing a .msh file.
 
 The interface grid can be used like any other Dune grid as it implements all necessary functionality.
@@ -133,7 +133,7 @@ When converting an interface grid entity to a bulk intersection, Dune-MMesh retu
 
 ## Moving Mesh
 
-Most interface driven-problems have time-dependent interfaces \(\Gamma = \Gamma(t)\).
+Most interface driven-problems have time-dependent interfaces $\Gamma = \Gamma(t)$.
 Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial dimension two.
 
 ### Moving Vertices
@@ -179,19 +179,19 @@ and marks presumbly degenerate cells for coarsening, cf. Figure \ref{fig:mark}. 
 The second method available for marking elements is \texttt{{markElements()}}.
 This method uses a default indicator that marks elements depending on their current geometrical properties.
 
-This indicator considers primarily maximal and minimal edge length and aims at an objective edge length between \(h_{max}\) and \(h_{min}\).
+This indicator considers primarily maximal and minimal edge length and aims at an objective edge length between $h_{max}$ and $h_{min}$.
 
-- If an edge is longer than the maximum edge length \(h_{max}\), the cell will be marked for refine.
-- If an edge is shorter than the minimum edge length \(h_{min}\), the cell will be marked for coarsening.
+- If an edge is longer than the maximum edge length $h_{max}$, the cell will be marked for refine.
+- If an edge is shorter than the minimum edge length $h_{min}$, the cell will be marked for coarsening.
 
 Additionally, if the ratio of longest to shortest edge is larger than 4, the cell is marked for coarsening.
-The number 4 occurs from the fact that we we will use bisection and a triangle where two edges are longer then \(h_{max}\)
-should not be splitted into smaller triangles where an edge is shorter than \(h_{min}\).
+The number 4 occurs from the fact that we we will use bisection and a triangle where two edges are longer then $h_{max}$
+should not be splitted into smaller triangles where an edge is shorter than $h_{min}$.
 
 Finally, a maximal radius ratio is taken into account to remove very ugly cells.
 Always coarsening has priority before refinement because refinement would not remove ugly cells.
 
-The minimal and maximal edge lengths \(h_{max}\) and \(h_{min}\) are
+The minimal and maximal edge lengths $h_{max}$ and $h_{min}$ are
 initialized automatically when constructing a mesh by determining the range of edge lengths occuring the grid.
 
 Remark that \texttt{{markElements()}} also checks the elements of the interface grid.
