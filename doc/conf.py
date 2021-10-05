@@ -27,7 +27,7 @@ release = '1.2'
 
 # -- General configuration ---------------------------------------------------
 
-autodoc_mock_imports = ["dune.generator"]
+autodoc_mock_imports = ["dune.generator", "dune.fem"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
