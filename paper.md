@@ -33,10 +33,9 @@ Dune-MMesh is an implementation of the DUNE [@BBD+21] grid interface that is tai
 
 # Statement of need
 
-In many technical applications, in particular in the field of fluid dynamics, comparably thin physical interfaces can have a large impact on the overall behaviour of a modeled system. For instance, interfaces occur as separating layer between fluid phases in multiphase flows, in fluid- structure interaction and fluid-solid phase change. Even fractures in porous media can be modeled by lower-dimensional surfaces. Oftentimes, these interfaces move over time and the processes become free-boundary value problems.
+In many technical applications, in particular in the field of fluid dynamics, comparably thin physical interfaces can have a large impact on the overall behaviour of a modeled system. Interfaces occur as separating layer between fluid phases in multiphase flows, in fluid-structure interaction, fluid-solid phase change and even fractures are modeled by lower-dimensional surfaces.
 
 The grid implementation Dune-MMesh aims at providing numerical capabilities for grid based methods to model interface-driven processes within the DUNE framework. Essentially, it consists of two things: A triangulation based on CGAL where a set of facets is considered as interface and the possibility to re-mesh the triangulation when necessary.
-These two ingredients enable many new possibilities within the DUNE framework.
 The representation of some grid facets as an interface makes Dune-MMesh a useful tool for the implementation of mixed-dimensional models.
 The inevitable non-hierarchical adaptation complements the existing grid implementations within the DUNE framework and allows for unprecedent flexibility of grid adaptation.
 
@@ -46,25 +45,19 @@ In its core, Dune-MMesh is a wrapper of CGAL Triangulations in $\mathbb{R}^d, d 
 
 A CGAL triangulation is a set of simplicial cells and vertices.
 Each cell gives access to its $d+1$ incident vertices and its $d+1$ adjacent cells.
-The $d+1$ vertices are indexed with $0, 1, \dots, d$ in positive orientation being defined by the orientation of
-the underlying Euclidian space $\mathbb{R}^d$.
-The neighbors of a cell are also indexed with $0, 1, \dots, d$ in such a way
-that the neighbor is opposite to the vertex with the same index.
 Facets are not explicitly represented: a facet is given by the pair of a cell $c$
-and an index $i$. Here, the facet $i$ of cell $c$ is the facet of $c$ that is
-opposite to the vertex with index $i$. Remark that a facet has two implicit representations.
+and an index $i$ and has two implicit representations.
 For $d=3$, edges are represented by triples of a cell $c$ and
 two indices $i$ and $j$ that indicate the two vertices of the edge.
 
 ![CGAL representation of cells and differing Dune numbering in brackets.\label{fig:wrapper}](img/wrapper.png)
 
-In order to match the Dune grid interface follow the reference element numbering, cf. Figure \ref{fig:wrapper}.
+In order to match the Dune grid interface we follow the reference element numbering, cf. Figure \ref{fig:wrapper}.
 Fortunately, the vertex numbering of cells can be retained, buy each facet $i$ of the CGAL representation corresponds to the codim-1 subentity $d-i$ in the Dune reference element.
 For the representation of Dune intersections we can directly use CGAL's cell-index representation of facets
 which is already equipped with an orientation.
 Various iterators of CGAL triangulations can directly be used to construct the Dune grid range generators.
 Additional (non-standard Dune) iterators have been added, e.g. iterating over the incident elements of a vertex.
-
 
 # Interface Grid
 
@@ -77,14 +70,12 @@ We assume the domain is triangulated conforming to the interface $\Gamma$.
 Dune-MMesh features a second implementation of the Dune grid interface that represents the interface triangulation.
 The interface grid can be used like any other Dune grid as it implements all necessary functionality.
 
-A codim-0 entity of the interface grid is represented by a CGAL cell-index pair as used for the codim-1 entities of the wrapper implementation.
-This representation is made unique by taking the representation where the cell has the lower index. The interface grid also supports networks. For this purpose, the intersection iterator returns all common intersections with
-adjacent cells, cf. Figure \ref{fig:junction}.
+A codim-0 entity of the interface grid is represented by a CGAL cell-index pair which is made unique by taking the representation where the cell has the lower index.
+The interface grid also supports networks, cf. Figure \ref{fig:junction}.
 
 ![Outer normals at junctions.\label{fig:junction}](img/junction.png){ width=30% }
 
-Each bulk grid intersection can be identified belonging to the interface or not.
-It is also possible to convert bulk intersections to interface grid elements and vice versa as the underlying representation is the same.
+It is possible to convert bulk intersections to interface grid elements and vice versa.
 
 # Moving Mesh
 
