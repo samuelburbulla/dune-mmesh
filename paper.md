@@ -29,7 +29,7 @@ bibliography: paper.bib
 
 # Summary
 
-Dune-MMesh is an implementation of the DUNE `@BBD+21` grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL `@CGAL` triangulations supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem `@DNK20` that demonstrate the versatile applicability of Dune-MMesh.
+Dune-MMesh is an implementation of the DUNE @BBD+21 grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL @CGAL triangulations supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem @DNK20 that demonstrate the versatile applicability of Dune-MMesh.
 
 # Statement of need
 
@@ -124,7 +124,7 @@ The interface grid also supports networks. For this purpose, the intersection it
 adjacent cells. Note that this can be more than one for a single codim-1 subentity.
 However, the intersection's outer normal is always independent of the neighbor entity, cf. Figure \ref{fig:junction}.
 
-![Outer normals at junctions.\label{fig:junction}](img/junction.png)
+![Outer normals at junctions.\label{fig:junction}](img/junction.png){ width=30% }
 
 Each bulk grid intersection can be identified belonging to the interface or not.
 It is also possible to convert bulk intersections to interface grid elements and vice versa as the underlying representation is the same.
@@ -144,8 +144,8 @@ For this, we assume that movement is given by the shift of vertices.
 This movement can be performed by simply changing the coordinates of the vertices.
 Dune-MMesh provides the method \texttt{{moveInterface(shifts)}} that takes a vector of shift coordinates indexed by interface vertex indices as in Figure \ref{fig:moving}.
 
-![Moving the interface.\label{fig:moving}](img/moving.png)
-![Marking elements. Green: refine. Red: coarsen.\label{fig:mark}](img/mark.png)
+![Moving the interface.\label{fig:moving}](img/moving.png){ width=30% }
+![Marking elements. Green: refine. Red: coarsen.\label{fig:mark}](img/mark.png){ width=30% }
 
 A second method \texttt{{moveVertices(shifts)}} is available for moving all vertices of the triangulation that is indexed by bulk vertex indices.
 
@@ -207,8 +207,8 @@ __2. Adapt__
 After marking elements the \texttt{{adapt()}} routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
 
-![Inserting and removing points.\label{fig:adapt}](img/adapt.png)
-![Connected components.\label{fig:conncomp}](img/conncomp.png)
+![Inserting and removing points.\label{fig:adapt}](img/adapt.png){ width=30% }
+![Connected components.\label{fig:conncomp}](img/conncomp.png){ width=30% }
 
 - In each element that is marked for refinement the center of the longest edge is inserted, i.e. refinement is done via bisection, cf. Figure \ref{fig:adapt}.
 
@@ -282,13 +282,13 @@ monolithicSolve(schemes=(scheme, ischeme), targets=(sol, isol), callback=None, i
 
 # Examples
 
-We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh `@GR09`.
+We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh @GR09.
 
-![Finite volume moving mesh method to track a discontinuity `@CMR+18`\label{fig:fvmm}](img/fvmm.png)
+![Finite volume moving mesh method to track a discontinuity @CMR+18\label{fig:fvmm}](img/fvmm.png)
 
 ![Mixed-dimensional model of poro-elasticity.\label{fig:poro}](img/poro.png)
 
-![Two-phase Navier-Stokes equation `@GBK20`.\label{fig:navierstokes}](img/navierstokes.png)
+![Two-phase Navier-Stokes equation @GBK20.\label{fig:navierstokes}](img/navierstokes.png)
 
 
 # Acknowledgements
