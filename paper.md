@@ -29,7 +29,7 @@ bibliography: paper.bib
 
 # Summary
 
-Dune-MMesh is an implementation of the DUNE @bastian:2021 grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL @thecgalproject:2020 triangulations supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem @dedner:2020 that demonstrate the versatile applicability of Dune-MMesh.
+Dune-MMesh is an implementation of the DUNE `@BBD+21` grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL `@CGAL` triangulations supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. We present a collection of examples based on the python bindings of the discretization module dune-fem `@DNK20` that demonstrate the versatile applicability of Dune-MMesh.
 
 # Statement of need
 
@@ -282,13 +282,13 @@ monolithicSolve(schemes=(scheme, ischeme), targets=(sol, isol), callback=None, i
 
 # Examples
 
-We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh @geuzaine:2009.
+We implemented a few examples to display how Dune-MMesh can be used in different contexts. All examples can be found in `dune-mmesh/doc/examples` as IPython notebooks. Some examples for the creation of grid files can be found in `doc/examples/grids` which rely on gmsh `@GR09`.
 
-![Finite volume moving mesh method to track a discontinuity @chalons:2018\label{fig:fvmm}](img/fvmm.png)
+![Finite volume moving mesh method to track a discontinuity `@CMR+18`\label{fig:fvmm}](img/fvmm.png)
 
 ![Mixed-dimensional model of poro-elasticity.\label{fig:poro}](img/poro.png)
 
-![Two-phase Navier-Stokes equation @gerstenberger:2020.\label{fig:navierstokes}](img/navierstokes.png)
+![Two-phase Navier-Stokes equation `@GBK20`.\label{fig:navierstokes}](img/navierstokes.png)
 
 
 # Acknowledgements
