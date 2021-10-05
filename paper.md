@@ -236,11 +236,11 @@ We use a similar concept on the interface grid that enables projection of discre
 
 Dune-MMesh exports both traces of bulk discrete functions on the interface and skeleton representations of interface discrete functions on bulk edges.
 
-\begin{python}
+````
 from dune.mmesh import trace, skeleton
 tr = trace(bulkFunction)
 sk = avg(skeleton(interfaceFunction, grid=geometryGridView))
-\end{python}
+````
 
 The trace is a discrete function on the interface grid that evaluates the given bulk discrete function. It can be restricted to positive ('+') or negative side ('-') and it might be used in UFL forms.
 
@@ -248,10 +248,10 @@ Analogously, the skeleton function is a discrete function that returns the inter
 
 
 Please note that if a trace is used in surface integrals of forms on the interface grid, one must use already restricted trace objects to prevent confusion with the interface facet's restriction.
-\begin{python}
+````
 trp = trace(bulkFunction, restrictTo='+')
 trm = trace(bulkFunction, restrictTo='-')
-\end{python}
+````
 
 
 ## Coupled solve
@@ -260,10 +260,10 @@ We provide two helper functions to solve bulk and interface schemes in a coupled
 
 The first method uses an iterative solution strategy with a vector formulation of Aitken's fix point acceleration.
 
-\begin{python}
+````
 from dune.mmesh import iterativeSolve
 iterativeSolve(schemes=(scheme, ischeme), targets=(sol, isol), callback=None, iter=100, tol=1e-8, f_tol=None, verbose=False)
-\end{python}
+````
 
 The callback function is called every time before solving a scheme.
 The iteration is performed until the residuum (measured in two norm between two iterates) is below the objective tolerance.
@@ -273,10 +273,10 @@ A newton method is implemented assembling the underlying jacobian matrix.
 Hereby, the coupling jacobian blocks are evaluated by finite difference on demand.
 There are two implementations: A fast version with a C++ backend using UMFPACK and a slow python version relying on scipy.
 
-\begin{python}
+````
 from dune.mmesh import monolithicSolve
 monolithicSolve(schemes=(scheme, ischeme), targets=(sol, isol), callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1e-8, verbose=0, python=False)
-\end{python}
+````
 
 
 
