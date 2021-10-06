@@ -22,7 +22,6 @@ dune_enable_all_packages()
 # make sure we have CGAL
 # find_package(CGAL REQUIRED)
 
-add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(dune)
 add_subdirectory(doc)
 add_subdirectory(cmake/modules)

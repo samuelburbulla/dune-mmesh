@@ -100,7 +100,7 @@ int main()
       }
 
       // 5. update the shifts because the interface grid might have changed
-      mapper.update();
+      mapper.update(igridView);
       shifts.resize( mapper.size() );
       for ( const auto& vertex : vertices( igridView ) )
         shifts[ mapper.index(vertex) ] = movement( vertex.geometry().center() );

@@ -2,47 +2,47 @@ dune_symlink_to_source_files(FILES
   grids
 )
 
-add_executable("cgal" cgal.cc)
+dune_add_test(NAME "cgal" SOURCES cgal.cc)
 target_link_libraries("cgal" "dunemmesh")
 
-add_executable("dgf" dgf.cc)
+dune_add_test(NAME "dgf" SOURCES dgf.cc)
 target_link_libraries("dgf" "dunemmesh")
 
-add_executable("dgf-interval" dgf-interval.cc)
+dune_add_test(NAME "dgf-interval" SOURCES dgf-interval.cc)
 target_link_libraries("dgf-interval" "dunemmesh")
 
-add_executable("gmsh-2d" gmsh.cc)
+dune_add_test(NAME "gmsh-2d" SOURCES gmsh.cc)
 target_compile_definitions("gmsh-2d" PRIVATE GRIDDIM=2)
 target_link_libraries("gmsh-2d" "dunemmesh")
 
-add_executable("gmsh-3d" gmsh.cc)
+dune_add_test(NAME "gmsh-3d" SOURCES gmsh.cc)
 target_compile_definitions("gmsh-3d" PRIVATE GRIDDIM=3)
 target_link_libraries("gmsh-3d" "dunemmesh")
 
-add_executable("gmsh-implicit-2d" gmsh-implicit.cc)
+dune_add_test(NAME "gmsh-implicit-2d" SOURCES gmsh-implicit.cc)
 target_compile_definitions("gmsh-implicit-2d" PRIVATE GRIDDIM=2)
 target_link_libraries("gmsh-implicit-2d" "dunemmesh")
 
-add_executable("gmsh-implicit-3d" gmsh-implicit.cc)
+dune_add_test(NAME "gmsh-implicit-3d" SOURCES gmsh-implicit.cc)
 target_compile_definitions("gmsh-implicit-3d" PRIVATE GRIDDIM=3)
 target_link_libraries("gmsh-implicit-3d" "dunemmesh")
 
-add_executable("interfacegrid-2d" interfacegrid.cc)
+dune_add_test(NAME "interfacegrid-2d" SOURCES interfacegrid.cc)
 target_compile_definitions("interfacegrid-2d" PRIVATE GRIDDIM=2)
 target_link_libraries("interfacegrid-2d" "dunemmesh")
 
-add_executable("interfacegrid-3d" interfacegrid.cc)
+dune_add_test(NAME "interfacegrid-3d" SOURCES interfacegrid.cc)
 target_compile_definitions("interfacegrid-3d" PRIVATE GRIDDIM=3)
 target_link_libraries("interfacegrid-3d" "dunemmesh")
 
-add_executable("movement-2d" movement.cc)
+dune_add_test(NAME "movement-2d" SOURCES movement.cc)
 target_compile_definitions("movement-2d" PRIVATE GRIDDIM=2)
 target_link_libraries("movement-2d" "dunemmesh")
 
-add_executable("interaction-2d" interaction.cc)
+dune_add_test(NAME "interaction-2d" SOURCES interaction.cc)
 target_compile_definitions("interaction-2d" PRIVATE GRIDDIM=2)
 target_link_libraries("interaction-2d" "dunemmesh")
 
-add_executable("interaction-3d" interaction.cc)
+dune_add_test(NAME "interaction-3d" SOURCES interaction.cc)
 target_compile_definitions("interaction-3d" PRIVATE GRIDDIM=3)
 target_link_libraries("interaction-3d" "dunemmesh")

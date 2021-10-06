@@ -1,3 +1,5 @@
+add_subdirectory(examples EXCLUDE_FROM_ALL)
+
 dune_symlink_to_source_files(FILES
   grids
 )
