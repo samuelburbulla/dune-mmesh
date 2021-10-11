@@ -4,7 +4,7 @@ except ImportError:
     from packagemetadata import metaData
 from skbuild import setup
 
-mmeshVersion = '1.3.0.dev20211011'
+mmeshVersion = '1.3.0.dev20211012'
 duneFemVersion  = '2.8.0.0'
 
 metadata = metaData(duneFemVersion)[1]
