@@ -5,9 +5,9 @@ except ImportError:
 from skbuild import setup
 
 mmeshVersion = '1.3.0.dev20211011'
-duneVersion  = '2.8.0.0'
+duneFemVersion  = '2.8.0.0'
 
-metadata = metaData(duneVersion)[1]
+metadata = metaData(duneFemVersion)[1]
 metadata['version'] = mmeshVersion
 
 # auto-generate pyproject.toml with duneVersion when building sdist
