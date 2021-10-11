@@ -64,23 +64,32 @@ namespace Dune
       struct NeighborInterfaceStencil : public Fem::Stencil<DomainSpace, RangeSpace>
       {
         typedef Fem::Stencil<DomainSpace, RangeSpace> BaseType;
+
+        typedef typename DomainSpace::GridPartType DomainGridPart;
+        typedef typename RangeSpace::GridPartType RangeGridPart;
+
       public:
         NeighborInterfaceStencil(const DomainSpace &dSpace, const RangeSpace &rSpace)
-          : BaseType( dSpace, rSpace )
+          : BaseType( dSpace, rSpace ),
+            domainGridPart_( dSpace.gridPart() ),
+            rangeGridPart_( rSpace.gridPart() )
         {}
 
-        void setupStencil() const
+        void setupStencil()
         {
-          const auto& gridPart = this->domainSpace_.gridPart();
-          const auto& mmesh = gridPart.grid().getMMesh();
-          for( const auto& entity : elements(gridPart, Partition{}) )
+          const auto& mmesh = domainGridPart_.grid().getMMesh();
+          for( const auto& entity : elements(domainGridPart_, Partition{}) )
           {
-            const auto intersection = convert(this->rangeSpace_.gridPart(), mmesh.asIntersection( entity ));
+            const auto intersection = convert(rangeGridPart_, mmesh.asIntersection( entity ));
 
             BaseType::fill(entity, intersection.inside());
             BaseType::fill(entity, intersection.outside());
           }
         }
+
+      private:
+        const DomainGridPart& domainGridPart_;
+        const RangeGridPart& rangeGridPart_;
       };
 
       /** \class InterfaceNeighborStencil
@@ -91,26 +100,35 @@ namespace Dune
       struct InterfaceNeighborStencil : public Fem::Stencil<DomainSpace, RangeSpace>
       {
         typedef Fem::Stencil<DomainSpace, RangeSpace> BaseType;
+
+        typedef typename DomainSpace::GridPartType DomainGridPart;
+        typedef typename RangeSpace::GridPartType RangeGridPart;
+
       public:
         InterfaceNeighborStencil(const DomainSpace &dSpace, const RangeSpace &rSpace)
-          : BaseType( dSpace, rSpace )
+          : BaseType( dSpace, rSpace ),
+            domainGridPart_( dSpace.gridPart() ),
+            rangeGridPart_( rSpace.gridPart() )
         {}
 
-        void setupStencil() const
+        void setupStencil()
         {
-          const auto& gridPart = this->domainSpace_.gridPart();
-          for( const auto& entity : elements(gridPart, Partition{}) )
+          for( const auto& entity : elements(domainGridPart_, Partition{}) )
           {
-            for( const auto& intersection : intersections(gridPart, entity) )
+            for( const auto& intersection : intersections(domainGridPart_, entity) )
             {
-              if( intersection.neighbor() && gridPart.grid().isInterface(intersection) )
+              if( intersection.neighbor() && domainGridPart_.grid().isInterface(intersection) )
               {
-                auto ientity = gridPart.grid().asInterfaceEntity(intersection);
+                auto ientity = domainGridPart_.grid().asInterfaceEntity(intersection);
                 BaseType::fill(entity, ientity);
               }
             }
           }
         }
+
+      private:
+        const DomainGridPart& domainGridPart_;
+        const RangeGridPart& rangeGridPart_;
       };
 
       template< class Sch, class ISch, class Sol, class ISol >
@@ -146,12 +164,12 @@ namespace Dune
         void init()
         {
           NeighborInterfaceStencil< InterfaceSpaceType, BulkSpaceType > stencilB( B_.domainSpace(), B_.rangeSpace() );
-          stencilB.update();
+          stencilB.setupStencil();
           B_.clear();
           B_.reserve( stencilB );
 
           InterfaceNeighborStencil< BulkSpaceType, InterfaceSpaceType > stencilC( C_.domainSpace(), C_.rangeSpace() );
-          stencilC.update();
+          stencilC.setupStencil();
           C_.clear();
           C_.reserve( stencilC );
         }
