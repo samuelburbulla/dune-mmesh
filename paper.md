@@ -75,9 +75,9 @@ Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial d
 
 ### Moving Vertices
 
-We assume that movement is given by a shift of interface vertices (or all grid vertices).
+We assume that movement is given by a shift of interface vertices (or all grid vertices), cf. Figure \ref{fig:movmark} (left).
 
-![Moving the interface.\label{fig:moving}](img/moving.png){ width=30% } ![Marking cells. Green: refine. Red: coarsen.\label{fig:mark}](img/mark.png){ width=30% }
+![Left: Moving the interface. Right: Marking cells for refinement (green) or coarsening (red).\label{fig:movmark}](img/movmark.png){ width=80% }
 
 To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with remeshing routines.
 
@@ -93,20 +93,21 @@ However, we will try to follow the general Dune approach and separate the adapta
 
 __1. Mark__
 
-Dune-MMesh provides utility functions to mark cells either in expectation of a movement of vertices or regarding to their current geometrical properties. However, one can also use a proprietary procedure marking cells manually, or one can insert and remove vertices directly.
+Dune-MMesh provides utility functions to mark cells either in expectation of a movement of vertices or regarding to their current geometrical properties, cf. Figure \ref{fig:movmark} (right).
+However, one can also use a proprietary procedure marking cells manually, or one can insert and remove vertices directly.
 
 __2. Adapt__
 
 After marking cells the `adapt` routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
 
-![Inserting and removing points.\label{fig:adapt}](img/adapt.png){ width=30% } ![Connected components.\label{fig:conncomp}](img/conncomp.png){ width=30% }
+![Left: Inserting and removing points. Right: Connected components.\label{fig:adaptconn}](img/adaptcomp.png){ width=80% }
 
-In each cell that is marked for refinement we bisect the longest edge, cf. Figure \ref{fig:adapt}.
+In each cell that is marked for refinement we bisect the longest edge, cf. Figure \ref{fig:adaptconn} (left).
 In all cells marked for coarsening, the least important vertex is removed.
 When a vertex is removed, the resulting star-shaped hole is re-triangulated with respect to the interface.
 
-For the purpose of projection, we introduce \emph{connected components}, see Figure \ref{fig:conncomp},
+For the purpose of projection, we introduce \emph{connected components}, see Figure \ref{fig:adaptconn} (right),
 and implement a generalized callback adaptation in dune-fem.
 
 ![Non-hierarchic projection with cut-set triangulation.\label{fig:projection}](img/projection.png)
