@@ -29,14 +29,14 @@ bibliography: paper.bib
 
 # Summary
 
-Dune-MMesh is an implementation of the Dune [@BBD+21] grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL triangulations [@CGAL] supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a remeshing algorithm that implements non-hierarchical adaptation procedures. Various examples based on the python bindings of the discretization module dune-fem [@DNK20] have been implemented that demonstrate the versatile applicability of Dune-MMesh.
+Dune-MMesh is an implementation of the Dune [@BBD+21] grid interface that is tailored for numerical applications with possibly moving physical interfaces. The implementation based on CGAL triangulations [@CGAL] supports two and three dimensional meshes and can export a predefined set of facets as a separate interface grid. In spatial dimension two, arbitrary movement of vertices is enhanced with a re-meshing algorithm that implements non-hierarchical adaptation procedures. Various examples based on the python bindings of the discretization module dune-fem [@DNK20] have been implemented that demonstrate the versatile applicability of Dune-MMesh.
 
 # Statement of need
 
 In many technical applications, in particular in the field of fluid dynamics, comparably thin physical interfaces can have a large impact on the overall behavior of a modeled system. Interfaces occur as separating layer between fluid phases in multiphase flows, in fluid-structure interaction, fluid-solid phase change and even fractures are modeled by lower-dimensional surfaces.
 
-The grid implementation Dune-MMesh aims at providing numerical capabilities for grid based methods to model interface-driven processes within the Dune framework. Essentially, it consists of two things: A triangulation based on CGAL where a set of facets is considered as interface and the possibility to re-mesh the triangulation when necessary.
-The representation of some grid facets as an interface makes Dune-MMesh a useful tool for the implementation of mixed-dimensional models.
+The grid implementation Dune-MMesh aims at providing numerical capabilities for grid based methods to model interface-driven processes within the Dune framework. Essentially, it consists of two things: First, a triangulation based on CGAL where a set of facets is considered as interface. And, second, the possibility to re-mesh the triangulation when necessary.
+The representation of some grid facets as interface makes Dune-MMesh a useful tool for the implementation of mixed-dimensional models.
 The inevitable non-hierarchical adaptation complements the existing grid implementations within the Dune framework and allows for unprecedented flexibility of grid adaptation.
 
 # CGAL Wrapper
@@ -71,7 +71,7 @@ The interface grid also supports networks, cf. Figure \ref{fig:junction}, and it
 # Moving Mesh
 
 Most interface driven-problems have time-dependent interfaces $\Gamma = \Gamma(t)$.
-Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial dimension two.
+Therefore, Dune-MMesh features capabilities of moving and re-meshing in spatial dimension two.
 
 ### Moving Vertices
 
@@ -79,7 +79,7 @@ We assume that movement is given by a shift of interface vertices (or all grid v
 
 ![Left: Moving the interface. Right: Marking cells for refinement (green) or coarsening (red).\label{fig:movmark}](img/movmark.png){ width=80% }
 
-To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with remeshing routines.
+To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with re-meshing routines.
 
 ### Adaptation
 
@@ -98,7 +98,7 @@ However, one can also use a proprietary procedure marking cells manually, or one
 
 __2. Adapt__
 
-After marking cells the `adapt` routine performs the actual adaptation process.
+After marking cells an adapt routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
 
 ![Left: Inserting and removing points. Right: Connected components.\label{fig:adaptconn}](img/adaptconn.png){ width=80% }
@@ -141,12 +141,12 @@ A newton method is implemented assembling the underlying jacobian matrix where t
 # Examples
 
 We implemented a few examples to display how Dune-MMesh can be used in different contexts.
-All examples can be found in [`dune-mmesh/doc/examples`](https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh/-/tree/master/doc/examples) as IPython notebooks.
+All examples can be found in [`dune-mmesh/doc/examples`](https://github.com/samuelburbulla/dune-mmesh/tree/master/doc/examples) as IPython notebooks.
 Some numerical results of these examples are visualized in Figure \ref{fig:fvmm}, Figure \ref{fig:poro} and Figure \ref{fig:navierstokes}.
 
 ![Finite volume moving mesh method to track a discontinuity [@CMR+18]\label{fig:fvmm}](img/fvmm.png)
 
-![Mixed-dimensional model of poro-elasticity with a t-shaped fracture.\label{fig:poro}](img/poro.png)
+![Mixed-dimensional model of poro-elasticity with a T-shaped fracture.\label{fig:poro}](img/poro.png)
 
 ![Two-phase Navier-Stokes equation [@GBK20].\label{fig:navierstokes}](img/navierstokes.png)
 
