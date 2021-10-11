@@ -101,7 +101,7 @@ __2. Adapt__
 After marking cells the `adapt` routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
 
-![Left: Inserting and removing points. Right: Connected components.\label{fig:adaptconn}](img/adaptcomp.png){ width=80% }
+![Left: Inserting and removing points. Right: Connected components.\label{fig:adaptconn}](img/adaptconn.png){ width=80% }
 
 In each cell that is marked for refinement we bisect the longest edge, cf. Figure \ref{fig:adaptconn} (left).
 In all cells marked for coarsening, the least important vertex is removed.
