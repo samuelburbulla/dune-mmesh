@@ -8,12 +8,6 @@ import sys
 import logging
 logger = logging.getLogger(__name__)
 
-from dune.common.checkconfiguration import assertHave, ConfigurationError
-from dune.generator.generator import SimpleGenerator
-from dune.common.hashit import hashIt
-
-mmGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMGrid")
-mmifGenerator = SimpleGenerator("HierarchicalGrid", "Dune::Python::MMIFGrid")
 def mmesh(constructor, dimgrid=None, **parameters):
     """Create an MMesh grid.
 
@@ -84,25 +78,24 @@ def mmesh(constructor, dimgrid=None, **parameters):
 
     """
 
-    from dune.grid.grid_generator import module, getDimgrid
-
     if not dimgrid:
+        from dune.grid.grid_generator import getDimgrid
         dimgrid = getDimgrid(constructor)
 
     if not (2 <= dimgrid and dimgrid <= 3):
         raise KeyError("Parameter error in MMesh with dimgrid=" + str(dimgrid) + ": dimgrid has to be either 2 or 3")
 
     if dimgrid == 2:
-        from dune.mmesh._mmesh import mmesh2 as gridModule
-        from dune.mmesh._mmesh import mimesh2 as igridModule
+        import dune.mmesh._mmesh2 as gridModule
+        import dune.mmesh._mimesh2 as igridModule
     elif dimgrid == 3:
-        from dune.mmesh._mmesh import mmesh3 as gridModule
-        from dune.mmesh._mmesh import mimesh3 as igridModule
+        import dune.mmesh._mmesh3 as gridModule
+        import dune.mmesh._mimesh3 as igridModule
 
     gridView = gridModule.LeafGrid(gridModule.reader(constructor))
 
     interfaceGrid = lambda self: self.interfaceHierarchicalGrid.leafView
-    gridModule.interfaceGrid = property(interfaceGrid)
+    gridModule.HierarchicalGrid.interfaceGrid = property(interfaceGrid)
 
     return gridView
 
