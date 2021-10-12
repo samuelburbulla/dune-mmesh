@@ -92,17 +92,17 @@ def mmesh(constructor, dimgrid=None, **parameters):
     if not (2 <= dimgrid and dimgrid <= 3):
         raise KeyError("Parameter error in MMesh with dimgrid=" + str(dimgrid) + ": dimgrid has to be either 2 or 3")
 
-    includes = ["dune/mmesh/mmesh.hh", "dune/python/mmesh/interfacegrid.hh"]
-    typeName = "Dune::MovingMesh< " + str(dimgrid) + " >"
-    gridModule = module(includes, typeName, generator=mmGenerator)
-
-    typeName = "typename Dune::MovingMesh< " + str(dimgrid) + " >::InterfaceGrid"
-    igridModule = module(includes, typeName, generator=mmifGenerator)
+    if dimgrid == 2:
+        from dune.mmesh._mmesh import mmesh2 as gridModule
+        from dune.mmesh._mmesh import mimesh2 as igridModule
+    elif dimgrid == 3:
+        from dune.mmesh._mmesh import mmesh3 as gridModule
+        from dune.mmesh._mmesh import mimesh3 as igridModule
 
     gridView = gridModule.LeafGrid(gridModule.reader(constructor))
 
     interfaceGrid = lambda self: self.interfaceHierarchicalGrid.leafView
-    gridModule.HierarchicalGrid.interfaceGrid = property(interfaceGrid)
+    gridModule.interfaceGrid = property(interfaceGrid)
 
     return gridView
 

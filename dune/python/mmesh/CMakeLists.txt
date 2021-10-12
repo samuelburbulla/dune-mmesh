@@ -1,5 +1,5 @@
 set(HEADERS
-  interfacegrid.hh
+  grid.hh
   jacobian.hh
   pyskeletontrace.hh
 )

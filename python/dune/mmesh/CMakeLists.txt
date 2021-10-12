@@ -11,3 +11,7 @@ add_python_targets(mmesh
 dune_symlink_to_source_files(FILES
   tutorial
 )
+
+dune_add_pybind11_module(NAME _mmesh)
+set_property(TARGET _mmesh PROPERTY LINK_LIBRARIES dunecommon dunegeometry dunegrid dunemmesh APPEND)
+install(TARGETS _mmesh LIBRARY DESTINATION python/dune/mmesh)
