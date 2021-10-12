@@ -13,10 +13,10 @@ dune_symlink_to_source_files(FILES
 )
 
 set(PRECOMPILE
-  _mmesh2
-  _mmesh3
-  _mimesh2
-  _mimesh3
+  _grid2d
+  _grid3d
+  _interfacegrid2d
+  _interfacegrid3d
 )
 
 foreach(obj ${PRECOMPILE})

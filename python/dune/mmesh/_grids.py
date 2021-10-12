@@ -86,11 +86,11 @@ def mmesh(constructor, dimgrid=None, **parameters):
         raise KeyError("Parameter error in MMesh with dimgrid=" + str(dimgrid) + ": dimgrid has to be either 2 or 3")
 
     if dimgrid == 2:
-        import dune.mmesh._mmesh2 as gridModule
-        import dune.mmesh._mimesh2 as igridModule
+        import dune.mmesh._grid2d as gridModule
+        import dune.mmesh._interfacegrid2d as igridModule
     elif dimgrid == 3:
-        import dune.mmesh._mmesh3 as gridModule
-        import dune.mmesh._mimesh3 as igridModule
+        import dune.mmesh._grid3d as gridModule
+        import dune.mmesh._interfacegrid3d as igridModule
 
     gridView = gridModule.LeafGrid(gridModule.reader(constructor))
 

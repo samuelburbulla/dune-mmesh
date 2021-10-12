@@ -8,13 +8,13 @@
 #include <dune/python/pybind11/pybind11.h>
 #include <dune/python/pybind11/stl.h>
 
-PYBIND11_MODULE( _mimesh2, module )
+PYBIND11_MODULE( _interfacegrid2d, module )
 {
-  auto mimesh2 = Dune::Python::insertClass< typename Dune::MovingMesh<2>::InterfaceGrid >( module,
+  auto cls = Dune::Python::insertClass< typename Dune::MovingMesh<2>::InterfaceGrid >( module,
     "HierarchicalGrid",
     pybind11::dynamic_attr(),
     Dune::Python::GenerateTypeName("typename Dune::MovingMesh<2>::InterfaceGrid"),
     Dune::Python::IncludeFiles{"dune/mmesh/mmesh.hh", "dune/python/grid/hierarchical.hh"}
   ).first;
-  Dune::Python::MMIFGrid::registerHierarchicalGrid( module, mimesh2 );
+  Dune::Python::MMIFGrid::registerHierarchicalGrid( module, cls );
 }
