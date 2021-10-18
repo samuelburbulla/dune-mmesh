@@ -19,7 +19,7 @@ def skeleton(interfaceFunction, grid=None):
         This function has to be restricted when evaluated on facets, e.g. using avg(skeleton).
     """
     if grid == None:
-        grid = interfaceFunction.space.grid.hierarchicalGrid.bulkGrid
+        grid = interfaceFunction.space.gridView.hierarchicalGrid.bulkGrid
 
     includes = ["dune/python/mmesh/pyskeletontrace.hh"]
     includes += interfaceFunction._includes + grid._includes
@@ -50,7 +50,7 @@ def trace(bulkFunction, igrid=None, restrictTo=None):
         This function has to be restricted to positive ('+') or negative side ('-').
     """
     if igrid == None:
-      igrid = bulkFunction.space.grid.hierarchicalGrid.interfaceGrid
+      igrid = bulkFunction.space.gridView.hierarchicalGrid.interfaceGrid
 
     traces = {}
     includes = ["dune/python/mmesh/pyskeletontrace.hh"]
