@@ -29,10 +29,11 @@ install(DIRECTORY "CGAL"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
-# if Python bindings are enabled, include necessary sub directories.
-if( DUNE_ENABLE_PYTHONBINDINGS )
-  add_subdirectory("python")
-endif()
+add_subdirectory("python")
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
+
+if ("${CMAKE_VERSION}" VERSION_GREATER 3.14)
+  cmake_policy(SET CMP0087 NEW)
+endif ("${CMAKE_VERSION}" VERSION_GREATER 3.14)
