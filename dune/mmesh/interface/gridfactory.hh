@@ -89,7 +89,7 @@ namespace Dune
 
       std::sort(ids.begin(), ids.end());
 
-      (mMesh_->interfaceSegments()).insert( ids );
+      (mMesh_->interfaceSegments()).insert( std::make_pair(ids, 1) );
 
       insertionIndexMap_.insert( { ids, countElements++ } );
     };

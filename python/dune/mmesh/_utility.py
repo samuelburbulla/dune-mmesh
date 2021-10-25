@@ -62,6 +62,30 @@ def domainMarker(grid):
     return fvspace.interpolate(cppfunc, name="domainMarker")
 
 
+def interfaceDomainMarker(igrid):
+    """Return interface domain markers passed by .msh grid file.
+
+    Args:
+       igrid: The interface grid.
+
+    Returns:
+       Interface grid function with cell-wise markers from .msh file.
+    """
+    code = """
+    #include <iostream>
+    #include <functional>
+    template <class GV>
+    auto interfaceDomainMarker(const GV &igv) {
+      auto ret = [&igv] (const auto& entity, const auto& xLocal) mutable -> auto {
+        return igv.grid().domainMarker(entity);
+      };
+      return ret;
+    }
+    """
+    from dune.fem.function import cppFunction
+    return cppFunction(igrid, name="interfaceDomainMarker", order=0, fctName="interfaceDomainMarker", includes=io.StringIO(code), args=[igrid])
+
+
 def normals(igrid):
     """Return normal vectors to the interface grid elements.
 

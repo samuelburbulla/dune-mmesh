@@ -523,6 +523,14 @@ namespace Dune
       return isInterface( entity.impl().hostEntity() );
     }
 
+    //! Return domain marker of entity
+    template< class Entity >
+    std::size_t domainMarker( const Entity& entity ) const
+    {
+      assert( isInterface( entity ) );
+      return mMesh_->interfaceSegments()[ getVertexIds_( entity.impl().hostEntity() ) ];
+    }
+
     //! Mark a set of children elements as refinement of a connected component
     void markAsRefined( const std::vector< std::vector< std::size_t > >& children, const ConnectedComponent connectedComponent )
     {

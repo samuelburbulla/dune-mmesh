@@ -153,7 +153,7 @@ namespace Dune
     using BoundaryIds = std::unordered_map< std::size_t, std::size_t >;
 
     //! The interface segment set
-    using InterfaceSegments = std::unordered_set< std::vector< std::size_t >, HashUIntVector >;
+    using InterfaceSegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
 
     //**********************************************************
     // The Interface Methods
@@ -330,7 +330,7 @@ namespace Dune
     }
 
     //! Add an intersection to the interface
-    void addInterface( const Intersection& intersection )
+    void addInterface( const Intersection& intersection, const std::size_t marker = 1 )
     {
       const auto& facet = entity( intersection.impl().getHostIntersection() );
       std::vector<std::size_t> ids;
@@ -341,7 +341,7 @@ namespace Dune
         ids.push_back( globalIdSet().id( vertex ).vt()[0] );
       }
       std::sort(ids.begin(), ids.end());
-      interfaceSegments_.insert( ids );
+      interfaceSegments_.insert( std::make_pair(ids, marker) );
       interfaceGrid_->setIndices();
     }
 
@@ -569,9 +569,12 @@ namespace Dune
 
       std::sort(ids.begin(), ids.end());
 
-      for ( const auto& seg : interfaceSegments_ )
+      for ( const auto& iseg : interfaceSegments_ )
+      {
+        const auto& seg = iseg.first;
         if ( (seg[0] == ids[0] && seg[1] == ids[1]) || (seg[1] == ids[0] && seg[2] == ids[1]) )
           return true;
+      }
 
       return false;
     }
@@ -1232,7 +1235,7 @@ namespace Dune
           ids.push_back( id );
           ids.push_back( globalIdSet().id( entity( ip.v0 ) ).vt()[0] );
           std::sort(ids.begin(), ids.end());
-          interfaceSegments_.insert( ids );
+          interfaceSegments_.insert( std::make_pair(ids, 1) ); // TODO: compute interface marker corresponding to ip.v0
 
           // pass this refinement information to the interface grid
           interfaceGrid_->markAsRefined( /*children*/ {ids}, ip.connectedcomponent );
@@ -1497,6 +1500,7 @@ namespace Dune
       std::sort(ids.begin(), ids.end());
 
       // erase old interface segment
+      std::size_t marker = interfaceSegments_[ids];
       interfaceSegments_.erase( ids );
 
       // insert the point
@@ -1517,7 +1521,7 @@ namespace Dune
           newIds.push_back( ids[(i+j)%dimension] );
 
         std::sort(newIds.begin(), newIds.end());
-        interfaceSegments_.insert( newIds );
+        interfaceSegments_.insert( std::make_pair(newIds, marker) );
         allNewIds.push_back( newIds );
       }
 
@@ -1535,6 +1539,7 @@ namespace Dune
       InterfaceGridConnectedComponent connectedComponent;
 
       // find and remove interface segments
+      std::size_t marker = 1;
       std::vector<VertexHandle> otherVhs;
       for ( const auto& e : incidentInterfaceElements( interfaceGrid_->entity( vh ) ) )
       {
@@ -1555,6 +1560,7 @@ namespace Dune
         auto it = interfaceSegments_.find( ids );
         if ( it != interfaceSegments_.end() )
         {
+          marker = interfaceSegments_[ ids ];
           interfaceSegments_.erase( it );
           otherVhs.push_back( other );
         }
@@ -1572,7 +1578,7 @@ namespace Dune
       // add the new interface segment
       std::vector<std::size_t> ids {{ otherVhs[0]->info().id, otherVhs[1]->info().id }};
       std::sort(ids.begin(), ids.end());
-      interfaceSegments_.insert( ids );
+      interfaceSegments_.insert( std::make_pair(ids, marker) );
 
       // pass this refinement information to the interface grid
       interfaceGrid_->markAsRefined( /*children*/ { ids }, connectedComponent );

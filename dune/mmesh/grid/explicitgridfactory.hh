@@ -59,7 +59,7 @@ namespace Dune
     typedef std::unordered_map< std::size_t, std::size_t > BoundaryIds;
 
     //! type of the interface segment set
-    typedef std::unordered_set< std::vector< std::size_t >, HashUIntVector > InterfaceSegments;
+    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > InterfaceSegments;
 
     template< int codim >
     struct Codim
@@ -321,10 +321,10 @@ namespace Dune
 
     /** \brief insert an interface into the macro grid
      *
-     *  \param[in]  type      GeometryType of the new interface
      *  \param[in]  vertices  indices of the interface vertices (starting with 0)
+     *  \param[in]  marker    marker value of the interface segment (default 1)
      */
-    void insertInterface ( const std::vector< unsigned int > &vertices )
+    void insertInterface ( const std::vector< unsigned int > &vertices, const std::size_t marker = 1 )
     {
       assert( vertices.size() == dimension );
 
@@ -332,7 +332,7 @@ namespace Dune
       for( const auto& v : vertices )
         sorted_vertices.push_back( vhs_[v]->info().id );
       std::sort(sorted_vertices.begin(), sorted_vertices.end());
-      interfaceSegments_.insert( sorted_vertices );
+      interfaceSegments_.insert( std::make_pair( sorted_vertices, marker ) );
     }
 
     /** \brief return insertion index of entity
@@ -398,11 +398,11 @@ namespace Dune
 
       // Remove interfaceSegments_ from boundarySegments_
       for( const auto& interfaceSeg : interfaceSegments_ )
-        boundarySegments_.erase( interfaceSeg );
+        boundarySegments_.erase( interfaceSeg.first );
 
       // Mark interface vertices as isInterface
       for( const auto& interfaceSeg : interfaceSegments_ )
-        for( const auto& v : interfaceSeg )
+        for( const auto& v : interfaceSeg.first )
           vhs_[v]->info().isInterface = true;
 
       // Check if all inserted elements really exist in the triangulation
