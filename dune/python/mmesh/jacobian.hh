@@ -75,7 +75,7 @@ namespace Dune
             rangeGridPart_( rSpace.gridPart() )
         {}
 
-        void setupStencil()
+        void setupStencil() const
         {
           const auto& mmesh = domainGridPart_.grid().getMMesh();
           for( const auto& entity : elements(domainGridPart_, Partition{}) )
@@ -111,7 +111,7 @@ namespace Dune
             rangeGridPart_( rSpace.gridPart() )
         {}
 
-        void setupStencil()
+        void setupStencil() const
         {
           for( const auto& entity : elements(domainGridPart_, Partition{}) )
           {
