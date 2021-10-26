@@ -5,6 +5,7 @@ before_script:
   - duneci-install-module https://gitlab.dune-project.org/core/dune-grid.git
   - duneci-install-module https://gitlab.dune-project.org/core/dune-localfunctions.git
   - duneci-install-module https://gitlab.dune-project.org/core/dune-istl.git
+  - duneci-install-module https://gitlab.dune-project.org/extensions/dune-alugrid.git
   - duneci-install-module https://gitlab.dune-project.org/dune-fem/dune-fem.git
 
 debian-11-gcc-9-20:
