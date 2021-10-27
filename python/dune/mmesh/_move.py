@@ -64,8 +64,9 @@ def moveMesh(grid, gridFunctions, getShifts, igrid=None, igridFunctions=None):
         + 0.5*(
               adv(uhOld, phi, em, n)
             + adv(u, phi, em, n)
-        ) == 0
-    ])
+        ) == 0],
+        solver=("suitesparse", "umfpack")
+    )
 
     if interface:
         ischeme = galerkin([
@@ -74,10 +75,12 @@ def moveMesh(grid, gridFunctions, getShifts, igrid=None, igridFunctions=None):
             + 0.5*(
                   adv(iuhOld, iphi, iem, ni)
                 + adv(iu, iphi, iem, ni)
-            ) == 0
-        ])
+            ) == 0],
+            solver=("suitesparse", "umfpack")
+        )
 
-    parameter["fem.adaptation.method"] = "callback"
+    if parameter["fem.adaptation.method"] != "callback":
+        parameter["fem.adaptation.method"] = "callback"
 
     ensure = 0
     while hgrid.ensureInterfaceMovement(shifts) and ensure < 10:
