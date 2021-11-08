@@ -207,7 +207,6 @@ namespace Dune
 
             for (std::size_t i = 0; i < row.size()-1; ++i)
               for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                if (std::abs(val[j]) > std::numeric_limits<double>::epsilon())
                   M.entry(row0 + i, col0 + col[j]) = val[j];
           };
 
