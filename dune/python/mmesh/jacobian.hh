@@ -251,10 +251,10 @@ namespace Dune
           auto dFIn = u;
           auto dFOut = u;
 
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FTmpIn( u.space() );
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FTmpOut( u.space() );
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dFTmpIn( u.space() );
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dFTmpOut( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FmTmpIn( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FmTmpOut( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FpTmpIn( u.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > FpTmpOut( u.space() );
 
           Dune::Fem::MutableLocalFunction< DomainGridFunction > tLocal( t );
 
@@ -277,11 +277,10 @@ namespace Dune
             const auto& inside = intersection.inside();
             const auto& outside = intersection.outside();
 
-            FTmpIn.bind( inside );
-            FTmpOut.bind( outside );
-
-            dFTmpIn.bind( inside );
-            dFTmpOut.bind( outside );
+            FmTmpIn.bind( inside );
+            FmTmpOut.bind( outside );
+            FpTmpIn.bind( inside );
+            FpTmpOut.bind( outside );
 
             uInside.bind( inside );
             uOutside.bind( outside );
@@ -292,34 +291,38 @@ namespace Dune
             localMatrixIn.clear();
             localMatrixOut.clear();
 
-            FTmpIn.clear();
-            FTmpOut.clear();
-            scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, FTmpIn, FTmpOut );
-
             for (std::size_t i = 0; i < tDof.size(); ++i)
             {
               dFIn.clear();
               dFOut.clear();
 
-              dFTmpIn.clear();
-              dFTmpOut.clear();
+              FmTmpIn.clear();
+              FmTmpOut.clear();
+              FpTmpIn.clear();
+              FpTmpOut.clear();
 
-              dFIn.addLocalDofs( inside, FTmpIn.localDofVector() );
-              dFOut.addLocalDofs( outside, FTmpOut.localDofVector() );
+              double h = std::max(tDof[ i ] * eps_, eps_);
+              tDof[ i ] -= h;
+              callback_();
+              scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, FmTmpIn, FmTmpOut );
+              tDof[ i ] += h;
+
+              dFIn.addLocalDofs( inside, FmTmpIn.localDofVector() );
+              dFOut.addLocalDofs( outside, FmTmpOut.localDofVector() );
 
               dFIn *= -1.;
               dFOut *= -1.;
 
-              tDof[ i ] += eps_;
+              tDof[ i ] += h;
               callback_();
-              scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, dFTmpIn, dFTmpOut );
-              tDof[ i ] -= eps_;
+              scheme.fullOperator().impl().addSkeletonIntegral( intersection, uInside, uOutside, FpTmpIn, FpTmpOut );
+              tDof[ i ] -= h;
 
-              dFIn.addLocalDofs( inside, dFTmpIn.localDofVector() );
-              dFOut.addLocalDofs( outside, dFTmpOut.localDofVector() );
+              dFIn.addLocalDofs( inside, FpTmpIn.localDofVector() );
+              dFOut.addLocalDofs( outside, FpTmpOut.localDofVector() );
 
-              dFIn /= eps_;
-              dFOut /= eps_;
+              dFIn /= 2 * h;
+              dFOut /= 2 * h;
 
               dFLocalIn.bind( inside );
               dFLocalOut.bind( outside );
@@ -351,8 +354,8 @@ namespace Dune
 
           auto dG = t;
 
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > GTmp( t.space() );
-          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > dGTmp( t.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > GmTmp( t.space() );
+          Dune::Fem::TemporaryLocalFunction< DiscreteFunctionSpaceType > GpTmp( t.space() );
 
           Dune::Fem::MutableLocalFunction< DomainGridFunction > uLocal( u );
 
@@ -372,31 +375,36 @@ namespace Dune
                 uLocal.bind( element );
                 auto& uDof = uLocal.localDofVector();
 
-                GTmp.bind( interface );
-                dGTmp.bind( interface );
+                GmTmp.bind( interface );
+                GpTmp.bind( interface );
                 tInterface.bind( interface );
 
                 localMatrix.init( element, interface );
                 localMatrix.clear();
 
-                GTmp.clear();
-                ischeme.fullOperator().impl().addInteriorIntegral( tInterface, GTmp );
-
                 for (std::size_t i = 0; i < uDof.size(); ++i)
                 {
                   dG.clear();
-                  dGTmp.clear();
 
-                  dG.addLocalDofs( interface, GTmp.localDofVector() );
+                  GmTmp.clear();
+                  GpTmp.clear();
+
+                  double h = std::max(uDof[ i ] * eps_, eps_);
+                  uDof[ i ] -= h;
+                  callback_();
+                  ischeme.fullOperator().impl().addInteriorIntegral( tInterface, GmTmp );
+                  uDof[ i ] += h;
+
+                  dG.addLocalDofs( interface, GmTmp.localDofVector() );
                   dG *= -1.;
 
-                  uDof[ i ] += eps_;
+                  uDof[ i ] += h;
                   callback_();
-                  ischeme.fullOperator().impl().addInteriorIntegral( tInterface, dGTmp );
-                  uDof[ i ] -= eps_;
+                  ischeme.fullOperator().impl().addInteriorIntegral( tInterface, GpTmp );
+                  uDof[ i ] -= h;
 
-                  dG.addLocalDofs( interface, dGTmp.localDofVector() );
-                  dG /= eps_;
+                  dG.addLocalDofs( interface, GpTmp.localDofVector() );
+                  dG /= 2 * h;
 
                   dGLocal.bind( interface );
 

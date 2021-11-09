@@ -98,11 +98,11 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1e-8, verbose=0, python=False):
+def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1.49012e-8, verbose=0):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method assembling the underlying jacobian matrix.
        The coupling jacobian blocks are evaluated by finite differences.
-       We provide a fast version with a C++ backend using UMFPACK and a python version relying on scipy.
+       We provide a fast version with a C++ backend using UMFPACK.
 
     Args:
         schemes:  pair of schemes
@@ -111,9 +111,8 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
         iter:     maximum number of iterations
         tol:      objective residual of iteration step in two norm
         f_tol:    objective residual of function value in two norm
-        eps:      step size for finite difference (only for python version)
+        eps:      step size for finite difference
         verbose:  1: print residuum for each newton iteration, 2: print details
-        python:   use the python implementation
 
     Returns:
         if converged
@@ -139,42 +138,6 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
 
     from numpy.linalg import norm
 
-    if python:
-        from dune.fem.operator import linear as linearOperator
-        A = linearOperator(scheme)
-        D = linearOperator(ischeme)
-
-        def updateJacobians():
-            scheme.jacobian(uh, A)
-            ischeme.jacobian(th, D)
-
-        # Evaluate the coupling blocks by finite difference on-demand
-        Bz = uh.copy()
-        def B(z):
-            if norm(z) == 0:
-                return np.zeros(n)
-            zh = z * eps / norm(z)
-            th.as_numpy[:] += zh
-            call()
-            scheme(uh, Bz)
-            th.as_numpy[:] -= zh
-            Bz.as_numpy[:] -= f.as_numpy
-            Bz.as_numpy[:] /= eps
-            return Bz.as_numpy * norm(z)
-
-        Cz = th.copy()
-        def C(z):
-            if norm(z) == 0:
-                return np.zeros(m)
-            zh = z * eps / norm(z)
-            uh.as_numpy[:] += zh
-            call()
-            ischeme(th, Cz)
-            uh.as_numpy[:] -= zh
-            Cz.as_numpy[:] -= g.as_numpy
-            Cz.as_numpy[:] /= eps
-            return Cz.as_numpy * norm(z)
-
     # Evaluate
     f = uh.copy()
     g = th.copy()
@@ -183,70 +146,35 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
     scheme(uh, f)
     ischeme(th, g)
 
-    if not python:
-        # Load C++ jacobian implementation
-        import hashlib
-        from dune.generator import Constructor
-        from dune.generator.generator import SimpleGenerator
+    # Load C++ jacobian implementation
+    import hashlib
+    from dune.generator import Constructor
+    from dune.generator.generator import SimpleGenerator
 
-        typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
-            + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
-        includes = scheme.cppIncludes + ischeme.cppIncludes + ["dune/python/mmesh/jacobian.hh"]
-        moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
-        constructor = Constructor(['const '+scheme.cppTypeName+'& scheme','const '+ischeme.cppTypeName+' &ischeme', 'const '+uh.cppTypeName+' &uh', 'const '+th.cppTypeName+' &th', 'const double eps', 'const std::function<void()> &callback'],
-                                  ['return new ' + typeName + '( scheme, ischeme, uh, th, eps, callback );'],
-                                  ['pybind11::keep_alive< 1, 2 >()', 'pybind11::keep_alive< 1, 3 >()', 'pybind11::keep_alive< 1, 4 >()', 'pybind11::keep_alive< 1, 6 >()'])
+    typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
+        + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
+    includes = scheme.cppIncludes + ischeme.cppIncludes + ["dune/python/mmesh/jacobian.hh"]
+    moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
+    constructor = Constructor(['const '+scheme.cppTypeName+'& scheme','const '+ischeme.cppTypeName+' &ischeme', 'const '+uh.cppTypeName+' &uh', 'const '+th.cppTypeName+' &th', 'const double eps', 'const std::function<void()> &callback'],
+                              ['return new ' + typeName + '( scheme, ischeme, uh, th, eps, callback );'],
+                              ['pybind11::keep_alive< 1, 2 >()', 'pybind11::keep_alive< 1, 3 >()', 'pybind11::keep_alive< 1, 4 >()', 'pybind11::keep_alive< 1, 6 >()'])
 
-        generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
-        module = generator.load(includes, typeName, moduleName, constructor)
-        jacobian = module.Jacobian(scheme, ischeme, uh, th, eps, call)
-        jacobian.init();
+    generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
+    module = generator.load(includes, typeName, moduleName, constructor)
+    jacobian = module.Jacobian(scheme, ischeme, uh, th, eps, call)
+    jacobian.init();
 
-        ux = uh.copy()
-        tx = th.copy()
+    ux = uh.copy()
+    tx = th.copy()
 
     for i in range(1, iter+1):
 
-        if python:
-            updateJacobians()
+        jacobian.update(uh, th)
+        jacobian.solve(f, g, ux, tx)
 
-            def J(x):
-                return (A.as_numpy.dot(x[:n]) + B(x[n:])).tolist() + (C(x[:n]) + D.as_numpy.dot(x[n:])).tolist()
-
-            data = []
-            row = []
-            col = []
-            v = np.zeros(n+m)
-            for k in range(n+m):
-                v[k] = 1
-                dv = J(v)
-                v[k] = 0
-                for j in range(n+m):
-                    if abs(dv[j]) > 1e-14:
-                        data += [dv[j]]
-                        row += [j]
-                        col += [k]
-
-            from scipy.sparse import csr_matrix
-            jac = csr_matrix((data, (row, col)))
-
-            r = np.concatenate((f.as_numpy, g.as_numpy))
-
-            from scipy.sparse.linalg import spsolve
-            x = spsolve(jac, r)
-
-            uh.as_numpy[:] -= x[:n]
-            th.as_numpy[:] -= x[n:]
-            xres = norm(x)
-
-        if not python:
-            jacobian.update(uh, th)
-            jacobian.solve(f, g, ux, tx)
-
-            uh -= ux
-            th -= tx
-            xres = np.sqrt(norm(ux.as_numpy)**2 + norm(tx.as_numpy)**2)
-
+        uh -= ux
+        th -= tx
+        xres = np.sqrt(norm(ux.as_numpy)**2 + norm(tx.as_numpy)**2)
 
         call()
         scheme(uh, f)
