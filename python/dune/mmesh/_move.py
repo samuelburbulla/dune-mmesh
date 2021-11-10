@@ -83,7 +83,7 @@ def moveMesh(grid, gridFunctions, getShifts, igrid=None, igridFunctions=None):
         parameter["fem.adaptation.method"] = "callback"
 
     ensure = 0
-    while hgrid.ensureInterfaceMovement(shifts) and ensure < 10:
+    while hgrid.ensureInterfaceMovement(2 * shifts) and ensure < 10:
         ensure += 1
         adapt(gridFunctions)
         if interface:
