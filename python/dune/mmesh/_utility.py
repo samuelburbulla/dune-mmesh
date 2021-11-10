@@ -107,9 +107,7 @@ def normals(igrid):
     import dune.ufl
     from dune.fem.function import cppFunction
     from dune.fem.space import finiteVolume
-    cppFunc = cppFunction(igrid, name="normal", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid])
-    fvspace = finiteVolume(igrid, dimRange=igrid.dimension+1)
-    return fvspace.interpolate(cppFunc, name="normal")
+    return cppFunction(igrid, name="normal", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid])
 
 def edgeMovement(grid, shifts):
     """Return linear interpolation of vertex shifts.
