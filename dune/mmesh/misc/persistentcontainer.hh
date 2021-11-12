@@ -37,6 +37,7 @@ namespace Dune
       {
         Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
           [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
+        sequence_ = this->grid_->sequence();
       }
     }
 
