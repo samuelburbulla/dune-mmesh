@@ -40,6 +40,7 @@ It also enables git support if you want to contribute.
 `dune-grid <https://gitlab.dune-project.org/core/dune-grid.git>`_,
 `dune-istl <https://gitlab.dune-project.org/core/dune-istl.git>`_,
 `dune-localfunctions <https://gitlab.dune-project.org/core/dune-localfunctions.git>`_,
+`dune-alugrid <https://gitlab.dune-project.org/extensions/dune-alugrid.git>`_
 `dune-fem <https://gitlab.dune-project.org/dune-fem/dune-fem.git>`_
 and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>`_.
 
@@ -50,6 +51,7 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
   git clone https://gitlab.dune-project.org/core/dune-grid.git
   git clone https://gitlab.dune-project.org/core/dune-istl.git
   git clone https://gitlab.dune-project.org/core/dune-localfunctions.git
+  git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git
   git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git
   git clone https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git
 
@@ -58,13 +60,11 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
 .. code-block:: bash
 
   ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
-  ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts make install_python
 
-3. Configure the automatically generated dune-py module by calling
+3. Activate the DUNE internal virtual environment.
 
 .. code-block:: bash
 
-  ./dune-common/bin/setup-dunepy.py --opts=dune-mmesh/cmake/config.opts
+  source ./dune-common/build-cmake/dune-env/bin/activate
 
-Remark that this generated dune-py module is used to perform the just-in-time compilation that is used for
-the python bindings of DUNE.
+Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
