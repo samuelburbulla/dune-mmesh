@@ -93,8 +93,10 @@ from dune.ufl import Constant
 from dune.fem.view import geometryGridView
 from dune.fem.function import uflFunction
 x = SpatialCoordinate(triangle)
-gridFunction = uflFunction(gridView, ufl=x, order=1, name="transform")
-geoGrid = geometryGridView(gridFunction)
+
+vectorSpace = dglagrange(gridView, dimRange=2, order=1)
+position = vectorSpace.interpolate(x, name="position")
+geoGrid = geometryGridView(position)
 
 space = dglagrange(geoGrid, order=3)
 u = TrialFunction(space)
