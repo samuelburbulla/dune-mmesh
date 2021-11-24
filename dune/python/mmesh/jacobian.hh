@@ -29,11 +29,10 @@ namespace Dune
     {
 
       //! Convert intersection if gridPart is wrapped, e.g. geometryGridPart
-      template< class GridPart, class Intersection >
-      const auto convert( const GridPart& gridPart, const Intersection& intersection, int )
+      template< class GridPart, class Intersection, class Entity >
+      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, int )
       {
-        const auto inside = gridPart.convert(intersection.inside());
-        const auto outside = gridPart.convert(intersection.outside());
+        const Entity outside = gridPart.convert(intersection.outside());
 
         for (auto is : intersections(gridPart, inside))
           if (is.outside() == outside)
@@ -42,17 +41,17 @@ namespace Dune
       }
 
       //! Default (trivial) convert
-      template< class GridPart, class Intersection >
-      const auto convert( const GridPart& gridPart, const Intersection& intersection, char )
+      template< class GridPart, class Intersection, class Entity >
+      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, char )
       {
         return intersection;
       }
 
       //! Give preference to the non-trivial version
-      template< class GridPart, class Intersection >
-      const auto convert( const GridPart& gridPart, const Intersection& intersection )
+      template< class GridPart, class Intersection, class Entity >
+      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside )
       {
-        return convert(gridPart, intersection, 0);
+        return convert(gridPart, intersection, inside, 0);
       }
 
 
@@ -80,7 +79,9 @@ namespace Dune
           const auto& mmesh = domainGridPart_.grid().getMMesh();
           for( const auto& entity : elements(domainGridPart_, Partition{}) )
           {
-            const auto intersection = convert(rangeGridPart_, mmesh.asIntersection( entity ));
+            const auto mmeshIntersection = mmesh.asIntersection( entity );
+            const auto inside = rangeGridPart_.convert( mmeshIntersection.inside() );
+            const auto intersection = convert( rangeGridPart_, mmeshIntersection, inside );
 
             BaseType::fill(entity, intersection.inside());
             BaseType::fill(entity, intersection.outside());
@@ -272,9 +273,10 @@ namespace Dune
             tLocal.bind( interface );
             auto& tDof = tLocal.localDofVector();
 
-            const auto intersection = convert(u.gridPart(), mmesh.asIntersection( interface ));
+            const auto mmeshIntersection = mmesh.asIntersection( interface );
+            const auto inside = u.gridPart().convert( mmeshIntersection.inside() );
+            const auto intersection = convert( u.gridPart(), mmeshIntersection, inside );
 
-            const auto& inside = intersection.inside();
             const auto& outside = intersection.outside();
 
             FmTmpIn.bind( inside );
