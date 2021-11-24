@@ -7,10 +7,6 @@ add_python_targets(mmesh
   _utility
 )
 
-dune_symlink_to_source_files(FILES
-  tutorial
-)
-
 set(PRECOMPILE
   _grid2d
   _grid3d

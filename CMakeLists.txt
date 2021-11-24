@@ -16,21 +16,17 @@ include(DuneMacros)
 
 # start a dune project with information from dune.module
 dune_project()
-
 dune_enable_all_packages()
 
-add_subdirectory(dune)
-add_subdirectory(doc)
-add_subdirectory(cmake/modules)
 install(DIRECTORY "CGAL"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
-add_subdirectory("python")
+if( DUNE_ENABLE_PYTHONBINDINGS )
+  set(PYDIR python)
+endif()
+
+dune_add_subdirs(dune doc cmake/modules ${PYDIR})
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
-
-if ("${CMAKE_VERSION}" VERSION_GREATER 3.14)
-  cmake_policy(SET CMP0087 NEW)
-endif ("${CMAKE_VERSION}" VERSION_GREATER 3.14)
