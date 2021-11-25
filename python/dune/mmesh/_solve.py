@@ -151,11 +151,11 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
     from dune.generator import Constructor
     from dune.generator.generator import SimpleGenerator
 
-    typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
-        + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
-    includes = scheme.cppIncludes + ischeme.cppIncludes + ["dune/python/mmesh/jacobian.hh"]
+    typeName = "Dune::Python::MMesh::Jacobian< " + scheme._typeName + ", " \
+        + ischeme._typeName + ", " + uh._typeName + ", " + th._typeName + " >"
+    includes = scheme._includes + ischeme._includes + ["dune/python/mmesh/jacobian.hh"]
     moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
-    constructor = Constructor(['const '+scheme.cppTypeName+'& scheme','const '+ischeme.cppTypeName+' &ischeme', 'const '+uh.cppTypeName+' &uh', 'const '+th.cppTypeName+' &th', 'const double eps', 'const std::function<void()> &callback'],
+    constructor = Constructor(['const '+scheme._typeName+'& scheme','const '+ischeme._typeName+' &ischeme', 'const '+uh._typeName+' &uh', 'const '+th._typeName+' &th', 'const double eps', 'const std::function<void()> &callback'],
                               ['return new ' + typeName + '( scheme, ischeme, uh, th, eps, callback );'],
                               ['pybind11::keep_alive< 1, 2 >()', 'pybind11::keep_alive< 1, 3 >()', 'pybind11::keep_alive< 1, 4 >()', 'pybind11::keep_alive< 1, 6 >()'])
 
