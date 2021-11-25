@@ -22,10 +22,10 @@ def skeleton(interfaceFunction, grid=None):
         grid = interfaceFunction.space.gridView.hierarchicalGrid.bulkGrid
 
     includes = ["dune/python/mmesh/pyskeletontrace.hh"]
-    includes += interfaceFunction.cppIncludes + grid.cppIncludes
+    includes += interfaceFunction._includes + grid._includes
     generator = SimpleGenerator("SkeletonGF", "Dune::Fem")
 
-    typeName = "Dune::Fem::SkeletonGF< " + grid.cppTypeName + ", " + interfaceFunction.cppTypeName + " >"
+    typeName = "Dune::Fem::SkeletonGF< " + grid._typeName + ", " + interfaceFunction._typeName + " >"
     moduleName = "skeleton_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
     cls = generator.load(includes, typeName, moduleName)
     skeleton = cls.SkeletonGF(grid, interfaceFunction)
@@ -54,12 +54,12 @@ def trace(bulkFunction, igrid=None, restrictTo=None):
 
     traces = {}
     includes = ["dune/python/mmesh/pyskeletontrace.hh"]
-    includes += bulkFunction.cppIncludes + igrid.cppIncludes
+    includes += bulkFunction._includes + igrid._includes
     generator = SimpleGenerator(["TraceGF","TraceGF"], "Dune::Fem", pythonname=["TraceGFP","TraceGFM"])
     typeName = []
     for side in [ "in", "out" ]:
         sideStr = "Dune::Fem::IntersectionSide::" + side
-        typeName += ["Dune::Fem::TraceGF< " + igrid.cppTypeName + ", " + bulkFunction.cppTypeName + ", " + sideStr + " >"]
+        typeName += ["Dune::Fem::TraceGF< " + igrid._typeName + ", " + bulkFunction._typeName + ", " + sideStr + " >"]
     moduleName = "skeleton_"+hashlib.md5(''.join(typeName).encode('utf8')).hexdigest()
     module = generator.load(includes, typeName, moduleName)
     traces["in"]  = module.TraceGFP(igrid, bulkFunction)
