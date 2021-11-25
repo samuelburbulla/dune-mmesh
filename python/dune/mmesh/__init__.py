@@ -6,3 +6,6 @@ from ._utility import *
 
 registry = dict()
 registry["grid"] = grid_registry
+
+from dune.fem import parameter
+parameter.append({"fem.adaptation.method": "callback"})
