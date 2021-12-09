@@ -3,7 +3,7 @@ logger = logging.getLogger(__name__)
 
 from dune.fem import adapt
 
-def moveMesh(grid, gridFunctions, getShifts, igrid=None, igridFunctions=[]):
+def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[]):
     """Move the mesh and adapt given discrete functions.
 
     Args:
@@ -16,18 +16,23 @@ def moveMesh(grid, gridFunctions, getShifts, igrid=None, igridFunctions=[]):
     Returns:
         Number of ensure and mark steps.
     """
-    igridFunctions += [igrid.hierarchicalGrid.one]
+    try:
+        igridFunctions += [grid.hierarchicalGrid.interfaceGrid.hierarchicalGrid.one]
+    except:
+        pass
     hgrid = grid.hierarchicalGrid
-    shifts = getShifts()
 
     ensure = 0
-    while hgrid.ensureInterfaceMovement(2 * shifts) and ensure < 10:
-        ensure += 1
-        adapt(gridFunctions)
-        adapt(igridFunctions)
+    if getShifts is not None:
         shifts = getShifts()
 
-    hgrid.moveInterface(shifts)
+        while hgrid.ensureInterfaceMovement(2 * shifts) and ensure < 10:
+            ensure += 1
+            adapt(gridFunctions)
+            adapt(igridFunctions)
+            shifts = getShifts()
+
+        hgrid.moveInterface(shifts)
 
     mark = 0
     while hgrid.markElements() and mark < 10:
