@@ -161,6 +161,20 @@ namespace Dune
           Return entity of the interface grid as (some) intersection of the MMesh
         )doc" );
 
+        cls.def( "addInterface", [] ( Grid &self, const Intersection& intersection ) {
+          self.addInterface( intersection );
+        },
+        R"doc(
+          Add the intersection to the set of interface edges
+        )doc" );
+
+        cls.def( "addInterface", [] ( Grid &self, const Intersection& intersection, const std::size_t marker ) {
+          self.addInterface( intersection, marker );
+        },
+        R"doc(
+          Add the intersection to the set of interface edges and mark it with marker
+        )doc" );
+
         cls.def( "postAdapt", [] ( Grid &self ) {
           self.postAdapt();
         },

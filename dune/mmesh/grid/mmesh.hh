@@ -332,6 +332,9 @@ namespace Dune
     //! Add an intersection to the interface
     void addInterface( const Intersection& intersection, const std::size_t marker = 1 )
     {
+      if (isInterface( intersection ))
+        return;
+
       const auto& facet = entity( intersection.impl().getHostIntersection() );
       std::vector<std::size_t> ids;
       for( std::size_t i = 0; i < facet.subEntities(dim); ++i )
@@ -1369,7 +1372,7 @@ namespace Dune
       }
     }
 
-    //! Add a new interface segment and connect it with vertex
+    //! Insert p into the triangulation and add a new interface segment between p and vertex
     template< typename Vertex >
     void addToInterface( const Vertex& vertex, const GlobalCoordinate& p )
     {

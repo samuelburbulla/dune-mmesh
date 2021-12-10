@@ -10,26 +10,53 @@ def interfaceIndicator(igrid, grid=None, restrict=True):
 
     Args:
         igrid: The interfacegrid.
-        grid (Grid, optional): The bulk grid. Necessary, if wrapped.
+        grid: deprecated
         restrict (bool, optional): If True, the returned UFL expression is restricted.
 
     Returns:
         Skeleton function that is one at interface edges.
     """
-    from ufl import avg
-    from dune.mmesh import skeleton
-    try:
-        one = igrid.hierarchicalGrid.one
-    except:
-        from dune.fem.space import finiteVolume
-        space = finiteVolume(igrid)
-        one = space.interpolate(1, name="one")
-        igrid.hierarchicalGrid.one = one
+    if grid is not None:
+        print("Note: Not needed to pass the grid parameter to interfaceIndicator any more!")
+
+    grid = igrid.hierarchicalGrid.bulkGrid
+
+    if igrid.dimension == 1:
+        import dune.mmesh._interfaceindicator2d as module
+    else:
+        import dune.mmesh._interfaceindicator3d as module
+
+    indicator = module.InterfaceIndicator(grid)
+    from dune.ufl import GridFunction
+    indicator = GridFunction(indicator)
 
     if restrict:
-        return avg(skeleton(one, grid=grid))
+        from ufl import avg
+        return avg(indicator)
     else:
-        return skeleton(one, grid=grid)
+        return indicator
+
+
+def normals(igrid):
+    """Return normal vectors to the interface grid elements.
+
+    Args:
+        igrid: The interface grid.
+
+    Returns:
+        Grid function on the interface grid. Coincides with n('+') of the bulk facet normal.
+    """
+    igrid = igrid.hierarchicalGrid.leafView
+
+    if igrid.dimension == 1:
+        import dune.mmesh._normals2d as module
+    else:
+        import dune.mmesh._normals3d as module
+
+    normals = module.Normals(igrid)
+    from dune.ufl import GridFunction
+    normals = GridFunction(normals)
+    return normals
 
 
 def domainMarker(grid):
@@ -84,32 +111,6 @@ def interfaceDomainMarker(igrid):
     """
     from dune.fem.function import cppFunction
     return cppFunction(igrid, name="interfaceDomainMarker", order=0, fctName="interfaceDomainMarker", includes=io.StringIO(code), args=[igrid])
-
-
-def normals(igrid):
-    """Return normal vectors to the interface grid elements.
-
-    Args:
-        igrid: The interface grid.
-
-    Returns:
-        Grid function on the interface grid. Coincides with n('+') of the bulk facet normal.
-    """
-    code="""
-    #include <functional>
-    template <class IGV>
-    auto normal(const IGV &igv) {
-      return [&igv] (const auto& entity, const auto& xLocal) mutable -> auto {
-        return igv.grid().getMMesh().asIntersection( entity ).centerUnitOuterNormal();
-      };
-    }
-    """
-    import dune.ufl
-    from dune.fem.function import cppFunction
-    from dune.fem.space import finiteVolume
-    fvspace = finiteVolume(igrid, dimRange=igrid.dimensionworld)
-    cppfunc = cppFunction(igrid, name="normal", order=0, fctName="normal", includes=io.StringIO(code), args=[igrid])
-    return fvspace.interpolate(cppfunc, name="normal")
 
 
 def edgeMovement(grid, shifts):

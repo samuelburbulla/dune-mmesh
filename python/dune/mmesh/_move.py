@@ -16,10 +16,6 @@ def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[])
     Returns:
         Number of ensure and mark steps.
     """
-    try:
-        igridFunctions += [grid.hierarchicalGrid.interfaceGrid.hierarchicalGrid.one]
-    except:
-        pass
     hgrid = grid.hierarchicalGrid
 
     ensure = 0
@@ -28,8 +24,10 @@ def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[])
 
         while hgrid.ensureInterfaceMovement(2 * shifts) and ensure < 10:
             ensure += 1
-            adapt(gridFunctions)
-            adapt(igridFunctions)
+            if len(gridFunctions) > 0:
+                adapt(gridFunctions)
+            if len(igridFunctions) > 0:
+                adapt(igridFunctions)
             shifts = getShifts()
 
         hgrid.moveInterface(shifts)
@@ -37,7 +35,9 @@ def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[])
     mark = 0
     while hgrid.markElements() and mark < 10:
         mark += 1
-        adapt(gridFunctions)
-        adapt(igridFunctions)
+        if len(gridFunctions) > 0:
+            adapt(gridFunctions)
+        if len(igridFunctions) > 0:
+            adapt(igridFunctions)
 
     return {"ensure": ensure, "mark": mark}
