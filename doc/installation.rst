@@ -28,6 +28,13 @@ The easiest way to install Dune-MMesh is using pip and the package uploaded to `
 
 Note that this takes some time in order to compile all dependent Dune modules.
 
+If you encounter problems with OpenMP or Boost headers not found (e.g. on an M1 Mac),
+make sure that the include paths can be found. For instance, use the export
+````
+export CXXFLAGS="-I/opt/homebrew/Cellar/libomp/13.0.0/include -I/opt/homebrew/Cellar/boost/1.76.0/include/"
+````
+before installing Dune-MMesh.
+
 
 From Source
 -----------
