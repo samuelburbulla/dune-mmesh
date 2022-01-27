@@ -62,7 +62,7 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
   git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git
   git clone https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git
 
-2. In a virtual environment (strongly recommended, see above) build the modules and install the python bindings.
+2. Build the modules. This will create an internal virtual environment and install the python bindings.
 
 .. code-block:: bash
 
