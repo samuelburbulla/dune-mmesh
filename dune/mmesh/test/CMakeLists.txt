@@ -87,3 +87,7 @@ target_link_libraries(test-femadaptation PUBLIC "dunemmesh")
 #dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
 #set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
 #target_link_libraries(test-threading-interface-3d PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
+set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+target_link_libraries(test-adapt-tuplespace PUBLIC "dunemmesh")
