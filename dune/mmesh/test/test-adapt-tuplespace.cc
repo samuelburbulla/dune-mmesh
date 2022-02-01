@@ -14,6 +14,7 @@
 
 #include <dune/fem/quadrature/cachingquadrature.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#include <dune/fempy/grid/adaptation.hh>
 
 #include <dune/fem/misc/l2norm.hh>
 #include <dune/fem/misc/capabilities.hh>
@@ -21,7 +22,7 @@
 #include <dune/fem/io/parameter.hh>
 
 #include <dune/mmesh/mmesh.hh>
-// #include <dune/alugrid/grid.hh>
+#include <dune/alugrid/grid.hh>
 
 using namespace Dune;
 using namespace Fem;
@@ -74,7 +75,6 @@ struct ExactSolution
   typedef FunctionSpaceType::RangeFieldType RangeFieldType;
   typedef FunctionSpaceType::DomainType DomainType;
 
-  //! f(x,y) = x*(1-x)*y*(1-y)
   void evaluate ( const DomainType &x, RangeType &ret ) const
   {
     ret = 2.; // maximum of function is 2
@@ -96,6 +96,19 @@ void adapt( MyGridType &grid, DiscreteFunctionType &solution, int step )
   rp.setFatherChildWeight(DGFGridInfo< MyGridType >::refineWeight());
 
   AdaptationManagerType adop(grid,rp);
+
+
+  ///////////////////////////////////////
+  // FemPy::RestrictProlong<MyGridType> rp(grid);
+  // using VRP = FemPy::VirtualizedRestrictProlong<MyGridType>;
+  // VRP vrp( solution );
+  // std::list<VRP> l ( {vrp} );
+  // rp.assign( l.begin(), l.end() );
+  // rp.setFatherChildWeight(DGFGridInfo< MyGridType >::refineWeight());
+  // typedef AdaptationManager< MyGridType, FemPy::RestrictProlong< MyGridType > > PyAdaptationManagerType;
+  // PyAdaptationManagerType adop(grid, rp);
+  ///////////////////////////////////////
+
 
   std::string message;
 
@@ -159,17 +172,17 @@ double algorithm ( MyGridType &grid, DiscreteFunctionType &solution, int step, i
   double error = l2norm.distance( gridFunc, solution );
   std::cout << "After: " << error << std::endl;
 
-  //! perform l2-projection to refined grid
-  Dune::Fem::interpolate( gridFunc, solution );
-  double new_error = l2norm.distance( gridFunc, solution );
-  std::cout << "Interpolation on new grid: " << new_error << std::endl << std::endl;
-
   // output
   typedef std::tuple< const DiscreteFunctionType *, decltype(gridFunc) * > IOTupleType;
   typedef DataOutput< MyGridType, IOTupleType > DataOutputType;
   IOTupleType ioTuple( &solution, &gridFunc );
   DataOutputType dataOutput( grid, ioTuple, MyDataOutputParameters( writestep ) );
   dataOutput.write();
+
+  //! perform l2-projection to refined grid
+  Dune::Fem::interpolate( gridFunc, solution );
+  double new_error = l2norm.distance( gridFunc, solution );
+  std::cout << "Interpolation on new grid: " << new_error << std::endl << std::endl;
 
   return error;
 }
@@ -202,7 +215,7 @@ try {
   std::string gridfile;
   Dune::Fem::Parameter::get( "fem.io.macrogrid", gridfilestr.str(), gridfile );
 
-  Dune::Fem::Parameter::append( "fem.verboserank", 0 );
+  Dune::Fem::Parameter::append( "fem.verboserank", -1 );
   Dune::Fem::Parameter::append( "fem.adaptation.method", "callback" );
   Dune::Fem::Parameter::append( "fem.prefix","output" );
   Dune::Fem::Parameter::append( "fem.io.savecount", "1" );
