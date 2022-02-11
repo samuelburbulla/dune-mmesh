@@ -648,7 +648,7 @@ namespace Dune
 
     static double refineWeight ()
     {
-      return 0;
+      return -1;
     }
   };
 
