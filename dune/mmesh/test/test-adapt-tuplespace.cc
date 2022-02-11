@@ -22,19 +22,17 @@
 #include <dune/fem/io/parameter.hh>
 
 #include <dune/mmesh/mmesh.hh>
-#include <dune/alugrid/grid.hh>
 
 using namespace Dune;
 using namespace Fem;
 
 typedef Dune::MovingMesh<2> MyGridType;
-// typedef Dune::ALUGrid<2, 2, simplex, conforming> MyGridType;
-typedef DGAdaptiveLeafGridPart< MyGridType > GridPartType;
+typedef AdaptiveLeafGridPart< MyGridType > GridPartType;
 
 static const std::string usingSpaceName("Using TupleDiscreteFunctionSpace");
 typedef Dune::Fem::FunctionSpace< MyGridType::ctype, double, 2, 2 > FuncSpace1;
 typedef Dune::Fem::FunctionSpace< MyGridType::ctype, double, 2, 1 > FuncSpace2;
-typedef Dune::Fem::DiscontinuousGalerkinSpace< FuncSpace1, GridPartType, 2, CachingStorage > DiscreteFunctionSpaceType1;
+typedef Dune::Fem::LagrangeDiscreteFunctionSpace< FuncSpace1, GridPartType, 2 > DiscreteFunctionSpaceType1;
 typedef Dune::Fem::DiscontinuousGalerkinSpace< FuncSpace2, GridPartType, 1, CachingStorage > DiscreteFunctionSpaceType2;
 typedef Dune::Fem::TupleDiscreteFunctionSpace< DiscreteFunctionSpaceType1, DiscreteFunctionSpaceType2 > DiscreteFunctionSpaceType;
 
@@ -42,29 +40,6 @@ typedef typename DiscreteFunctionSpaceType :: FunctionSpaceType FunctionSpaceTyp
 typedef AdaptiveDiscreteFunction< DiscreteFunctionSpaceType > DiscreteFunctionType;
 typedef DofManager< MyGridType > DofManagerType;
 typedef AdaptationManager< MyGridType, RestrictProlongDefault< DiscreteFunctionType > > AdaptationManagerType;
-
-// DataOutputParameters
-struct MyDataOutputParameters
-: public Dune::Fem::LocalParameter< DataOutputParameters, MyDataOutputParameters >
-{
-  MyDataOutputParameters ( const int step )
-  : step_( step )
-  {}
-
-  MyDataOutputParameters ( const MyDataOutputParameters &other )
-  : step_( other.step_ )
-  {}
-
-  std::string prefix () const
-  {
-    std::stringstream s;
-    s << "adapt-tuplespace-" << step_ << "-";
-    return s.str();
-  }
-
-private:
-  int step_;
-};
 
 // ***********************************************************
 // the exact solution to the problem for EOC calculation
@@ -96,19 +71,6 @@ void adapt( MyGridType &grid, DiscreteFunctionType &solution, int step )
   rp.setFatherChildWeight(DGFGridInfo< MyGridType >::refineWeight());
 
   AdaptationManagerType adop(grid,rp);
-
-
-  ///////////////////////////////////////
-  // FemPy::RestrictProlong<MyGridType> rp(grid);
-  // using VRP = FemPy::VirtualizedRestrictProlong<MyGridType>;
-  // VRP vrp( solution );
-  // std::list<VRP> l ( {vrp} );
-  // rp.assign( l.begin(), l.end() );
-  // rp.setFatherChildWeight(DGFGridInfo< MyGridType >::refineWeight());
-  // typedef AdaptationManager< MyGridType, FemPy::RestrictProlong< MyGridType > > PyAdaptationManagerType;
-  // PyAdaptationManagerType adop(grid, rp);
-  ///////////////////////////////////////
-
 
   std::string message;
 
@@ -155,6 +117,13 @@ double algorithm ( MyGridType &grid, DiscreteFunctionType &solution, int step, i
     std::cout << "Before: " << new_error;
   }
 
+  // output
+  Dune::Fem::VTKIO< GridPartType > vtkIO( solution.space().gridPart(), Dune::VTK::nonconforming );
+  vtkIO.addVertexData( gridFunc );
+  vtkIO.addVertexData( solution );
+  if (writestep == 0)
+    vtkIO.write( "test-adapt-tuplespace-0" );
+
   adapt(grid, solution, step);
 
   // tmp solution should be zero after adapt
@@ -173,11 +142,7 @@ double algorithm ( MyGridType &grid, DiscreteFunctionType &solution, int step, i
   std::cout << "After: " << error << std::endl;
 
   // output
-  typedef std::tuple< const DiscreteFunctionType *, decltype(gridFunc) * > IOTupleType;
-  typedef DataOutput< MyGridType, IOTupleType > DataOutputType;
-  IOTupleType ioTuple( &solution, &gridFunc );
-  DataOutputType dataOutput( grid, ioTuple, MyDataOutputParameters( writestep ) );
-  dataOutput.write();
+  vtkIO.write( "test-adapt-tuplespace-" + std::to_string(writestep+1) );
 
   //! perform l2-projection to refined grid
   Dune::Fem::interpolate( gridFunc, solution );
@@ -215,7 +180,7 @@ try {
   std::string gridfile;
   Dune::Fem::Parameter::get( "fem.io.macrogrid", gridfilestr.str(), gridfile );
 
-  Dune::Fem::Parameter::append( "fem.verboserank", -1 );
+  Dune::Fem::Parameter::append( "fem.verboserank", 0 );
   Dune::Fem::Parameter::append( "fem.adaptation.method", "callback" );
   Dune::Fem::Parameter::append( "fem.prefix","output" );
   Dune::Fem::Parameter::append( "fem.io.savecount", "1" );
