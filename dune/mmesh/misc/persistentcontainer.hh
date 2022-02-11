@@ -48,17 +48,33 @@ namespace Dune
       assert( codim == codimension() );
 
       // add one id for caching entity during adaptation
-      MMeshImpl::MultiId id ( {42, 42, 42} );
-      this->data_.insert( std::make_pair( id, value ) );
+      if constexpr (codim == 0)
+      {
+        MMeshImpl::MultiId id ( { std::size_t(-4), std::size_t(-3), std::size_t(-2) } );
+        this->data_.insert( std::make_pair( id, value ) );
+      }
 
-      // add one id for a codim 1 entity during adaptation
-      MMeshImpl::MultiId eid ( {42, 42} );
-      this->data_.insert( std::make_pair( eid, value ) );
+      // add one id for a every caching codim 1 entity during adaptation
+      if constexpr (codim == 1)
+      {
+        MMeshImpl::MultiId eid0 ( { std::size_t(-4), std::size_t(-3) } );
+        this->data_.insert( std::make_pair( eid0, value ) );
+        MMeshImpl::MultiId eid1 ( { std::size_t(-4), std::size_t(-2) } );
+        this->data_.insert( std::make_pair( eid1, value ) );
+        MMeshImpl::MultiId eid2 ( { std::size_t(-3), std::size_t(-2) } );
+        this->data_.insert( std::make_pair( eid2, value ) );
+      }
 
-      // add one id for caching vertices during adaptation
-      auto vh = this->grid_->getHostGrid().infinite_vertex();
-      MMeshImpl::MultiId vid ( vh->info().id );
-      this->data_.insert( std::make_pair( vid, value ) );
+      // add one id for every caching vertex during adaptation
+      if constexpr (codim == dim)
+      {
+        MMeshImpl::MultiId vid0 ( std::size_t(-4) );
+        this->data_.insert( std::make_pair( vid0, value ) );
+        MMeshImpl::MultiId vid1 ( std::size_t(-3) );
+        this->data_.insert( std::make_pair( vid1, value ) );
+        MMeshImpl::MultiId vid2 ( std::size_t(-2) );
+        this->data_.insert( std::make_pair( vid2, value ) );
+      }
 
       // create empty map, but keep old data
       Map data;
@@ -83,6 +99,7 @@ namespace Dune
     typedef PersistentContainerMap< G, typename G::LocalIdSet, std::unordered_map< typename G::LocalIdSet::IdType, T > > Base;
     typedef typename MMeshInterfaceGrid< MMesh >::LocalIdSet IdSet;
     typedef std::unordered_map< typename MMeshInterfaceGrid< MMesh >::LocalIdSet::IdType, T > Map;
+    static constexpr int dim = MMesh::dimensionworld-1;
 
   public:
     typedef typename Base::Grid Grid;
@@ -112,13 +129,20 @@ namespace Dune
       assert( codim == codimension() );
 
       // add one id for caching entity during adaptation
-      MMeshImpl::MultiId id ( {42, 42} );
-      this->data_.insert( std::make_pair( id, value ) );
+      if constexpr (codim == 0)
+      {
+        MMeshImpl::MultiId id ( { std::size_t(-3), std::size_t(-2)} );
+        this->data_.insert( std::make_pair( id, value ) );
+      }
 
-      // add one id for caching vertices during adaptation
-      auto vh = this->grid_->getHostGrid().infinite_vertex();
-      MMeshImpl::MultiId vid ( vh->info().id );
-      this->data_.insert( std::make_pair( vid, value ) );
+      // add one id for every caching vertex during adaptation
+      if constexpr (codim == dim)
+      {
+        MMeshImpl::MultiId vid0 ( std::size_t(-3) );
+        this->data_.insert( std::make_pair( vid0, value ) );
+        MMeshImpl::MultiId vid1 ( std::size_t(-2) );
+        this->data_.insert( std::make_pair( vid1, value ) );
+      }
 
       // create empty map, but keep old data
       Map data;

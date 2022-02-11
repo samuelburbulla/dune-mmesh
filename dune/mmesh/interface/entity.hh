@@ -411,7 +411,7 @@ namespace Dune
     {}
 
     MMeshInterfaceGridEntity(const GridImp* grid, const VertexStorage& vertex)
-      : id_( /*caching id*/ IdType({42,42}) ), grid_(grid), isLeaf_(false), vertex_(vertex)
+      : id_( /*caching id*/ IdType({ std::size_t(-3), std::size_t(-2) }) ), grid_(grid), isLeaf_(false), vertex_(vertex)
     {}
 
     MMeshInterfaceGridEntity(const MMeshInterfaceGridEntity& original)

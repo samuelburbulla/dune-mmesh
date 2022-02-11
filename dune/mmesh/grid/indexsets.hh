@@ -373,15 +373,29 @@ namespace Dune
     subId (const typename std::remove_const<GridImp>::type::Traits::template Codim<0>::Entity& e, int i, int codim) const
     {
       assert( 0 <= codim && codim <= dim );
+      IdType dummyId ( { std::size_t(-4), std::size_t(-3), std::size_t(-2) } );
       switch( codim )
       {
-        case 0: return id<0>( e.impl().template subEntity<0>( i ) );
+        case 0:
+          return e.impl().id();
         case 1:
-          if ( e.isLeaf() )
-            return id<1>( e.impl().template subEntity<1>( i ) );
-          else // we have no codim 1 for caching entities
-            return IdType( {42, 42} );
-        case 2: return id<2>( e.impl().template subEntity<2>( i ) );
+          if (e.impl().id() != dummyId )
+          {
+            auto id0 = e.impl().id().vt()[i < 2 ? 0 : 1];
+            auto id1 = e.impl().id().vt()[i == 0 ? 1 : 2];
+            return IdType( { std::min(id0, id1), std::max(id0, id1) } );
+          }
+          else
+          {
+            std::size_t id0 = (i < 2 ? -4 : -3);
+            std::size_t id1 = (i == 0 ? -3 : -2);
+            return IdType( { id0, id1 } );
+          }
+        case 2:
+          if (e.impl().id() != dummyId )
+            return e.impl().id().vt()[i];
+          else
+            return IdType( std::size_t(-4 + i) );
       };
       return IdType();
     }

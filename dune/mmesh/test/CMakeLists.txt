@@ -68,6 +68,10 @@ dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
 set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-femadaptation-dg PUBLIC "dunemmesh")
 
+dune_add_test(NAME test-femadaptation SOURCES test-femadaptation.cc)
+set_property(TARGET test-femadaptation APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2; LAGRANGE" )
+target_link_libraries(test-femadaptation PUBLIC "dunemmesh")
+
 #dune_add_test(NAME test-threading SOURCES test-threading.cc)
 #set_property(TARGET test-threading APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 #target_link_libraries(test-threading PUBLIC "dunemmesh")

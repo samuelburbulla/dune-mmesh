@@ -480,7 +480,7 @@ namespace Dune
     {}
 
     MMeshEntity(const GridImp* mMesh, const VertexStorage& vertex)
-      : id_( /*caching id*/ IdType({42,42,42}) ), isLeaf_(false), mMesh_(mMesh), vertex_(vertex)
+      : id_( /*caching id*/ IdType({ std::size_t(-4), std::size_t(-3), std::size_t(-2) }) ), isLeaf_(false), mMesh_(mMesh), vertex_(vertex)
     {}
 
     MMeshEntity(const MMeshEntity& original)
