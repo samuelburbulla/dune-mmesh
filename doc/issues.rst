@@ -10,8 +10,6 @@ or need further clarification:
 - MPI parallelization
 
 
-There are a few known issues that either just have not been implemented so far or need further clarification.
-
 The remeshing feature is not (yet) supported in spatial dimension three because the removal of a vertex is not offered by the underlying CGAL triangulation class.
 In fact, it could appear that the region formed by its adjacent tetrahedrons is an instance of the untetrahedralizable Schönhardt’s polyhedron.
 In this case, the removal of the vertex might be impossible without rebuilding the whole triangulation.
