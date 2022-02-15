@@ -1,4 +1,7 @@
+add_subdirectory(test)
+
 set(HEADERS
+  distance.hh
   grid.hh
   jacobian.hh
   pyskeletontrace.hh

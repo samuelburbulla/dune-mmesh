@@ -16,6 +16,7 @@ set(PRECOMPILE
   _interfaceindicator3d
   _normals2d
   _normals3d
+  _distance
 )
 
 foreach(obj ${PRECOMPILE})

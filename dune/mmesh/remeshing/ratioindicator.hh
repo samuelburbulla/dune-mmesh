@@ -30,6 +30,8 @@ class RatioIndicator
   using GlobalCoordinate = FieldVector<ctype, dim>;
 
 public:
+  using DistanceType = Distance<Grid>;
+
     /*!
      * \brief Calculates the indicator for each grid cell.
      *
@@ -81,7 +83,7 @@ public:
       }
 
       factor_ = maxh / minh;
-      distance_ = Distance<Grid>(grid);
+      distance_ = DistanceType(grid);
     };
 
     //! Update the distances of all vertices
@@ -206,6 +208,12 @@ public:
       return factor_;
     }
 
+    //! Returns distance object
+    const DistanceType& distance () const
+    {
+      return distance_;
+    }
+
   private:
     const ctype edgeRatio_;
     const ctype K_;
@@ -216,7 +224,7 @@ public:
     ctype distProportion_;
     ctype factor_;
     ctype maxDist_;
-    Distance<Grid> distance_;
+    DistanceType distance_;
 };
 
 } // end namespace Dune
