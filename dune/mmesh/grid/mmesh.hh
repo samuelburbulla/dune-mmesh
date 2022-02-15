@@ -1705,6 +1705,11 @@ namespace Dune
       return indicator_;
     }
 
+    const auto& distance() const
+    {
+      return indicator_.distance();
+    }
+
     int sequence() const
     {
       return sequence_;

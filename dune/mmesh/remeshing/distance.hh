@@ -11,7 +11,6 @@
 
 #include <memory>
 #include <dune/common/exceptions.hh>
-#include <dune/common/timer.hh>
 #include <dune/grid/common/partitionset.hh>
 
 namespace Dune
@@ -30,6 +29,7 @@ class Distance
   using GlobalCoordinate = FieldVector<ctype, dim>;
   using Vertex = typename Grid::Vertex;
   using Element = typename Grid::template Codim<0>::Entity;
+  using Facet = typename Grid::template Codim<1>::Entity;
   using InterfaceElement = typename Grid::InterfaceGrid::template Codim<0>::Entity;
 
 public:
@@ -39,45 +39,26 @@ public:
     //! Constructor with grid reference
     Distance(const Grid& grid)
      : grid_( &grid )
-    {}
-
-    //! Assignment
-    ThisType& operator=(const ThisType& original)
     {
-      if (this != &original)
-        grid_ = original.grid_;
-      return *this;
+      update();
     }
 
     //! Update the distances of all vertices
     void update()
     {
-      // Timer timer;
+      // Resize distance_ and set to high default value
       distances_.resize( indexSet().size(dim) );
-      std::fill( distances_.begin(), distances_.end(), 1e100 );
+      std::fill(distances_.begin(), distances_.end(), 1e100);
 
-      std::vector<GlobalCoordinate> ivertices;
-      ivertices.reserve( grid_->interfaceGrid().size(dim-1) );
-      for ( const auto& ivertex : vertices( grid_->interfaceGrid().leafGridView() ) )
-        ivertices.push_back( ivertex.geometry().center() );
-
-      for ( const auto& vertex : vertices( grid_->leafGridView() ) )
+      // Set all interface vertices to zero and initialize queue
+      for ( const InterfaceElement& ielement : elements( grid_->interfaceGrid().leafGridView() ) )
       {
-        const auto& idx = indexSet().index( vertex );
+        // Convert to bulk facet
+        const Facet facet = grid_->entity( ielement.impl().hostEntity() );
 
-        if ( vertex.impl().isInterface() )
-        {
-          distances_[ idx ] = 0.0;
-          continue;
-        }
-
-        for ( const auto& ivertex : ivertices )
-        {
-          ctype dist = (ivertex - vertex.geometry().center()).two_norm();
-          distances_[ idx ] = std::min( distances_[ idx ], dist );
-        }
+        // Compute vertex distances to this facet
+        handleFacet(facet);
       }
-      // std::cout << "Distance::update() took " << timer.stop() << "s." << std::endl;
     };
 
     /*!
@@ -87,7 +68,20 @@ public:
      */
     ctype operator() (const Vertex& vertex) const
     {
+      assert( indexSet().index( vertex ) < size() );
       return distances_[ indexSet().index( vertex ) ];
+    }
+
+    /*!
+     * \brief Set distance of vertex
+     *
+     * \param vertex    A grid vertex
+     * \param value     Distance value
+     */
+    void set(const Vertex& vertex, ctype value)
+    {
+      assert( indexSet().index( vertex ) < size() );
+      distances_[ indexSet().index( vertex ) ] = value;
     }
 
     /*!
@@ -140,6 +134,60 @@ public:
     }
 
   private:
+    //! Handle facet: Compute all vertex distances
+    void handleFacet(const Facet& facet)
+    {
+      for (const auto& v : vertices(grid_->leafGridView()))
+      {
+        ctype dist = computeDistance(v, facet);
+        if (dist < operator()(v))
+          set(v, dist);
+      }
+    }
+
+    //! Compute vertex distance value
+    ctype computeDistance(const Vertex& v, const Facet &facet) const
+    {
+      GlobalCoordinate vp = v.geometry().center();
+      const auto& geo = facet.geometry();
+
+      if constexpr (dim == 2)
+      {
+        for (std::size_t i = 0; i < dim; ++i)
+        {
+          const GlobalCoordinate& vi = geo.corner(i);
+          const GlobalCoordinate& vj = geo.corner(1-i);
+          ctype sgn = (vi - vj) * (vp - vi);
+          if (sgn >= 0)
+            return (vp - vi).two_norm();
+        }
+
+        Dune::Plane<GlobalCoordinate> plane (geo.corner(0), geo.corner(1));
+        return std::abs(plane.signedDistance(vp));
+      }
+      else // dim == 3
+      {
+        // We only use an estimate for 3d.
+        ctype dist = 1e100;
+        for (std::size_t i = 0; i < dim; ++i)
+        {
+          const GlobalCoordinate& vi = geo.corner(i);
+          dist = std::min(dist, (vp - vi).two_norm2());
+
+          const GlobalCoordinate& vj = geo.corner((i+1)%dim);
+          dist = std::min(dist, (vp - 0.5*(vi+vj)).two_norm2());
+        }
+
+        const GlobalCoordinate& vc = geo.center();
+        dist = std::min(dist, (vp - vc).two_norm2());
+
+        return std::sqrt(dist);
+      }
+
+      DUNE_THROW(InvalidStateException, "Compute distance failed");
+      return -1.;
+    }
+
     const typename Grid::LeafIndexSet& indexSet() const
     {
       return grid_->leafIndexSet();

@@ -59,6 +59,22 @@ def normals(igrid):
     return normals
 
 
+def distance(grid):
+    """Return function representing the distance to the interface
+
+    Args:
+        grid: The grid.
+
+    Returns:
+        Piecewise linear grid function.
+    """
+    import dune.mmesh._distance as module
+    distance = module.Distance(grid.hierarchicalGrid.leafView)
+    from dune.ufl import GridFunction
+    distance = GridFunction(distance)
+    return distance
+
+
 def domainMarker(grid):
     """Return domain markers passed by .msh grid file.
 

@@ -91,3 +91,7 @@ target_link_libraries(test-femadaptation PUBLIC "dunemmesh")
 dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
 set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 target_link_libraries(test-adapt-tuplespace PUBLIC "dunemmesh")
+
+dune_add_test(NAME test-distance SOURCES test-distance.cc)
+set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+target_link_libraries(test-distance PUBLIC "dunemmesh")
