@@ -109,7 +109,7 @@ iv = TestFunction(ispace)
 uh = space.interpolate(0, name="solution")
 iuh = ispace.interpolate(0, name="isolution")
 
-I = interfaceIndicator(igridView)
+I = interfaceIndicator(igridView, grid=geoGrid)
 n = FacetNormal(space)
 n_g = FacetNormal(ispace)
 beta = Constant(1e2, name="beta")
