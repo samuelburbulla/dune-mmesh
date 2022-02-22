@@ -4,7 +4,13 @@
 Installation
 ************
 
-In order to install and use Dune-MMesh you need a recent C++ compiler (at least C++17 compatible), Python (3.7 or later), CMake (3.13 or later) and Boost (1.66 or later).
+In order to install and use Dune-MMesh you need:
+- C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7)
+- CMake (3.13 or later)
+- pkg-config
+- Boost (1.66 or later)
+- OpenMPI (this will become optional)
+- Python (3.7 or later)
 
 There are two ways of installing Dune-MMesh.
 
@@ -28,11 +34,13 @@ The easiest way to install Dune-MMesh is using pip and the package uploaded to `
 
 Note that this takes some time in order to compile all dependent Dune modules.
 
-If you encounter problems with OpenMP or Boost headers not found (e.g. on an M1 Mac),
+If you encounter problems with, e.g., Boost headers missing (e.g. on an M1 Mac),
 make sure that the include paths can be found. For instance, use the export
-````
-export CXXFLAGS="-I/opt/homebrew/Cellar/libomp/13.0.0/include -I/opt/homebrew/Cellar/boost/1.76.0/include/"
-````
+
+.. code-block:: bash
+
+  export CXXFLAGS="-I/opt/homebrew/Cellar/boost/1.66.0/include/"
+
 before installing Dune-MMesh.
 
 
