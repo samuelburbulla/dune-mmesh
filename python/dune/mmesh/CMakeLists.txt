@@ -21,7 +21,7 @@ set(PRECOMPILE
 
 foreach(obj ${PRECOMPILE})
   dune_add_pybind11_module(NAME ${obj})
-  set_property(TARGET ${obj} PROPERTY LINK_LIBRARIES dunecommon dunegeometry dunegrid dunemmesh APPEND)
+  set_property(TARGET ${obj} PROPERTY LINK_LIBRARIES dunecommon dunegeometry dunegrid APPEND)
   if(SKBUILD)
     install(TARGETS ${obj} LIBRARY DESTINATION python/dune/mmesh)
   endif()
