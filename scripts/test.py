@@ -122,8 +122,9 @@ a -= dot(dot(avg(grad(u)), n('+')), jump(v)) * (1-I)*dS
 a += beta * inner(u - 0, v) * ds
 a -= dot(dot(grad(u), n), v) * ds
 
-a += -(skeleton(iuh, grid=geoGrid)('+') - u('-')) / omega * v('+') * I*dS
-a += -(skeleton(iuh, grid=geoGrid)('+') - u('-')) / omega * v('-') * I*dS
+sk = skeleton(iuh, grid=geoGrid)
+a -= (sk('+') - u('+')) / omega * v('+') * I*dS
+a -= (sk(iuh, grid=geoGrid)('-') - u('-')) / omega * v('-') * I*dS
 
 
 ia  = inner(grad(iu), grad(iv)) * dx
@@ -131,7 +132,7 @@ ia += beta * inner(jump(iu), jump(iv)) * dS
 ia -= inner(avg(grad(iu)), n_g('+')) * jump(iv) * dS
 
 tr  = trace(uh)
-ia  = (iu - tr('+')) / omega * iv * dx
+ia += (iu - tr('+')) / omega * iv * dx
 ia += (iu - tr('-')) / omega * iv * dx
 
 ib  = 1 * iv * dx

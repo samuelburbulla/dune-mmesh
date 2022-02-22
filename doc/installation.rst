@@ -5,6 +5,7 @@ Installation
 ************
 
 In order to install and use Dune-MMesh you need:
+
 * C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7)
 * CMake (3.13 or later)
 * pkg-config
