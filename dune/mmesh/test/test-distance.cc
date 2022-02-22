@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
   using Grid3D = Dune::MovingMesh<3>;
   using GridFactory3D = Dune::GmshGridFactory< Grid3D >;
-  GridFactory3D gridFactory3d( "grids/mimesh3d.msh" );
+  GridFactory3D gridFactory3d( "grids/flat3d.msh" );
   Grid3D& grid3d = *gridFactory3d.grid();
   writeAndCheckDistance(grid3d, 0.05);
 

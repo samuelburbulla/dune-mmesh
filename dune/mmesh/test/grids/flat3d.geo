@@ -1,5 +1,5 @@
-lc = 1;
-lcf = 1;
+lc = 0.1;
+lcf = 0.1;
 
 // domain corners
 Point(1) = {0, 0, 0, lc};
