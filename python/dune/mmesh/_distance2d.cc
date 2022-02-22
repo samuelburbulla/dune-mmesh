@@ -8,11 +8,11 @@
 #include <dune/python/pybind11/pybind11.h>
 #include <dune/python/pybind11/stl.h>
 
-PYBIND11_MODULE( _distance, module )
+PYBIND11_MODULE( _distance2d, module )
 {
   auto cls = Dune::Python::insertClass< Dune::Fem::Distance< typename Dune::MovingMesh<2>::LeafGridView > >( module,
     "Distance",
-    Dune::Python::GenerateTypeName("Dune::Fem::Distance<typename Dune::MovingMesh<2>::InterfaceGrid::LeafGridView>"),
+    Dune::Python::GenerateTypeName("Dune::Fem::Distance<typename Dune::MovingMesh<2>::LeafGridView>"),
     Dune::Python::IncludeFiles{"dune/mmesh/mmesh.hh", "dune/python/grid/hierarchical.hh", "dune/python/mmesh/distance.hh"}
   ).first;
   Dune::Fem::registerDistance( module, cls );

@@ -68,7 +68,12 @@ def distance(grid):
     Returns:
         Piecewise linear grid function.
     """
-    import dune.mmesh._distance as module
+
+    if grid.dimension == 2:
+        import dune.mmesh._distance2d as module
+    else:
+        import dune.mmesh._distance3d as module
+
     distance = module.Distance(grid.hierarchicalGrid.leafView)
     from dune.ufl import GridFunction
     distance = GridFunction(distance)
