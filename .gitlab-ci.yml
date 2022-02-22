@@ -17,10 +17,11 @@ debian-11-gcc-9-20:
     DUNECI_OPTS: "scripts/opts/ci-gcc.opts"
     DUNECI_PARALLEL: 8
 
-ubuntu:20.04-clang-10-17:
+ubuntu:20.04-clang-10-20:
   image: registry.dune-project.org/docker/ci/ubuntu:20.04
   script: duneci-standard-test
   variables:
+    GIT_SSL_NO_VERIFY: 1
     DUNECI_TOOLCHAIN: clang-10-20
     DUNECI_BRANCH: "master"
     DUNECI_OPTS: "scripts/opts/ci-gcc.opts"
