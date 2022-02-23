@@ -121,12 +121,11 @@ plt.savefig("plot.png")
 ![](scripts/plot.png)
 
 ## Testing
-To run the Dune-MMesh tests, follow the installation instructions of the development version on the [Installation](https://dune-mmesh.readthedocs.io/en/latest/installation.html) page, and run
+You can test your installation of Dune-MMesh by running the python tests
 ````
-make build_tests
-make test
+python -m dune.mmesh test
 ````
-in the build directory.
+Further tests of the C++ backend can be performed with a [source build](https://dune-mmesh.readthedocs.io/en/latest/installation.html#from-source) executing `make build_test` and `make test` in the build directory.
 
 ## Contribution
 
