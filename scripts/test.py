@@ -124,7 +124,7 @@ a -= dot(dot(grad(u), n), v) * ds
 
 sk = skeleton(iuh, grid=geoGrid)
 a -= (sk('+') - u('+')) / omega * v('+') * I*dS
-a -= (sk(iuh, grid=geoGrid)('-') - u('-')) / omega * v('-') * I*dS
+a -= (sk('-') - u('-')) / omega * v('-') * I*dS
 
 
 ia  = inner(grad(iu), grad(iv)) * dx
