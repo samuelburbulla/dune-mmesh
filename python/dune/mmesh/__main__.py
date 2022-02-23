@@ -11,12 +11,7 @@ def main(arguments=None):
     ret = 0
     args = parser.parse_args(arguments)
     if args.command == 'test':
-        import dune.mmesh.test
-        test_scripts = ['distance.py']
-
-        for script in test_scripts:
-            print("Run test script:", script)
-            subprocess.call([sys.executable, script])
+        subprocess.run([sys.executable, '-m', 'dune.mmesh.test'], stdout=sys.stdout)
 
     sys.exit(ret)
 

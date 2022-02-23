@@ -1,6 +1,8 @@
+add_subdirectory(grids)
+
+add_python_targets(test __main__)
+
 set(TESTS
-  line
-  plane
   interfaceindicator
   normals
   distance

@@ -8,8 +8,8 @@ from ufl import *
 
 
 # 2D
-file = "line.msh"
-grid = mmesh((reader.gmsh, file), 2)
+from dune.mmesh.test.grids import line
+grid = mmesh((reader.gmsh, line.filename), 2)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
 I = interfaceIndicator(igrid)
@@ -32,12 +32,12 @@ scheme.solve(uh)
 grid.writeVTK("interfaceindicator-2d", pointdata=[uh])
 
 intU = integrate(grid, uh, order=1)
-assert(abs(intU - 0.5) < 1e-3)
+assert(abs(intU - 0.5) < 1e-2)
 
 
 # 3D
-file = "plane.msh"
-grid  = mmesh((reader.gmsh, file), 3)
+from dune.mmesh.test.grids import plane
+grid  = mmesh((reader.gmsh, plane.filename), 3)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
 I = interfaceIndicator(igrid)
@@ -60,4 +60,4 @@ scheme.solve(uh)
 grid.writeVTK("interfaceindicator-2d", pointdata=[uh])
 
 intU = integrate(grid, uh, order=1)
-assert(abs(intU - 0.5) < 1e-3)
+assert(abs(intU - 0.5) < 1e-2)

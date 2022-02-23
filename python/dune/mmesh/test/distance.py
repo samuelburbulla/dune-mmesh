@@ -6,7 +6,7 @@ from dune.fem.function import integrate
 
 
 # 2D
-import line
+from dune.mmesh.test.grids import line
 grid = mmesh((reader.gmsh, line.filename), 2)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
@@ -24,7 +24,7 @@ assert((nor * nor) < 1e-8)
 
 
 # 3D
-import plane
+from dune.mmesh.test.grids import plane
 grid  = mmesh((reader.gmsh, plane.filename), 3)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
