@@ -1,5 +1,5 @@
 Module: dune-mmesh
-Version: 1.3-git
+Version: 1.4-git
 Author: Samuel Burbulla
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
 Description: MMesh is a grid implementation based on CGAL triangulations
