@@ -155,12 +155,12 @@ namespace Dune
 
 
 
-    //////////////
-    // Distance //
-    //////////////
+    //////////////////////
+    // DistanceFunction //
+    //////////////////////
 
     template <class GV>
-    struct Distance
+    struct DistanceFunction
     : public BindableGridFunctionWithSpace<FemPy::GridPart<GV>, Dune::FieldVector<double, 1>>
     {
       using GridView = GV;
@@ -170,7 +170,7 @@ namespace Dune
       using RangeType = typename Base::RangeType;
       static constexpr bool scalar = true;
 
-      Distance(const GridView &gridView)
+      DistanceFunction(const GridView &gridView)
       : Base(FemPy::gridPart<GridView>(gridView), "distance", 0),
         interpolation_(GeometryTypes::simplex(dim), std::vector<Dune::FieldVector<double, 1>>())
       {}
@@ -220,15 +220,15 @@ namespace Dune
     };
 
     template< class GridView >
-    inline static void registerDistance(pybind11::module module, pybind11::class_< Distance<GridView> > cls)
+    inline static void registerDistanceFunction(pybind11::module module, pybind11::class_< DistanceFunction<GridView> > cls)
     {
       using pybind11::operator""_a;
 
       cls.def( pybind11::init( [] ( const GridView &gridView ) {
-          return Distance<GridView> ( gridView );
+          return DistanceFunction<GridView> ( gridView );
         } ), "gridView"_a, pybind11::keep_alive< 1, 2 >() );
 
-      cls.def_property_readonly( "scalar", [] ( Distance<GridView> &self ) { return true; } );
+      cls.def_property_readonly( "scalar", [] ( DistanceFunction<GridView> &self ) { return true; } );
 
       Dune::FemPy::registerGridFunction( module, cls );
     }

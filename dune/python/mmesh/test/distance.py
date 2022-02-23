@@ -26,7 +26,7 @@ grid  = mmesh((reader.gmsh, file), 3)
 dist = distance(grid)
 
 normal = grad(dist)
-grid.writeVTK("distance", pointdata={"d": dist, "n": normal}, nonconforming=True)
+grid.writeVTK("distance-3d", pointdata={"d": dist, "n": normal}, nonconforming=True)
 
 from dune.fem.function import integrate
 int = integrate(grid, dist, order=5)

@@ -12,12 +12,8 @@ set(PRECOMPILE
   _grid3d
   _interfacegrid2d
   _interfacegrid3d
-  _interfaceindicator2d
-  _interfaceindicator3d
-  _normals2d
-  _normals3d
-  _distance2d
-  _distance3d
+  _utility2d
+  _utility3d
 )
 
 foreach(obj ${PRECOMPILE})

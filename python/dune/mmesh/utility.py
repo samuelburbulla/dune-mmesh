@@ -22,9 +22,9 @@ def interfaceIndicator(igrid, grid=None, restrict=True):
     grid = igrid.hierarchicalGrid.bulkGrid
 
     if igrid.dimension == 1:
-        import dune.mmesh._interfaceindicator2d as module
+        import dune.mmesh._utility2d as module
     else:
-        import dune.mmesh._interfaceindicator3d as module
+        import dune.mmesh._utility3d as module
 
     indicator = module.InterfaceIndicator(grid)
     from dune.ufl import GridFunction
@@ -49,9 +49,9 @@ def normals(igrid):
     igrid = igrid.hierarchicalGrid.leafView
 
     if igrid.dimension == 1:
-        import dune.mmesh._normals2d as module
+        import dune.mmesh._utility2d as module
     else:
-        import dune.mmesh._normals3d as module
+        import dune.mmesh._utility3d as module
 
     normals = module.Normals(igrid)
     from dune.ufl import GridFunction
@@ -70,9 +70,9 @@ def distance(grid):
     """
 
     if grid.dimension == 2:
-        import dune.mmesh._distance2d as module
+        import dune.mmesh._utility2d as module
     else:
-        import dune.mmesh._distance3d as module
+        import dune.mmesh._utility3d as module
 
     distance = module.Distance(grid.hierarchicalGrid.leafView)
     from dune.ufl import GridFunction
