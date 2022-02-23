@@ -1,5 +1,3 @@
-add_subdirectory(test)
-
 set(HEADERS
   distance.hh
   grid.hh

@@ -6,12 +6,15 @@ from dune.fem.function import integrate
 
 
 # 2D
-file = "line2d.msh"
-grid = mmesh((reader.gmsh, file), 2)
+import line
+grid = mmesh((reader.gmsh, line.filename), 2)
+igrid = grid.hierarchicalGrid.interfaceGrid
+
 dist = distance(grid)
 
 normal = grad(dist)
 grid.writeVTK("distance-2d", pointdata={"d": dist, "n": [normal[0], normal[1], 0]}, nonconforming=True)
+igrid.writeVTK("distance-2d-interface")
 
 int = integrate(grid, dist, order=5)
 nor = integrate(grid, normal, order=5)
@@ -21,12 +24,15 @@ assert((nor * nor) < 1e-8)
 
 
 # 3D
-file = "flat3d.msh"
-grid  = mmesh((reader.gmsh, file), 3)
+import plane
+grid  = mmesh((reader.gmsh, plane.filename), 3)
+igrid = grid.hierarchicalGrid.interfaceGrid
+
 dist = distance(grid)
 
 normal = grad(dist)
 grid.writeVTK("distance-3d", pointdata={"d": dist, "n": normal}, nonconforming=True)
+igrid.writeVTK("distance-3d-interface")
 
 from dune.fem.function import integrate
 int = integrate(grid, dist, order=5)

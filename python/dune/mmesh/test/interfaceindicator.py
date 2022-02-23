@@ -8,7 +8,7 @@ from ufl import *
 
 
 # 2D
-file = "line2d.msh"
+file = "line.msh"
 grid = mmesh((reader.gmsh, file), 2)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
@@ -36,7 +36,7 @@ assert(abs(intU - 0.5) < 1e-3)
 
 
 # 3D
-file = "flat3d.msh"
+file = "plane.msh"
 grid  = mmesh((reader.gmsh, file), 3)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
