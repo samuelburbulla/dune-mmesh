@@ -32,21 +32,25 @@ jobs:
 
       - name: Clone modules
         run: |
-          git clone https://gitlab.dune-project.org/core/dune-common.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/core/dune-geometry.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/core/dune-grid.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/core/dune-localfunctions.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/core/dune-istl.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git ${{ github.workspace }}
-          git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git ${{ github.workspace }}
+          cd ${{ github.workspace }}/..
+          mkdir dune-common dune-geometry dune-grid dune-localfunctions dune-istl dune-alugrid dune-fem
+          git clone https://gitlab.dune-project.org/core/dune-common.git dune-common
+          git clone https://gitlab.dune-project.org/core/dune-geometry.git dune-geometry
+          git clone https://gitlab.dune-project.org/core/dune-grid.git dune-grid
+          git clone https://gitlab.dune-project.org/core/dune-localfunctions.git dune-localfunctions
+          git clone https://gitlab.dune-project.org/core/dune-istl.git dune-istl
+          git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git dune-alugrid
+          git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git dune-fem
 
       - name: Configure and build modules
-        run: ${{ github.workspace }}/dune-common/bin/dunecontrol --opts=${{ github.workspace }}/dune-mmesh/cmake/config.opts all
+        run: |
+          cd ${{ github.workspace }}/..
+          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
 
       - name: Build tests
-        working-directory: ${{ github.workspace }}/dune-mmesh/build-cmake/
+        working-directory: ${{ github.workspace }}/build-cmake/
         run: make build_tests
 
       - name: Test
-        working-directory: ${{ github.workspace }}/dune-mmesh/build-cmake/
+        working-directory: ${{ github.workspace }}/build-cmake/
         run: make test
