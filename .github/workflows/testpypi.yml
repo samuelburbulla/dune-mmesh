@@ -37,12 +37,12 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt update
-            sudo apt install libopenmpi-dev openmpi-bin libsuperlu-dev libsuitesparse-dev petsc-dev paraview python3-paraview gmsh libboost-all-dev
+            sudo apt install libopenmpi-dev openmpi-bin libsuperlu-dev libsuitesparse-dev petsc-dev paraview python3-paraview gmsh libboost-all-dev libmpfr-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew update
             rm /usr/local/bin/2to3
             brew install python@3.9
-            brew install openmpi superlu suite-sparse petsc paraview gmsh boost
+            brew install openmpi superlu suite-sparse petsc paraview gmsh boost mpfr
           fi
         shell: bash
 
