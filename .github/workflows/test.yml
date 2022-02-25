@@ -32,21 +32,21 @@ jobs:
 
       - name: Clone modules
         run: |
-          git clone https://gitlab.dune-project.org/core/dune-common.git
-          git clone https://gitlab.dune-project.org/core/dune-geometry.git
-          git clone https://gitlab.dune-project.org/core/dune-grid.git
-          git clone https://gitlab.dune-project.org/core/dune-localfunctions.git
-          git clone https://gitlab.dune-project.org/core/dune-istl.git
-          git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git
-          git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git
+          git clone https://gitlab.dune-project.org/core/dune-common.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/core/dune-geometry.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/core/dune-grid.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/core/dune-localfunctions.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/core/dune-istl.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git ${{ github.workspace }}
+          git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git ${{ github.workspace }}
 
       - name: Configure and build modules
-        run: ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
+        run: ${{ github.workspace }}/dune-common/bin/dunecontrol --opts=${{ github.workspace }}/dune-mmesh/cmake/config.opts all
 
       - name: Build tests
-        working-directory: ./dune-mmesh/build-cmake/
+        working-directory: ${{ github.workspace }}/dune-mmesh/build-cmake/
         run: make build_tests
 
       - name: Test
-        working-directory: ./dune-mmesh/build-cmake/
+        working-directory: ${{ github.workspace }}/dune-mmesh/build-cmake/
         run: make test
