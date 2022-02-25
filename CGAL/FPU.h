@@ -363,7 +363,7 @@ inline double CGAL_IA_SQUARE(double a){
 
 #define CGAL_IA_SETFPCW(CW) _MM_SET_ROUNDING_MODE(CW)
 #define CGAL_IA_GETFPCW(CW) CW = _MM_GET_ROUNDING_MODE()
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    _MM_ROUND_NEAREST
 #define CGAL_FE_TOWARDZERO   _MM_ROUND_TOWARD_ZERO
 #define CGAL_FE_UPWARD       _MM_ROUND_UP
@@ -391,7 +391,7 @@ typedef unsigned short FPU_CW_t;
 #elif defined __SUNPRO_CC && defined __sun
 #define CGAL_IA_SETFPCW(CW) fpsetround(fp_rnd(CW))
 #define CGAL_IA_GETFPCW(CW) CW = fpgetround()
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    FP_RN
 #define CGAL_FE_TOWARDZERO   FP_RZ
 #define CGAL_FE_UPWARD       FP_RP
@@ -400,7 +400,7 @@ typedef unsigned int FPU_CW_t;
 #elif defined __sparc__
 #define CGAL_IA_SETFPCW(CW) asm volatile ("ld %0,%%fsr" : :"m" (CW))
 #define CGAL_IA_GETFPCW(CW) asm volatile ("st %%fsr,%0" : "=m" (CW))
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    (0x0        | 0x20000000 | 0x1f)
 #define CGAL_FE_TOWARDZERO   (0x40000000 | 0x20000000 | 0x1f)
 #define CGAL_FE_UPWARD       (0x80000000 | 0x20000000 | 0x1f)
@@ -409,7 +409,7 @@ typedef unsigned int FPU_CW_t;
 #elif defined __mips__
 #define CGAL_IA_SETFPCW(CW) asm volatile ("ctc1 %0,$31" : :"r" (CW))
 #define CGAL_IA_GETFPCW(CW) asm volatile ("cfc1 %0,$31" : "=r" (CW)); CW &= 3
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    (0x0)
 #define CGAL_FE_TOWARDZERO   (0x1)
 #define CGAL_FE_UPWARD       (0x2)
@@ -418,7 +418,7 @@ typedef unsigned int FPU_CW_t;
 #elif defined __osf || defined __osf__  // Not yet supported.
 #define CGAL_IA_SETFPCW(CW) write_rnd(CW)
 #define CGAL_IA_GETFPCW(CW) CW = read_rnd()
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    FP_RND_RN
 #define CGAL_FE_TOWARDZERO   FP_RND_RZ
 #define CGAL_FE_UPWARD       FP_RND_RP
@@ -430,9 +430,9 @@ typedef unsigned int FPU_CW_t;
 #define CGAL_IA_GETFPCW(CW) CW = _controlfp (0, 0 ) &  _MCW_RC
 typedef unsigned short FPU_CW_t;
 #else
-#define CGAL_IA_SETFPCW(CW) unsigned int dummy; _controlfp_s (&dummy, CW, _MCW_RC )
+#define CGAL_IA_SETFPCW(CW) unsigned long dummy; _controlfp_s (&dummy, CW, _MCW_RC )
 #define CGAL_IA_GETFPCW(CW)_controlfp_s (&CW, 0, 0 ); CW  &=  _MCW_RC
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #endif
 
 #define CGAL_FE_TONEAREST    _RC_NEAR
@@ -442,7 +442,7 @@ typedef unsigned int FPU_CW_t;
 # elif defined __VFP_FP__ && !defined __SOFTFP__
 #define CGAL_IA_SETFPCW(CW) asm volatile ("VMSR FPSCR, %0" : :"r" (CW))
 #define CGAL_IA_GETFPCW(CW) asm volatile ("VMRS %0, FPSCR" : "=r" (CW)); CW &= CGAL_FE_TOWARDZERO
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    (0x0)
 #define CGAL_FE_TOWARDZERO   (0xC00000)
 #define CGAL_FE_UPWARD       (0x400000)
@@ -450,7 +450,7 @@ typedef unsigned int FPU_CW_t;
 # elif defined  __aarch64__
 #define CGAL_IA_SETFPCW(CW) asm volatile ("MSR FPCR, %0" : :"r" (CW))
 #define CGAL_IA_GETFPCW(CW) asm volatile ("MRS %0, FPCR" : "=r" (CW))
-typedef unsigned int FPU_CW_t;
+typedef unsigned long FPU_CW_t;
 #define CGAL_FE_TONEAREST    (0x0)
 #define CGAL_FE_TOWARDZERO   (0xC00000)
 #define CGAL_FE_UPWARD       (0x400000)
@@ -463,7 +463,7 @@ typedef unsigned int FPU_CW_t;
 // some future modular computations).
 #define CGAL_IA_SETFPCW(CW)  fesetround(CW)
 #define CGAL_IA_GETFPCW(CW)  CW = fegetround()
-typedef int FPU_CW_t;
+typedef long FPU_CW_t;
 #define CGAL_FE_TONEAREST    FE_TONEAREST
 #define CGAL_FE_TOWARDZERO   FE_TOWARDZERO
 #define CGAL_FE_UPWARD       FE_UPWARD

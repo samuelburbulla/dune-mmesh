@@ -10,8 +10,10 @@ In order to install and use Dune-MMesh you need:
 * CMake (3.13 or later)
 * pkg-config
 * Boost (1.66 or later)
+* SuiteSparse (we use UMFPack)
 * OpenMPI (this will become optional)
 * Python (3.7 or later)
+
 
 
 There are two ways of installing Dune-MMesh.
