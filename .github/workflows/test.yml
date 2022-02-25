@@ -1,0 +1,52 @@
+name: test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt update
+            sudo apt install libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh libboost-all-dev
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew update
+            brew install openmpi suite-sparse gmsh boost
+          fi
+        shell: bash
+
+      - name: Clone modules
+        run: |
+          git clone https://gitlab.dune-project.org/core/dune-common.git
+          git clone https://gitlab.dune-project.org/core/dune-geometry.git
+          git clone https://gitlab.dune-project.org/core/dune-grid.git
+          git clone https://gitlab.dune-project.org/core/dune-localfunctions.git
+          git clone https://gitlab.dune-project.org/core/dune-istl.git
+          git clone https://gitlab.dune-project.org/extensions/dune-alugrid.git
+          git clone https://gitlab.dune-project.org/dune-fem/dune-fem.git
+
+      - name: Configure and build modules
+        run: ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
+
+      - name: Build tests
+        working-directory: ./dune-mmesh/build-cmake/
+        run: make build_tests
+
+      - name: Test
+        working-directory: ./dune-mmesh/build-cmake/
+        run: make test
