@@ -97,7 +97,10 @@ namespace Dune
       std::string line;
       std::getline(gridFile, line);
       while (line.find("$Nodes") == std::string::npos)
-          std::getline(gridFile, line);
+      {
+        if (!std::getline(gridFile, line))
+          DUNE_THROW(IOError, "Gmsh file not valid!");
+      }
 
       // read all vertices
       std::getline(gridFile, line);
@@ -119,7 +122,8 @@ namespace Dune
 
           // insert vertex and move to next line
           factory_->insertVertex( v );
-          std::getline(gridFile, line);
+          if (!std::getline(gridFile, line))
+            DUNE_THROW(IOError, "Gmsh file not valid!");
           vertexCount++;
       }
 
@@ -129,7 +133,8 @@ namespace Dune
 
       // read file until we get to the list of elements
       while(line.find("$Elements") == std::string::npos)
-          std::getline(gridFile, line);
+        if (!std::getline(gridFile, line))
+          DUNE_THROW(IOError, "Gmsh file not valid!");
 
       // read elements
       std::getline(gridFile, line);
@@ -170,7 +175,8 @@ namespace Dune
               factory_->insertInterfaceBoundarySegment( cornersIndices );
 
           // get next line
-          std::getline(gridFile, line);
+          if (!std::getline(gridFile, line))
+            DUNE_THROW(IOError, "Gmsh file not valid!");
           elemCount++;
       }
 
