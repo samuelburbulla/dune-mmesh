@@ -292,8 +292,8 @@ namespace Dune
           Dune::Fem::ConstLocalFunction< RangeGridFunction > uInside( u );
           Dune::Fem::ConstLocalFunction< RangeGridFunction > uOutside( u );
 
-          Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalIn( dFIn );
-          Dune::Fem::ConstLocalFunction< RangeGridFunction > dFLocalOut( dFOut );
+          Dune::Fem::MutableLocalFunction< RangeGridFunction > dFLocalIn( dFIn );
+          Dune::Fem::MutableLocalFunction< RangeGridFunction > dFLocalOut( dFOut );
 
           TemporaryLocalMatrixType localMatrixIn( B_.domainSpace(), B_.rangeSpace() );
           TemporaryLocalMatrixType localMatrixOut( B_.domainSpace(), B_.rangeSpace() );
@@ -316,6 +316,9 @@ namespace Dune
 
             uInside.bind( inside );
             uOutside.bind( outside );
+
+            dFLocalIn.bind( inside );
+            dFLocalOut.bind( outside );
 
             localMatrixIn.init( interface, inside );
             localMatrixOut.init( interface, outside );
@@ -356,9 +359,6 @@ namespace Dune
               dFIn /= 2 * h;
               dFOut /= 2 * h;
 
-              dFLocalIn.bind( inside );
-              dFLocalOut.bind( outside );
-
               for (std::size_t j = 0; j < dFLocalIn.localDofVector().size(); ++j)
                 localMatrixIn.set(j, i, dFLocalIn[j]);
 
@@ -392,7 +392,7 @@ namespace Dune
           Dune::Fem::MutableLocalFunction< DomainGridFunction > uLocal( u );
 
           Dune::Fem::ConstLocalFunction< RangeGridFunction > tInterface( t );
-          Dune::Fem::ConstLocalFunction< RangeGridFunction > dGLocal( dG );
+          Dune::Fem::MutableLocalFunction< RangeGridFunction > dGLocal( dG );
 
           TemporaryLocalMatrixType localMatrix( C_.domainSpace(), C_.rangeSpace() );
 
@@ -411,6 +411,7 @@ namespace Dune
                 GpTmp.bind( interface );
                 tInterface.bind( interface );
 
+                dGLocal.bind( interface );
                 localMatrix.init( element, interface );
                 localMatrix.clear();
 
@@ -437,8 +438,6 @@ namespace Dune
 
                   dG.addLocalDofs( interface, GpTmp.localDofVector() );
                   dG /= 2 * h;
-
-                  dGLocal.bind( interface );
 
                   for (std::size_t j = 0; j < dGLocal.localDofVector().size(); ++j)
                     localMatrix.set(j, i, dGLocal[j]);
