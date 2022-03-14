@@ -393,6 +393,7 @@ namespace Dune
     bool adapt ( AdaptDataHandleInterface< GridImp, DataHandle > &handle )
     {
       preAdapt();
+      sequence_ += 1;
 
       for (const auto& ielement : elements( this->leafGridView() ))
         if (ielement.isNew())
@@ -613,6 +614,12 @@ namespace Dune
       return mMesh_->getHostGrid();
     }
 
+    //! Return sequence number
+    int sequence() const
+    {
+      return sequence_;
+    }
+
   private:
     std::unique_ptr<MMeshInterfaceGridLeafIndexSet<const GridImp>> leafIndexSet_;
 
@@ -631,6 +638,8 @@ namespace Dune
     std::size_t numBoundarySegments_;
 
     mutable std::unordered_map< MMeshImpl::MultiId, int > mark_;
+
+    int sequence_ = 0;
 
   }; // end Class MMeshInterfaceGrid
 

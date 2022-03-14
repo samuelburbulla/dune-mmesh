@@ -345,6 +345,23 @@ namespace Dune
       }
       std::sort(ids.begin(), ids.end());
       interfaceSegments_.insert( std::make_pair(ids, marker) );
+
+      // Add some interface element to connected component in order to initialize values
+      InterfaceGridConnectedComponent connectedComponent ( [&]()
+      {
+        const auto& ientity = asInterfaceEntity( intersection );
+        // use the first incident interface entity
+        for( std::size_t i = 0; i < ientity.subEntities(dim-1); ++i )
+        {
+          const auto& vertex = ientity.impl().template subEntity<dim-1>(i);
+          for (const auto& incident : incidentInterfaceElements(vertex))
+            return incident;
+        }
+        // as fallback use itself
+        return ientity;
+      }() );
+      interfaceGrid_->markAsRefined( {ids}, connectedComponent );
+
       interfaceGrid_->setIndices();
     }
 

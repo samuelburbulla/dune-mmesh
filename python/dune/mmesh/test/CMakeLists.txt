@@ -3,6 +3,7 @@ add_subdirectory(grids)
 add_python_targets(test __main__)
 
 set(TESTS
+  adaptation
   interfaceindicator
   normals
   distance

@@ -114,11 +114,11 @@ namespace Dune
 
     void resize ( const Value &value = Value() )
     {
-      if( sequence_ != this->grid_->getMMesh().sequence() )
+      if( sequence_ != this->grid_->sequence() )
       {
         Hybrid::forEach( std::make_index_sequence< Grid::dimension+1 >{},
           [ & ]( auto i ){ if( i == this->codimension() ) this->template resize< i >( value ); } );
-        sequence_ = this->grid_->getMMesh().sequence();
+        sequence_ = this->grid_->sequence();
       }
     }
 
