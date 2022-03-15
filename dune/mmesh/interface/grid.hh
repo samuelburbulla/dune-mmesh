@@ -399,12 +399,13 @@ namespace Dune
         if (ielement.isNew())
         {
           bool initialize = true;
+          const auto &connComp = ielement.impl().connectedComponent();
 
-          for ( const auto& old : ielement.impl().connectedComponent().children() )
+          for ( const auto& old : connComp.children() )
           {
             const Entity& father = old;
 
-            if (father.geometry().volume() > ielement.geometry().volume())
+            if (connComp.size() == 1 && father != ielement)
             {
               ielement.impl().bindFather( father );
               handle.prolongLocal( father, ielement, true );

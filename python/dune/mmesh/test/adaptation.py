@@ -20,15 +20,21 @@ uh = space.interpolate(x[0]+x[1], name="uh")
 ispace = dglagrange(igridView, order=1)
 iuh = ispace.interpolate(x[0], name="iuh")
 
-def addSomeInterface():
+def addSomeInterface(number):
   for e in gridView.elements:
     for i in gridView.intersections(e):
-      if abs(i.geometry.center[1] - 0.5) < 0.0075 and not hgrid.isInterface(i):
+      if hgrid.isInterface(i) or i.boundary:
+        continue
+      if number == 0:
         print("Add interface at", i.geometry.center)
         hgrid.addInterface(i)
         return
+      number -= 1
 
-addSomeInterface()
+addSomeInterface(0)
+addSomeInterface(10)
+addSomeInterface(20)
+addSomeInterface(42)
 adapt([uh])
 adapt([iuh])
 
@@ -39,4 +45,4 @@ intuh = integrate(gridView, uh, order=1)
 intiuh = integrate(igridView, iuh, order=1)
 print(intuh, intiuh)
 assert(abs(intuh - 1) < 1e-6)
-assert(abs(intiuh - 0.50285) < 1e-6)
+assert(abs(intiuh - 0.533425) < 1e-6)
