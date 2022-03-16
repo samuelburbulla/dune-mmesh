@@ -6,19 +6,20 @@ Installation
 
 In order to install and use Dune-MMesh you need:
 
-* C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7)
-* CMake (3.13 or later)
-* Python3 (3.7 or later) + pip (+ venv)
-* pkg-config
-* Boost (1.66 or later)
-* OpenMPI (this will become optional)
-* SuiteSparse (we use UMFPack)
-* Gmsh
+C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7),
+CMake (3.13 or later),
+Python3 (3.7 or later) + pip (+ venv),
+pkg-config,
+Boost (1.66 or later),
+OpenMPI (this will become optional),
+SuiteSparse (we use UMFPack) and
+Gmsh.
 
 
 A minimal setup with Docker can be set up as follows:
 
 .. code-block:: bash
+
   docker run -it ubuntu:latest
   apt update
   apt install g++ cmake python3 python3-pip python3-venv pkg-config libboost-dev libopenmpi3 libsuitesparse-dev gmsh git
