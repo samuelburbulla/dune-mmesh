@@ -8,15 +8,32 @@ In order to install and use Dune-MMesh you need:
 
 * C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7)
 * CMake (3.13 or later)
+* Python3 (3.7 or later) + pip (+ venv)
 * pkg-config
 * Boost (1.66 or later)
-* SuiteSparse (we use UMFPack)
 * OpenMPI (this will become optional)
-* Python (3.7 or later)
+* SuiteSparse (we use UMFPack)
+* Gmsh
+
+
+A minimal setup with Docker can be set up as follows:
+
+.. code-block:: bash
+  docker run -it ubuntu:latest
+  apt update
+  apt install g++ cmake python3 python3-pip python3-venv pkg-config libboost-dev libopenmpi3 libsuitesparse-dev gmsh git
+
+
+On MacOS, you can install the required dependencies by installing the Xcode Command Line Tools and using Homebrew:
+
+.. code-block:: bash
+
+  xcode-select --install
+  brew install pkg-config boost openmpi suite-sparse gmsh
 
 
 
-There are two ways of installing Dune-MMesh.
+There are two ways of installing Dune-MMesh, either from PyPI or from source.
 
 Using Pip
 ---------
@@ -30,6 +47,8 @@ The easiest way to install Dune-MMesh is using pip and the package uploaded to `
   python3 -m venv dune-env
   source dune-env/bin/activate
 
+This requires that you have `venv` available (`apt install python3-venv`).
+
 2. Download and build Dune-MMesh and its dependencies.
 
 .. code-block:: bash
@@ -37,6 +56,18 @@ The easiest way to install Dune-MMesh is using pip and the package uploaded to `
   pip install dune-mmesh
 
 Note that this takes some time in order to compile all dependent Dune modules.
+
+Now, you should be able to execute Dune-MMesh's python code. For instance:
+````
+git clone https://github.com/samuelburbulla/dune-mmesh.git
+cd dune-mmesh/doc/examples/grids
+python horizontal.py
+cd ..
+python coupling.py
+````
+
+Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
+
 
 If you encounter problems with, e.g., Boost headers missing on an M1 Mac,
 make sure that the include paths can be found. For instance, use the export
@@ -46,6 +77,9 @@ make sure that the include paths can be found. For instance, use the export
   export CXXFLAGS="-I/opt/homebrew/Cellar/boost/1.66.0/include/"
 
 before installing Dune-MMesh.
+
+Please be aware that we use `git-lfs` for uploading the `.msh` files.
+In order to pull them, please activate large file storage.
 
 
 From Source
@@ -85,5 +119,3 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
 .. code-block:: bash
 
   source ./dune-common/build-cmake/dune-env/bin/activate
-
-Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
