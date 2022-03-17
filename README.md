@@ -9,17 +9,31 @@ You find the full documentation of Dune-MMesh at [dune-mmesh.readthedocs.io](htt
 
 Note that Dune-MMesh has a list of dependencies: C++ compiler, CMake, Python3 + pip (+ venv), pkg-config, Boost, OpenMPI, SuiteSparse, Gmsh.
 
-A minimal setup with Docker can be set up as follows:
+The easiest starting point is to use Docker with a preconfigured setup.
+Build the corresponding Docker container as follows:
+
 ````
-docker run -it ubuntu:latest
-apt update
-apt install g++ cmake python3 python3-pip python3-venv pkg-config libboost-dev libopenmpi3 libsuitesparse-dev gmsh git
+docker build -t mmesh \
+  https://raw.githubusercontent.com/samuelburbulla/dune-mmesh/master/scripts/Dockerfile
+docker run -it mmesh
+````
+
+This will open an interactive shell in the Dune-MMesh's examples directory.
+
+__On your system__
+
+In order to install and use Dune-MMesh and your system you have to install all requirements.
+
+On Linux the requirements could be installed as follows:
+````
+apt install g++ cmake python3 python3-pip python3-venv git
+apt install pkg-config libboost-dev libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh git-lfs
 ````
 
 On MacOS, you can install the required dependencies with Xcode Command Line Tools and Homebrew:
 ````
 xcode-select --install
-brew install pkg-config boost openmpi suite-sparse gmsh
+brew install pkg-config boost openmpi suite-sparse gmsh git-lfs
 ````
 
 We strongly recommend using a virtual environment:
@@ -37,9 +51,7 @@ Note that this takes some time in order to compile all dependent Dune modules.
 Now, you should be able to execute Dune-MMesh's python code. For instance:
 ````
 git clone https://github.com/samuelburbulla/dune-mmesh.git
-cd dune-mmesh/doc/examples/grids
-python horizontal.py
-cd ..
+cd dune-mmesh/doc/examples
 python coupling.py
 ````
 

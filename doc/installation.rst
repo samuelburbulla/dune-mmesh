@@ -4,6 +4,25 @@
 Installation
 ************
 
+
+Using Docker
+------------
+
+The easiest starting point is to use Docker with a preconfigured setup.
+Build the corresponding Docker container as follows:
+
+.. code-block:: bash
+
+  docker build -t mmesh \
+    https://raw.githubusercontent.com/samuelburbulla/dune-mmesh/master/scripts/Dockerfile
+  docker run -it mmesh
+
+This will open an interactive shell in the Dune-MMesh's examples directory.
+
+
+On your system
+--------------
+
 In order to install and use Dune-MMesh you need:
 
 C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7),
@@ -16,13 +35,11 @@ SuiteSparse (we use UMFPack) and
 Gmsh.
 
 
-A minimal setup with Docker can be set up as follows:
+On Linux the requirements could be installed as follows:
 
 .. code-block:: bash
 
-  docker run -it ubuntu:latest
-  apt update
-  apt install g++ cmake python3 python3-pip python3-venv pkg-config libboost-dev libopenmpi3 libsuitesparse-dev gmsh git
+  apt install g++ cmake python3 python3-pip python3-venv pkg-config libboost-dev libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh git git-lfs
 
 
 On MacOS, you can install the required dependencies by installing the Xcode Command Line Tools and using Homebrew:
@@ -30,11 +47,10 @@ On MacOS, you can install the required dependencies by installing the Xcode Comm
 .. code-block:: bash
 
   xcode-select --install
-  brew install pkg-config boost openmpi suite-sparse gmsh
+  brew install pkg-config boost openmpi suite-sparse gmsh git-lfs
 
 
-
-There are two ways of installing Dune-MMesh, either from PyPI or from source.
+There are two ways to install Dune-MMesh, either from PyPI or from source.
 
 Using Pip
 ---------
@@ -59,13 +75,12 @@ This requires that you have `venv` available (`apt install python3-venv`).
 Note that this takes some time in order to compile all dependent Dune modules.
 
 Now, you should be able to execute Dune-MMesh's python code. For instance:
-````
-git clone https://github.com/samuelburbulla/dune-mmesh.git
-cd dune-mmesh/doc/examples/grids
-python horizontal.py
-cd ..
-python coupling.py
-````
+
+.. code-block:: bash
+
+  git clone https://github.com/samuelburbulla/dune-mmesh.git
+  cd dune-mmesh/doc/examples
+  python coupling.py
 
 Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
 
