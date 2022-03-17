@@ -148,6 +148,9 @@ namespace Dune
         using CType = Dune::Fem::SparseRowLinearOperator<Solution, ISolution, SparseMatrix>;
         using DType = typename IScheme::JacobianOperatorType;
 
+        using UMFPackMatrix = Dune::BCRSMatrix<double>;
+        using UMFPackVector = Dune::BlockVector<double>;
+
         typedef typename AType::DomainSpaceType BulkSpaceType;
         typedef typename DType::DomainSpaceType InterfaceSpaceType;
 
@@ -166,12 +169,10 @@ namespace Dune
         {
           NeighborInterfaceStencil< InterfaceSpaceType, BulkSpaceType > stencilB( B_.domainSpace(), B_.rangeSpace() );
           stencilB.setupStencil();
-          B_.clear();
           B_.reserve( stencilB );
 
           InterfaceNeighborStencil< BulkSpaceType, InterfaceSpaceType > stencilC( C_.domainSpace(), C_.rangeSpace() );
           stencilC.setupStencil();
-          C_.clear();
           C_.reserve( stencilC );
         }
 
@@ -189,17 +190,13 @@ namespace Dune
 
         void solve( const Solution &f, const ISolution &g, Solution& u, ISolution& t )
         {
-          using Matrix = Dune::BCRSMatrix<double>;
-          using Vector = Dune::BlockVector<double>;
+          if (M_.buildStage() != UMFPackMatrix::built)
+            setup();
 
-          std::size_t n = f.size();
-          std::size_t m = g.size();
+          std::size_t n = B_.exportMatrix().rows();
+          std::size_t m = B_.exportMatrix().cols();
 
-          std::size_t nz = A_.exportMatrix().maxNzPerRow() + B_.exportMatrix().maxNzPerRow();
-          Matrix M (n+m, n+m, nz, 0.1, Matrix::implicit);
-          Vector x(n+m), b(n+m);
-
-          auto addBlock = [&M](const auto& block, std::size_t row0, std::size_t col0)
+          auto setBlock = [this](const auto& block, std::size_t row0, std::size_t col0)
           {
             auto crs = block.exportMatrix().exportCRS();
             const auto& val = std::get<0>(crs);
@@ -208,7 +205,56 @@ namespace Dune
 
             for (std::size_t i = 0; i < row.size()-1; ++i)
               for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                  M.entry(row0 + i, col0 + col[j]) = val[j];
+                  this->M_[row0 + i][col0 + col[j]] = val[j];
+          };
+
+          setBlock(A_, 0, 0);
+          setBlock(B_, 0, n);
+          setBlock(C_, n, 0);
+          setBlock(D_, n, n);
+
+          for (std::size_t i = 0; i < n; ++i)
+            b_[i] = f.leakPointer()[i];
+          for (std::size_t i = 0; i < m; ++i)
+            b_[i+n] = g.leakPointer()[i];
+
+          Dune::UMFPack<UMFPackMatrix> solver(M_);
+          Dune::InverseOperatorResult res;
+          solver.apply(x_, b_, res);
+          solver.free();
+
+          for (std::size_t i = 0; i < u.size(); ++i)
+            u.leakPointer()[i] = x_[i];
+          for (std::size_t i = 0; i < t.size(); ++i)
+            t.leakPointer()[i] = x_[i+n];
+        }
+
+      private:
+
+        // Setup UMFPackMatrix
+        void setup()
+        {
+          std::size_t n = B_.exportMatrix().rows();
+          std::size_t m = B_.exportMatrix().cols();
+          x_.resize(n+m);
+          b_.resize(n+m);
+
+          std::size_t nz = std::max( A_.exportMatrix().maxNzPerRow() + B_.exportMatrix().maxNzPerRow(),
+                                     C_.exportMatrix().maxNzPerRow() + D_.exportMatrix().maxNzPerRow() );
+          M_.setBuildMode(UMFPackMatrix::implicit);
+          M_.setImplicitBuildModeParameters(nz, 0.1);
+          M_.setSize(n+m, n+m);
+
+          auto addBlock = [this](const auto& block, std::size_t row0, std::size_t col0)
+          {
+            auto crs = block.exportMatrix().exportCRS();
+            const auto& val = std::get<0>(crs);
+            const auto& col = std::get<1>(crs);
+            const auto& row = std::get<2>(crs);
+
+            for (std::size_t i = 0; i < row.size()-1; ++i)
+              for (std::size_t j = row[i]; j < row[i+1]; ++j)
+                  this->M_.entry(row0 + i, col0 + col[j]) = val[j];
           };
 
           addBlock(A_, 0, 0);
@@ -216,25 +262,9 @@ namespace Dune
           addBlock(C_, n, 0);
           addBlock(D_, n, n);
 
-          M.compress();
-
-          for (std::size_t i = 0; i < n; ++i)
-            b[i] = f.leakPointer()[i];
-          for (std::size_t i = 0; i < m; ++i)
-            b[i+n] = g.leakPointer()[i];
-
-          Dune::UMFPack<Matrix> solver(M);
-          Dune::InverseOperatorResult res;
-          solver.apply(x, b, res);
-          solver.free();
-
-          for (std::size_t i = 0; i < u.size(); ++i)
-            u.leakPointer()[i] = x[i];
-          for (std::size_t i = 0; i < t.size(); ++i)
-            t.leakPointer()[i] = x[i+n];
+          M_.compress();
         }
 
-      private:
 
         template< class Scheme, class DomainGridFunction, class RangeGridFunction >
         void assembleB (const Scheme &scheme, const DomainGridFunction &t, const RangeGridFunction &u)
@@ -427,6 +457,8 @@ namespace Dune
         BType B_;
         CType C_;
         DType D_;
+        UMFPackMatrix M_;
+        UMFPackVector x_, b_;
         const double eps_;
         const std::function<void()> callback_;
       };

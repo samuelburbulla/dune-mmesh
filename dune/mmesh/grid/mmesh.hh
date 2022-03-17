@@ -346,20 +346,8 @@ namespace Dune
       std::sort(ids.begin(), ids.end());
       interfaceSegments_.insert( std::make_pair(ids, marker) );
 
-      // Add some interface element to connected component in order to initialize values
-      auto ientity = ( [&]()
-      {
-        const auto& ientity = asInterfaceEntity( intersection );
-        if (interfaceGrid_->size(0) > 0)
-        {
-          auto it = interfaceGrid_->template leafbegin<0>();
-          if (*it == ientity) it++;
-          return *it;
-        }
-        else
-          // if interface grid is empty, use ientity itself and expect unintialized values
-          return ientity;
-      }() );
+      // Add interface element to connected component in order to mark element as new
+      const auto& ientity = asInterfaceEntity( intersection );
       InterfaceGridConnectedComponent connectedComponent ( ientity );
       interfaceGrid_->markAsRefined( {ids}, connectedComponent );
 
