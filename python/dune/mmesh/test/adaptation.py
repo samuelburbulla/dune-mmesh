@@ -5,7 +5,7 @@ from dune.fem.view import adaptiveLeafGridView as adaptive
 from dune.fem.space import dglagrange
 from dune.fem.function import integrate
 
-from ufl import SpatialCoordinate
+from ufl import SpatialCoordinate, conditional
 
 from dune.mmesh.test.grids import line
 grid = mmesh((reader.gmsh, line.filename), 2)
@@ -38,6 +38,9 @@ addSomeInterface(42)
 adapt([uh])
 adapt([iuh])
 
+# Initialize new elements with 0
+iuh.interpolate(conditional(abs(iuh - x[0]) < 1e-6, iuh, 0))
+
 gridView.writeVTK("adaptation", pointdata=[uh], nonconforming=True)
 igridView.writeVTK("adaptation-interface", pointdata=[iuh], nonconforming=True)
 
@@ -45,4 +48,4 @@ intuh = integrate(gridView, uh, order=1)
 intiuh = integrate(igridView, iuh, order=1)
 print(intuh, intiuh)
 assert(abs(intuh - 1) < 1e-6)
-assert(abs(intiuh - 0.533425) < 1e-6)
+assert(abs(intiuh - 0.5) < 1e-6)
