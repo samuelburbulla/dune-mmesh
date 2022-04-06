@@ -58,7 +58,7 @@ namespace Dune
           return;
 
         // we know the intersection polygon of two triangles is convex
-        for (int i = 1; i < points.size()-1; ++i)
+        for (std::size_t i = 1; i < points.size()-1; ++i)
         {
           EntityImpl entity ( &element.impl().grid(), { points[0], points[i], points[i+1] } );
           if ( entity.geometry().volume() > 1e-8 )
