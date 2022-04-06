@@ -75,16 +75,12 @@ namespace Dune
     }
 
     //! return grid pointer
-    Grid* grid() const
+    std::shared_ptr<Grid> grid() const
     {
       if ( !grid_ )
         grid_ = factory_->createGrid();
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      return grid_.get();
-#else
       return grid_;
-#endif
     }
 
     //! returns if intersection was inserted
@@ -214,7 +210,7 @@ namespace Dune
         }
     }
 
-    mutable typename Grid::GridPtrType grid_;
+    mutable std::shared_ptr<Grid> grid_;
     GridFactory* factory_;
   };
 

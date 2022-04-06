@@ -25,7 +25,7 @@ namespace Dune
   {
     using Grid = Dune::MovingMesh< dim >;
 
-    static std::unique_ptr<Grid> read (const std::string& fileName, bool verbose = true, bool insertBoundarySegments = true)
+    static std::shared_ptr<Grid> read (const std::string& fileName, bool verbose = true, bool insertBoundarySegments = true)
     {
       Dune::GmshGridFactory<Grid> gmshFactory( fileName );
       return gmshFactory.grid();

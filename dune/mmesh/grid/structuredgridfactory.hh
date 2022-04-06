@@ -49,13 +49,9 @@ namespace Dune
     }
 
     //! return grid pointer
-    Grid* grid() const
+    const std::shared_ptr<Grid> grid() const
     {
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 7)
-      return grid_.get();
-#else
       return grid_;
-#endif
     }
 
     //! returns if intersection was inserted
@@ -120,7 +116,7 @@ public:
     }
 
 private:
-    typename Grid::GridPtrType grid_;
+    std::shared_ptr<Grid> grid_;
     GridFactory factory_;
   };
 
