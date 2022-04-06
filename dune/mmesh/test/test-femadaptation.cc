@@ -221,6 +221,23 @@ std::array<double, 2> algorithm ( HGridType &grid, IGridType &igrid, const int s
     // make range smaller
     grid.indicator().maxH() *= 0.8;
     grid.indicator().minH() *= 1.2;
+
+    // also test addInterface
+    if (time == 4)
+    {
+      auto add = [&]()
+      {
+        for (const auto& e : elements(gridPart))
+          for (const auto& i : intersections(gridPart, e))
+             if (!grid.isInterface(i))
+             {
+               std::cout << "Add interface at " << i.geometry().center() << std::endl;
+               grid.addInterface(i);
+               return;
+             }
+      };
+      add();
+    }
   }
 
   // compute error
@@ -271,10 +288,15 @@ try
 
   auto errors = algorithm( grid, grid.interfaceGrid(), 0 );
   std::cout << "Error bulk: " << errors[0] << std::endl;
-  std::cout << "Error interface: " << errors[1] << std::endl;
-
   assert( errors[0] < 1e-12 );
-  assert( errors[1] < 1e-12 );
+
+#ifdef LAGRANGE
+  double exact_ierror = 0.191608;
+#else
+  double exact_ierror = 0.066098;
+#endif
+  std::cout << "Error interface: " << errors[1] - exact_ierror << std::endl;
+  assert( std::abs(errors[1] - exact_ierror) < 1e-6 );
 
   return 0;
 }

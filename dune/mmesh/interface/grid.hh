@@ -405,7 +405,7 @@ namespace Dune
           {
             const Entity& father = old;
 
-            if (connComp.size() == 1 && father != ielement)
+            if (father.geometry().volume() > ielement.geometry().volume())
             {
               ielement.impl().bindFather( father );
               handle.prolongLocal( father, ielement, true );
