@@ -1,5 +1,7 @@
 #include <config.h>
 
+#if HAVE_DUNE_FEM
+
 #include <dune/mmesh/mmesh.hh>
 #include <dune/python/grid/hierarchical.hh>
 #include <dune/python/mmesh/utility.hh>
@@ -38,3 +40,5 @@ PYBIND11_MODULE( _utility3d, module )
   ).first;
   Dune::Fem::registerDistance( module, clsDistance );
 }
+
+#endif //HAVE_DUNE_FEM

@@ -23,10 +23,12 @@ install(DIRECTORY "CGAL"
 )
 
 if( DUNE_ENABLE_PYTHONBINDINGS )
-  set(PYDIR python)
+  add_subdirectory(python)
 endif()
 
-dune_add_subdirs(dune doc cmake/modules ${PYDIR})
+add_subdirectory(cmake/modules)
+add_subdirectory(doc)
+add_subdirectory(dune)
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
