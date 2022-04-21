@@ -354,6 +354,13 @@ namespace Dune
       interfaceGrid_->setIndices();
     }
 
+    //! Add wrapped intersection to the interface
+    template <class I>
+    void addInterface( const I& intersection, const std::size_t marker = 1 )
+    {
+      addInterface(intersection.impl().hostIntersection(), marker);
+    }
+
     //! number of leaf entities per codim in this process
     int size (int codim) const {
       return leafIndexSet().size(codim);
