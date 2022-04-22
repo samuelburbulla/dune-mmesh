@@ -37,12 +37,12 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt update
-            sudo apt install libopenmpi-dev openmpi-bin libsuperlu-dev libsuitesparse-dev petsc-dev paraview python3-paraview gmsh libboost-all-dev
+            sudo apt install libopenmpi-dev openmpi-bin libsuperlu-dev libsuitesparse-dev petsc-dev paraview python3-paraview gmsh libboost-all-dev libmpfr-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew update
             rm /usr/local/bin/2to3
             brew install python@3.9
-            brew install openmpi superlu suite-sparse petsc paraview gmsh boost
+            brew install openmpi superlu suite-sparse petsc paraview gmsh boost mpfr
           fi
         shell: bash
 
@@ -60,18 +60,7 @@ jobs:
           pip install dune-mmesh
         shell: bash
 
-      - name: Setup dune-py
-        run: |
-          source dune-env/bin/activate
-          pip list
-          DUNE_CONTROL_PATH=dune-env setup-dunepy.py --opts=config.opts
-        shell: bash
-
       - name: Run test
         run: |
-          source dune-env/bin/activate
-          export DUNEPY_DISABLE_PLOTTING=1
-          cd scripts
-          python ../doc/examples/grids/horizontal.py
-          python test.py
+          python -m dune.mmesh test
         shell: bash
