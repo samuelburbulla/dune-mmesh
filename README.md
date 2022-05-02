@@ -1,6 +1,13 @@
 # The Dune-MMesh Module
 
-The Dune-MMesh Module is an implementation of the DUNE grid interface that wraps CGAL triangulations in 2D and 3D. It is also capable to export a prescribed set of cell facets as a dim-1 interface grid and remesh the grid when moving this interface.
+The Dune-MMesh Module is an implementation of the DUNE grid interface that wraps CGAL triangulations in 2D and 3D.
+It is also capable to export a prescribed set of cell facets as a dim-1 interface grid and remesh the grid when moving this interface.
+
+The purpose of Dune-MMesh is to provide a triangulation for grid-based methods that want to make use of a grid-conforming physical surface (the "interface").
+This includes, for instance, moving mesh methods and solving mixed-dimensional PDEs.
+
+The unified DUNE grid interface allows it to use Dune-MMesh with various DUNE discretization modules like dune-fem, DuMuX, etc.
+On the basis of Dune-Fem, mixed-dimensional PDEs can be solved stating the weak form of the model in UFL, see example below.
 
 You find the full documentation of Dune-MMesh at [dune-mmesh.readthedocs.io](https://dune-mmesh.readthedocs.io).
 
@@ -22,7 +29,7 @@ This will open an interactive shell in the Dune-MMesh's examples directory.
 
 __On your system__
 
-In order to install and use Dune-MMesh and your system you have to install all requirements.
+In order to install and use Dune-MMesh on your system you have to install the requirements.
 
 On Linux the requirements could be installed as follows:
 ````
