@@ -50,7 +50,6 @@ igridView = hgrid.interfaceGrid
 from ufl import *
 from dune.ufl import Constant
 
-t = 0
 tEnd = 0.4
 dt = 0.04
 
@@ -109,7 +108,7 @@ def getShifts():
     return shifts
 
 em = edgeMovement(gridView, getShifts())
-time = Constant(t, name="time")
+t = Constant(0, name="time")
 
 def g(u, n):
     sgn = inner(speed(), n('+'))
@@ -117,7 +116,7 @@ def g(u, n):
 
 def gBnd(u, n):
     sgn = inner(speed(), n)
-    return inner( conditional( sgn > 0, f(u), f(uexact(x, time)) ), n )
+    return inner( conditional( sgn > 0, f(u), f(uexact(x, t)) ), n )
 
 def h(u, n):
     sgn = inner(em('+'), n('+'))
@@ -137,21 +136,62 @@ a += tau * gBnd(u, n) * v * ds
 
 scheme = galerkin([a == 0], solver=("suitesparse","umfpack"))
 
-# ## Timeloop
+
+# ## Timeloop without adaptation
 #
-# We need to set the `"fem.adaptation.method"` parameter to `"callback"` in order to use the non-hierarchical adaptation strategy of Dune-MMesh. Then, within the time loop, we can adapt the mesh according to the following strategy.
+# For comparison, we run the finite volume scheme once without adaptation of the mesh.
 
 # In[6]:
 
 
-from dune.fem import parameter, adapt
-parameter.append( { "fem.adaptation.method": "callback" } )
+from time import time
 from dune.fem.plotting import plotPointData as plot
 import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 5, figsize=(12,3))
+runtime = 0
+
+# Disable edge movement
+em.interpolate([0,0])
 
 i = 0
-while t < tEnd:
+t.assign(0)
+while t.value < tEnd:
+    runtime -= time()
+
+    t.value += dt
+
+    uh_old.assign(uh)
+    scheme.solve(target=uh)
+
+    runtime += time()
+
+    i += 1
+    if i % 2 == 0:
+        plot(uh, figure=(fig, axs[i//2-1]), clim=[0,1], colorbar=None)
+
+print(f"Runtime: {runtime:.3f}s")
+
+
+# ## Timeloop with adaptation
+#
+# We need to set the `"fem.adaptation.method"` parameter to `"callback"` in order to use the non-hierarchical adaptation strategy of Dune-MMesh. Then, within the time loop, we can adapt the mesh according to the following strategy.
+
+# In[7]:
+
+
+from dune.fem import parameter, adapt
+parameter.append( { "fem.adaptation.method": "callback" } )
+fig.clear()
+fig, axs = plt.subplots(1, 5, figsize=(12,3))
+runtime = 0
+
+uh.interpolate(u0(x))
+
+i = 0
+t.assign(0)
+while t.value < tEnd:
+    runtime -= time()
+
     hgrid.markElements()
     hgrid.ensureInterfaceMovement(getShifts()*dt)
     adapt([uh])
@@ -159,12 +199,15 @@ while t < tEnd:
     hgrid.moveInterface(getShifts()*dt)
 
     em.assign(edgeMovement(gridView, getShifts()))
-    t += dt
-    time.assign(t)
+    t.value += dt
 
     uh_old.assign(uh)
     scheme.solve(target=uh)
 
+    runtime += time()
+
     i += 1
     if i % 2 == 0:
         plot(uh, figure=(fig, axs[i//2-1]), clim=[0,1], colorbar=None)
+
+print(f"Runtime: {runtime:.3f}s")
