@@ -51,7 +51,6 @@ from ufl import *
 from dune.ufl import Constant
 
 tEnd = 0.4
-dt = 0.04
 
 def speed():
     return as_vector([1.0, 0.0])
@@ -68,11 +67,12 @@ def u0(x):
 def uexact(x, t):
     return u0( x - t * speed() )
 
+
 # ## Finite Volume Moving Mesh Method
 #
 # We use a Finite Volume Moving Mesh method to keep the discontinuity sharp. It can be formulated by
 # \begin{align}
-# \int_\Omega (u^{n+1} |det(\Psi)| - u^n) v\ dx + \Delta t \int_\mathcal{F} \big( g(u^{n+1}, n) - h(u^{n+1}, n) \big) \jump{v}\ dS = 0
+# \int_\Omega (u^{n+1} |det(\Psi)| - u^n) v\ dx + \Delta t \int_\mathcal{F} \big( g(u^{n}, n) - h(u^{n}, n) \big) \jump{v}\ dS = 0
 # \end{align}
 # where $\Psi := x + \Delta t s$ and s is a linear interpolation of the interface’s vertex movement m on the bulk triangulation.
 #
@@ -92,6 +92,7 @@ n = FacetNormal(space)
 
 uh = space.interpolate(u0(x), name="uh")
 uh_old = uh.copy()
+
 
 # In[4]:
 
@@ -122,19 +123,32 @@ def h(u, n):
     sgn = inner(em('+'), n('+'))
     return conditional( sgn > 0, sgn * u('+'), sgn * u('-') )
 
+
 # In[5]:
 
 
 from dune.fem.scheme import galerkin
 
-tau = Constant(dt, name="tau")
+tau = Constant(0, name="tau")
 detPsi = abs(det(nabla_grad(x + tau * em)))
 
 a = (u * detPsi - uh_old) * v * dx
-a += tau * (g(u, n) - h(u, n)) * jump(v) * dS
-a += tau * gBnd(u, n) * v * ds
+a += tau * (g(uh_old, n) - h(uh_old, n)) * jump(v) * dS
+a += tau * gBnd(uh_old, n) * v * ds
 
 scheme = galerkin([a == 0], solver=("suitesparse","umfpack"))
+
+
+# Compute CFL time step using cell edge lengths
+l, ll = TrialFunction(space), TestFunction(space)
+b = (l - MinCellEdgeLength(space)) * ll * dx
+lscheme = galerkin([b == 0], solver=("suitesparse","umfpack"))
+lh = space.interpolate(0, name="lh")
+
+def dtCFL():
+    lscheme.solve(lh)
+    lMin = np.min(lh.as_numpy)
+    return 0.5 * lMin / speed()[0]
 
 
 # ## Timeloop without adaptation
@@ -150,15 +164,20 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 5, figsize=(12,3))
 runtime = 0
 
+uh.interpolate(u0(x))
+
 # Disable edge movement
 em.interpolate([0,0])
+
+tau.value = dtCFL()
+print(f"dt = {tau.value:.4f}")
 
 i = 0
 t.assign(0)
 while t.value < tEnd:
     runtime -= time()
 
-    t.value += dt
+    t.value += tau.value
 
     uh_old.assign(uh)
     scheme.solve(target=uh)
@@ -166,7 +185,7 @@ while t.value < tEnd:
     runtime += time()
 
     i += 1
-    if i % 2 == 0:
+    if i % 2 == 0 and i//2 <= 5:
         plot(uh, figure=(fig, axs[i//2-1]), clim=[0,1], colorbar=None)
 
 print(f"Runtime: {runtime:.3f}s")
@@ -184,6 +203,7 @@ parameter.append( { "fem.adaptation.method": "callback" } )
 fig.clear()
 fig, axs = plt.subplots(1, 5, figsize=(12,3))
 runtime = 0
+dtmin = 1e3
 
 uh.interpolate(u0(x))
 
@@ -192,22 +212,27 @@ t.assign(0)
 while t.value < tEnd:
     runtime -= time()
 
+    tau.value = dtCFL()
+    dtmin = min(dtmin, tau.value)
+
     hgrid.markElements()
-    hgrid.ensureInterfaceMovement(getShifts()*dt)
+    hgrid.ensureInterfaceMovement(getShifts()*tau.value)
     adapt([uh])
 
-    hgrid.moveInterface(getShifts()*dt)
-
     em.assign(edgeMovement(gridView, getShifts()))
-    t.value += dt
+
+    t.value += tau.value
 
     uh_old.assign(uh)
     scheme.solve(target=uh)
 
+    hgrid.moveInterface(getShifts()*tau.value)
+
     runtime += time()
 
     i += 1
-    if i % 2 == 0:
-        plot(uh, figure=(fig, axs[i//2-1]), clim=[0,1], colorbar=None)
+    if i % 4 == 0 and i//4 <= 5:
+        plot(uh, figure=(fig, axs[i//4-1]), clim=[0,1], colorbar=None)
 
+print(f"dt_min = {dtmin:.4f}")
 print(f"Runtime: {runtime:.3f}s")
