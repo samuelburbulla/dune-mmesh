@@ -5,12 +5,12 @@
 #
 # This is an example of how to move the interface and adapt the mesh.
 
-# We implement the finite volume moving mesh method presented in [CMR+18]_.
-#
+# We implement the finite volume moving mesh method presented in [CMR+18]_. 
+# 
 # .. [CMR+18] C. Chalons, J. Magiera, C. Rohde, M. Wiebe. A Finite-Volume Tracking Scheme for Two-Phase Compressible Flow. Theory, Numerics and Applications of Hyperbolic Problems I, pp. 309--322, 2018.
 
 # ## Grid creation
-#
+# 
 # We use the [vertical](grids/vertical.rst) grid file that contains an interface $\Gamma = {0.5} \times [0, 1]$ embedded in a domain $\Omega = [0,1]^2$.
 # For this example, we have to construct an _adaptive_ leaf grid view and we will need to obtain the hierarchical grid object.
 
@@ -26,8 +26,9 @@ gridView = adaptive( mmesh((reader.gmsh, file), dim) )
 hgrid = gridView.hierarchicalGrid
 igridView = hgrid.interfaceGrid
 
+
 # ## Problem
-#
+# 
 # Let us consider the following transport problem.
 # \begin{align}
 # u_t + \operatorname{div} f(u) = 0, & \qquad \text{in } \Omega \times [0,T], \\
@@ -38,7 +39,7 @@ igridView = hgrid.interfaceGrid
 # f(u) &= [1,0]^T u, \\
 # u_0(x,y) &= (0.5+x) \chi_{x<0.5}.
 # \end{align}
-#
+# 
 # Further, the interface is supposed to move with the transport speed in $f$, i.e. $m = [1,0]^T$.
 # \begin{align*}
 # \renewcommand{\jump}[1]{[\mskip-5mu[ #1 ]\mskip-5mu]}
@@ -69,13 +70,13 @@ def uexact(x, t):
 
 
 # ## Finite Volume Moving Mesh Method
-#
+# 
 # We use a Finite Volume Moving Mesh method to keep the discontinuity sharp. It can be formulated by
 # \begin{align}
 # \int_\Omega (u^{n+1} |det(\Psi)| - u^n) v\ dx + \Delta t \int_\mathcal{F} \big( g(u^{n}, n) - h(u^{n}, n) \big) \jump{v}\ dS = 0
 # \end{align}
 # where $\Psi := x + \Delta t s$ and s is a linear interpolation of the interface’s vertex movement m on the bulk triangulation.
-#
+# 
 # The numerical fluxes $g(u, n)$ and $h(u, n)$ are assumed to be consistent with the flux functions $f(u) \cdot n$ and $u s \cdot n$, respectively.
 
 # In[3]:
@@ -152,16 +153,22 @@ def dtCFL():
 
 
 # ## Timeloop without adaptation
-#
+# 
 # For comparison, we run the finite volume scheme once without adaptation of the mesh.
 
 # In[6]:
 
 
 from time import time
+from dune.fem.function import integrate
 from dune.fem.plotting import plotPointData as plot
 import matplotlib.pyplot as plt
-fig, axs = plt.subplots(1, 5, figsize=(12,3))
+plots = 4
+fig, axs = plt.subplots(1, plots, figsize=(3*plots,3))
+def shouldPlot(a):
+    t_a = a * tEnd / (plots-1)
+    return t.value > t_a and t.value - t_a <= tau.value
+
 runtime = 0
 
 uh.interpolate(u0(x))
@@ -185,14 +192,22 @@ while t.value < tEnd:
     runtime += time()
 
     i += 1
-    if i % 2 == 0 and i//2 <= 5:
-        plot(uh, figure=(fig, axs[i//2-1]), clim=[0,1], colorbar=None)
+    for a in range(plots):
+        if shouldPlot(a):
+            plot(uh, figure=(fig, axs[a]), clim=[0,1], colorbar=None)
 
 print(f"Runtime: {runtime:.3f}s")
 
+def L2Error(uh):
+    u = uexact(x, t)
+    return sqrt(integrate(gridView, dot(uh-u, uh-u), order=5))
+
+L2 = L2Error(uh)
+print(f"L2-Error: {L2:.3f}")
+
 
 # ## Timeloop with adaptation
-#
+# 
 # We need to set the `"fem.adaptation.method"` parameter to `"callback"` in order to use the non-hierarchical adaptation strategy of Dune-MMesh. Then, within the time loop, we can adapt the mesh according to the following strategy.
 
 # In[7]:
@@ -201,8 +216,8 @@ print(f"Runtime: {runtime:.3f}s")
 from dune.fem import parameter, adapt
 parameter.append( { "fem.adaptation.method": "callback" } )
 fig.clear()
-fig, axs = plt.subplots(1, 5, figsize=(12,3))
-runtime = 0
+fig, axs = plt.subplots(1, plots, figsize=(3*plots,3))
+runtimeAdapted = 0
 dtmin = 1e3
 
 uh.interpolate(u0(x))
@@ -210,29 +225,40 @@ uh.interpolate(u0(x))
 i = 0
 t.assign(0)
 while t.value < tEnd:
-    runtime -= time()
+    runtimeAdapted -= time()
 
     tau.value = dtCFL()
     dtmin = min(dtmin, tau.value)
 
-    hgrid.markElements()
-    hgrid.ensureInterfaceMovement(getShifts()*tau.value)
-    adapt([uh])
-
-    em.assign(edgeMovement(gridView, getShifts()))
-
     t.value += tau.value
+    
+    mark = hgrid.markElements()
+    ensure = hgrid.ensureInterfaceMovement(getShifts()*tau.value)
+    if mark or ensure:
+        adapt([uh])
+    
+    shifts = getShifts()
+    em.assign(edgeMovement(gridView, shifts))
 
     uh_old.assign(uh)
     scheme.solve(target=uh)
 
-    hgrid.moveInterface(getShifts()*tau.value)
+    hgrid.moveInterface(shifts*tau.value)
 
-    runtime += time()
+    runtimeAdapted += time()
 
     i += 1
-    if i % 4 == 0 and i//4 <= 5:
-        plot(uh, figure=(fig, axs[i//4-1]), clim=[0,1], colorbar=None)
+    for a in range(plots):
+        if shouldPlot(a):
+            plot(uh, figure=(fig, axs[a]), clim=[0,1], colorbar=None)
+
 
 print(f"dt_min = {dtmin:.4f}")
-print(f"Runtime: {runtime:.3f}s")
+print(f"Runtime: {runtimeAdapted:.3f}s")
+
+L2Adapted = L2Error(uh)
+print(f"L2-Error: {L2Adapted:.3f}")
+
+print(f"\nRuntime factor: {runtimeAdapted / runtime:.2f}x")
+print(f"Error improvement: {L2 / L2Adapted:.2f}x")
+
