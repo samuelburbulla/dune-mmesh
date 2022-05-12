@@ -61,6 +61,11 @@ jobs:
         shell: bash
 
       - name: Run test
+        # TODO: Replace by `python -m dune.mmesh test`
         run: |
-          python -m dune.mmesh test
+          source dune-env/bin/activate
+          export DUNEPY_DISABLE_PLOTTING=1
+          cd scripts
+          python ../doc/examples/grids/horizontal.py
+          python test.py
         shell: bash
