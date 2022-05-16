@@ -1,9 +1,12 @@
 # The Dune-MMesh Module
 
-The Dune-MMesh Module is an implementation of the DUNE grid interface that wraps CGAL triangulations in 2D and 3D. It is also capable to export a prescribed set of cell facets as a dim-1 interface grid and remesh the grid when moving this interface.
+In several physical and environmental processes that concern multiphase flows, biological systems, and geophysical phenomena, important physical processes occur along thin physical interfaces. These processes include effects that may alter the interface's position or topology over time creating a moving interface, which complicates traditional modeling techniques. Moving interface problems thus require advanced numerical tools with specific treatment of the interface and the simultaneous ability to implement complex physical effects.
+
+Dune-MMesh is tailored for numerical applications with moving physical interfaces. It is an implementation of the well-developed [Dune](https://www.dune-project.org) grid interface and is well-suited for the numerical discretization of partial differential equations. The package wraps two and three dimensional [CGAL](https://www.cgal.org) triangulations in high-level objects like intersections of grid entities, index and id sets and geometry transformations and exports a predefined set of facets as a separate interface grid.
+In two dimensions, the arbitrary movement of vertices is enhanced with a re-meshing algorithm that implements non-hierarchical adaptation procedures. Besides the adaptation of the triangulation, Dune-MMesh provides the necessary data structures to adapt discrete functions defined on the bulk grid or the interface. This adaptation approach complements existing grid implementations within the Dune framework that strictly rely on hierarchical adaptation.
+Various examples in Python have been implemented based on the discretization module [dune-fem](https://www.dune-project.org/sphinx/dune-fem/) that demonstrate the versatile applicability of Dune-MMesh. Due to the ability to handle custom PDEs in their weak from written in Unified Form Language (UFL) and the mesh adaptation capabilities, we believe Dune-MMesh provides a useful tool for solving mixed-dimensional PDEs on moving interfaces that arise from various fields of modelling.
 
 You find the full documentation of Dune-MMesh at [dune-mmesh.readthedocs.io](https://dune-mmesh.readthedocs.io).
-
 
 ## Installation
 
@@ -22,7 +25,7 @@ This will open an interactive shell in the Dune-MMesh's examples directory.
 
 __On your system__
 
-In order to install and use Dune-MMesh and your system you have to install all requirements.
+In order to install and use Dune-MMesh on your system you have to install the requirements.
 
 On Linux the requirements could be installed as follows:
 ````
@@ -172,7 +175,8 @@ Further tests of the C++ backend can be performed with a [source build](https://
 
 ## Contribution
 
-Contributions are highly welcome. If you want to contribute, please use our [GitLab](https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh) or [GitHub](https://github.com/samuelburbulla/dune-mmesh/).
+Contributions are highly welcome. If you want to contribute, please use our [GitLab](https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh)
+or [GitHub](https://github.com/samuelburbulla/dune-mmesh/) to report an issue or open a merge/pull request.
 
 ## License
 Dune-MMesh is licensed under the terms and conditions of the GNU General Public License (GPL) version 3 or - at your option - any later version.
