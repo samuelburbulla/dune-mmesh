@@ -1,8 +1,8 @@
 # A rectangle grid with a vertical interface
 
 name = "vertical.msh"
-h = 0.1
-hf = 0.1
+h = 0.05
+hf = 0.05
 
 import gmsh
 gmsh.initialize()
