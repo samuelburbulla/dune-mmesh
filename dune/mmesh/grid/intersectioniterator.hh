@@ -63,7 +63,7 @@ namespace Dune
 
     //! returns if iterators reference same intersection
     bool equals(const MMeshLeafIntersectionIterator& other) const {
-      return i_ == other.i_;
+      return i_ == other.i_ && hostEntity_ == other.hostEntity_;
     }
 
     //! prefix increment
