@@ -41,15 +41,18 @@
 #include "../remeshing/ratioindicator.hh"
 #include "../interface/traits.hh"
 #include "../misc/boundaryidprovider.hh"
+#include "../misc/partitionhelper.hh"
 #include "../misc/twistutility.hh"
 // Further includes below!
 
 #if HAVE_MPI
   #include <dune/common/parallel/mpicommunication.hh>
-  using MMeshCollectiveCommunication = Dune::Communication<MPI_Comm>;
+  using Comm = MPI_Comm;
 #else
-  using MMeshCollectiveCommunication = Dune::Communication<No_Comm>;
+  using Comm = No_Comm;
 #endif
+
+using MMeshCollectiveCommunication = Dune::Communication<Comm>;
 
 namespace Dune
 {
@@ -653,6 +656,13 @@ namespace Dune
     Intersection asIntersection( const InterfaceEntity& interfaceEntity ) const
     {
       const auto& host = interfaceEntity.impl().hostEntity();
+      return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
+    }
+
+    //! Return a facet as intersection
+    Intersection asIntersection( const Facet& facet ) const
+    {
+      const auto& host = facet.impl().hostEntity();
       return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
     }
 
@@ -1644,7 +1654,25 @@ namespace Dune
 
     /** \brief Size of the ghost cell layer on the leaf level */
     unsigned int ghostSize(int codim) const {
-      return 0;
+      std::size_t size = 0;
+
+      if (codim == 0)
+        for (const auto& e : elements(this->leafGridView()))
+          if (e.partitionType() == GhostEntity)
+            size++;
+
+
+      if (codim == 1)
+        for (const auto& f : facets(this->leafGridView()))
+          if (f.partitionType() == GhostEntity)
+            size++;
+
+      if (codim == dimension)
+        for (const auto& v : vertices(this->leafGridView()))
+          if (v.partitionType() == GhostEntity)
+            size++;
+
+      return size;
     }
 
 
@@ -1659,16 +1687,28 @@ namespace Dune
       return ghostSize(codim);
     }
 
+    /** \brief Distributes this grid over the available nodes in a distributed machine
+     */
+    void loadBalance()
+    {
+      for ( auto fc = hostgrid_.finite_faces_begin(); fc != hostgrid_.finite_faces_end(); ++fc) // TODO 3D
+      {
+        const auto element = entity(fc);
+        int rank = PartitionHelper::rank( element );
+        element.impl().setRank( rank );
+      }
+      update();
+    };
 
     /** \brief Distributes this grid over the available nodes in a distributed machine
      *
      * \param minlevel The coarsest grid level that gets distributed
      * \param maxlevel does currently get ignored
      */
-    void loadBalance() {};
-
     template<class T>
-    bool loadBalance( const T& t ) { return false; };
+    bool loadBalance( const T& t ) {
+      DUNE_THROW(NotImplemented, "MMesh::loadBalance(t)");
+    };
 
     void loadBalance(int strategy, int minlevel, int depth, int maxlevel, int minelement){
       DUNE_THROW(NotImplemented, "MMesh::loadBalance()");

@@ -70,11 +70,14 @@ namespace Dune
 
         try {
           std::sort(ids.begin(), ids.end());
-          maxNbIdx_[d] = std::max( 0, (int)indexSet.indexMap().at( ids ).size() - 2 );
+          maxNbIdx_[d] = (int)indexSet.indexMap().at( ids ).size() - 2;
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
       }
+
+      while( skip() )
+        ++i_;
     }
 
     //! constructor for end iterator
@@ -97,12 +100,15 @@ namespace Dune
     //! prefix increment
     void increment()
     {
-      if ( nbIdx_ < maxNbIdx_[i_] )
+      if ( maxNbIdx_[i_] != -1 and nbIdx_ < maxNbIdx_[i_] )
         nbIdx_++;
       else
       {
         ++i_;
         nbIdx_ = 0;
+
+        while( skip() )
+          ++i_;
       }
     }
 
@@ -112,11 +118,18 @@ namespace Dune
     }
 
   private:
+    bool skip()
+    {
+      if (i_ == dimension + 1)
+        return false;
+      return grid_->entity(hostEntity_).partitionType() == GhostEntity and maxNbIdx_[i_] == -1;
+    }
+
     const GridImp* grid_;
     MMeshInterfaceEntity hostEntity_;
     std::size_t i_;
     std::size_t nbIdx_;
-    std::array<std::size_t, dimension+1> maxNbIdx_;
+    std::array<int, dimension+1> maxNbIdx_;
   };
 
 }  // namespace Dune

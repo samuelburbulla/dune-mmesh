@@ -230,9 +230,9 @@ namespace Dune
       // Count the finite edges and build index map
       std::size_t vertexCount = 0;
       std::size_t elementCount = 0;
-      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        if ( contains( *eh ) )
-        {
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+      {
+          auto eh = &element.impl().hostEntity();
           auto vh0 = eh->first->vertex((eh->second+1)%3);
           auto vh1 = eh->first->vertex((eh->second+2)%3);
 
@@ -252,7 +252,7 @@ namespace Dune
           } catch (std::exception &e) {
             DUNE_THROW(InvalidStateException, e.what());
           }
-        }
+      }
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;
@@ -283,9 +283,9 @@ namespace Dune
       std::size_t vertexCount = 0;
       std::size_t edgeCount = 0;
       std::size_t elementCount = 0;
-      for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
-        if ( contains( *eh ) )
-        {
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+      {
+          auto eh = &element.impl().hostEntity();
           std::array<std::size_t, dimensionworld> ids;
           for( int i = 0; i < dimensionworld; ++i )
           {
@@ -315,7 +315,7 @@ namespace Dune
             if ( edgeIndexMap_.count( edgeIds ) == 0 )
               edgeIndexMap_.insert( { edgeIds, edgeCount++ } );
           }
-        }
+      }
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;

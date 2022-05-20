@@ -37,6 +37,12 @@
 namespace Dune
 {
 
+#if HAVE_MPI
+  using Comm = MPI_Comm;
+#else
+  using Comm = No_Comm;
+#endif
+
   // MMeshInterfaceGrid family
   template<class MMesh>
   struct MMeshInterfaceGridFamily
@@ -63,7 +69,7 @@ namespace Dune
         MMeshImpl::MultiId, // GlobalIdSet::IdType,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >, // LocalIdSet
         MMeshImpl::MultiId, // LocalIdSet::IdType,
-        CollectiveCommunication< No_Comm >,
+        CollectiveCommunication< Comm >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshInterfaceGridEntitySeed
@@ -439,8 +445,21 @@ namespace Dune
 
 
     /** \brief Size of the ghost cell layer on the leaf level */
-    unsigned int ghostSize(int codim) const {
-      return 0;
+    unsigned int ghostSize(int codim) const
+    {
+      std::size_t size = 0;
+
+      if (codim == 0)
+        for (const auto& e : elements(this->leafGridView()))
+          if (e.partitionType() == GhostEntity)
+            size++;
+
+      if (codim == dimension)
+        for (const auto& v : vertices(this->leafGridView()))
+          if (v.partitionType() == GhostEntity)
+            size++;
+
+      return size;
     }
 
 
@@ -474,7 +493,7 @@ namespace Dune
 
 
     /** \brief dummy collective communication */
-    const CollectiveCommunication< No_Comm >& comm () const
+    const CollectiveCommunication< Comm >& comm () const
     {
       return ccobj;
     }
@@ -585,7 +604,7 @@ namespace Dune
     // **********************************************************
 
   private:
-    CollectiveCommunication< No_Comm > ccobj;
+    CollectiveCommunication< Comm > ccobj;
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {

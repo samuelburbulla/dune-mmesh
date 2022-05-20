@@ -21,6 +21,7 @@ namespace Dune
 // MMesh includes
 #include <dune/mmesh/grid/connectedcomponent.hh>
 #include <dune/mmesh/grid/polygoncutting.hh>
+#include <dune/mmesh/misc/partitionhelper.hh>
 
 namespace Dune
 {
@@ -67,10 +68,14 @@ namespace Dune
   private:
     typedef typename GridImp::ctype ctype;
 
-    // equivalent entity in the host grid
+    // The equivalent entity in the host grid
     typedef typename GridImp::template HostGridEntity<codim> HostGridEntity;
 
+    //! The type of the Entity interface class
+    typedef typename GridImp::template Codim<codim>::Entity Entity;
+
   public:
+    //! The type of the Geometry interface class
     typedef typename GridImp::template Codim<codim>::Geometry Geometry;
 
     //! The type of the EntitySeed interface class
@@ -176,8 +181,56 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType( 0 );
+    PartitionType partitionType () const
+    {
+      if constexpr (codim == dim)
+      {
+        if (grid().comm().size() == 1)
+          return InteriorEntity;
+
+        std::size_t interior = 0, count = 0;
+        for (const auto& e : incidentElements( Entity(*this) ))
+        {
+          count++;
+          if (e.partitionType() == InteriorEntity)
+            interior++;
+        }
+
+        if (interior == count)
+          return InteriorEntity;
+        else if (interior == 0)
+          return GhostEntity;
+        else
+          return BorderEntity;
+      }
+      else if constexpr (codim == 1)
+      {
+        const auto is = grid().asIntersection( *this );
+
+        auto pIn = is.inside().partitionType();
+        if (is.neighbor())
+        {
+          auto pOut = is.inside().partitionType();
+          if (pIn == InteriorEntity && pOut == InteriorEntity)
+            return InteriorEntity;
+
+          if ((pIn == InteriorEntity && pOut == GhostEntity)
+            || (pIn == GhostEntity && pOut == InteriorEntity))
+            return BorderEntity;
+
+          return GhostEntity;
+        }
+        else
+          return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
+      }
+      else
+        return InteriorEntity;
+    }
+
+    //! Set the partition type for parallel computing
+    void setRank (int rank)
+    {
+      hostEntity_->info().rank = rank;
     }
 
     //! Return the number of subEntities of codimension codim
@@ -608,8 +661,18 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType::InteriorEntity; /* dummy */
+    PartitionType partitionType () const
+    {
+      if (hostEntity_->info().rank == grid().comm().rank())
+        return InteriorEntity;
+      else
+        return GhostEntity;
+    }
+
+    //! Set the partition type for parallel computing
+    void setRank (int rank) const
+    {
+      hostEntity_->info().rank = rank;
     }
 
     //! Geometry of this entity

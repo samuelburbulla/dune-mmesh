@@ -20,6 +20,8 @@ using namespace Dune;
  */
 int main(int argc, char *argv[])
 {
+  MPIHelper::instance(argc, argv);
+
   std::cout << "-- Grid check --" << std::endl;
 
   // Create Grid
@@ -31,12 +33,27 @@ int main(int argc, char *argv[])
   GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/plane3d.msh" );
 
   Grid& grid = *gridFactory.grid();
+  const auto& igrid = grid.interfaceGrid();
+  grid.loadBalance();
+
+  std::cout << "Rank " << grid.comm().rank() << ": Elements " << grid.size(0) << " (" << grid.ghostSize(0) << " ghost)" << std::endl;
+  std::cout << "Rank " << grid.comm().rank() << ": Facets " << grid.size(1) << " (" << grid.ghostSize(1) << " ghost)" << std::endl;
+  std::cout << "Rank " << grid.comm().rank() << ": Vertices " << grid.size(2) << " (" << grid.ghostSize(2) << " ghost)" << std::endl;
+
+  std::cout << "Interface Rank " << grid.comm().rank() << ": Elements " << igrid.size(0) << " (" << igrid.ghostSize(0) << " ghost)" << std::endl;
+  std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(1) << " (" << igrid.ghostSize(1) << " ghost)" << std::endl;
 
   // Call gridcheck from dune-grid
   gridcheck( grid );
 
   // Call grid check for interface grid
-  gridcheck( grid.interfaceGrid() );
+  gridcheck( igrid );
+
+  VTKWriter vtkWriter( grid.leafGridView() );
+  vtkWriter.write("test-grid");
+
+  VTKWriter ivtkWriter( igrid.leafGridView() );
+  ivtkWriter.write("test-igrid");
 
   return EXIT_SUCCESS;
 }

@@ -48,7 +48,7 @@ namespace Dune
       hostLeafIterator_(mMesh->getHostGrid().finite_edges_begin()),
       hostLeafIteratorEnd_(mMesh->getHostGrid().finite_edges_end())
     {
-      while( hostLeafIterator_ != hostLeafIteratorEnd_ && !mMesh_->isInterface( *hostLeafIterator_ ) )
+      while( proceed() )
         ++hostLeafIterator_;
     }
 
@@ -66,7 +66,7 @@ namespace Dune
     void increment() {
       ++hostLeafIterator_;
 
-      while( hostLeafIterator_ != hostLeafIteratorEnd_ && !mMesh_->isInterface( *hostLeafIterator_ ) )
+      while( proceed() )
         ++hostLeafIterator_;
     }
 
@@ -81,6 +81,16 @@ namespace Dune
     }
 
   private:
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == hostLeafIteratorEnd_)
+        return false;
+      if (!mMesh_->isInterface( *hostLeafIterator_ ))
+        return true;
+      return !PartitionHelper::contains(pitype, dereference());
+    }
+
     const GridImp* mMesh_;
 
     HostGridLeafIterator hostLeafIterator_;
@@ -105,7 +115,7 @@ namespace Dune
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_begin()),
       hostLeafIteratorEnd_(mMesh->getHostGrid().finite_vertices_end())
     {
-      while( hostLeafIterator_ != hostLeafIteratorEnd_ && !hostLeafIterator_->info().isInterface )
+      while( proceed() )
         ++hostLeafIterator_;
     }
 
@@ -123,7 +133,7 @@ namespace Dune
     void increment() {
       ++hostLeafIterator_;
 
-      while( hostLeafIterator_ != hostLeafIteratorEnd_ && !hostLeafIterator_->info().isInterface )
+      while( proceed() )
         ++hostLeafIterator_;
     }
 
@@ -138,6 +148,16 @@ namespace Dune
     }
 
   private:
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == hostLeafIteratorEnd_)
+        return false;
+      if (!hostLeafIterator_->info().isInterface)
+        return true;
+      return !PartitionHelper::contains(pitype, dereference());
+    }
+
     const GridImp* mMesh_;
 
     HostGridLeafIterator hostLeafIterator_;

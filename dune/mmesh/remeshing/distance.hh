@@ -51,7 +51,8 @@ public:
       std::fill(distances_.begin(), distances_.end(), 1e100);
 
       // Set all interface vertices to zero and initialize queue
-      for ( const InterfaceElement& ielement : elements( grid_->interfaceGrid().leafGridView() ) )
+
+      for ( const InterfaceElement& ielement : elements( grid_->interfaceGrid().leafGridView(), Partitions::interior ) )
       {
         // Convert to bulk facet
         const Facet facet = grid_->entity( ielement.impl().hostEntity() );
@@ -137,7 +138,7 @@ public:
     //! Handle facet: Compute all vertex distances
     void handleFacet(const Facet& facet)
     {
-      for (const auto& v : vertices(grid_->leafGridView()))
+      for (const auto& v : vertices(grid_->leafGridView(), Partitions::interior))
       {
         ctype dist = computeDistance(v, facet);
         if (dist < operator()(v))

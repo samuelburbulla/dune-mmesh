@@ -31,6 +31,7 @@ namespace Dune
       bool isNew = false;
       bool mightVanish = false;
       std::size_t componentNumber = 0;
+      int rank = 0;
     };
 
     struct VertexInfo {

@@ -140,8 +140,27 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType( 0 );
+    PartitionType partitionType () const
+    {
+      if constexpr (codim == dim)
+      {
+        int interior = 0, count = 0;
+        for (const auto& incident : incidentInterfaceElements( grid().entity(hostEntity_) ))
+        {
+          count++;
+          if (incident.partitionType() == InteriorEntity)
+            interior++;
+        }
+
+        if (interior == count)
+          return InteriorEntity;
+        else if (interior == 0)
+          return GhostEntity;
+        else
+          return BorderEntity;
+      }
+      else
+        return InteriorEntity;
     }
 
     //! Return the number of subEntities of codimension codim
@@ -578,8 +597,27 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType::InteriorEntity; /* dummy */
+    PartitionType partitionType () const
+    {
+      const auto is = grid().getMMesh().asIntersection( *this );
+
+      auto pIn = is.inside().partitionType();
+      if (is.neighbor())
+      {
+        auto pOut = is.inside().partitionType();
+        if (pIn == InteriorEntity && pOut == InteriorEntity)
+          return InteriorEntity;
+
+        if (pIn == GhostEntity && pOut == GhostEntity)
+          return GhostEntity;
+
+        if (is.inside().impl().hostEntity()->info().rank < is.outside().impl().hostEntity()->info().rank)
+          return InteriorEntity;
+        else
+          return GhostEntity;
+      }
+      else
+        return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
     }
 
     //! Geometry of this entity

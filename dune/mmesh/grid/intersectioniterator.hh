@@ -50,7 +50,10 @@ namespace Dune
       : mMesh_(mMesh)
       , hostEntity_(hostEntity)
       , i_( 0 )
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     //! constructor for end iterator
     MMeshLeafIntersectionIterator(const GridImp* mMesh,
@@ -68,7 +71,9 @@ namespace Dune
 
     //! prefix increment
     void increment() {
-      ++i_;
+      do {
+        ++i_;
+      } while( proceed() );
     }
 
     //! \brief dereferencing
@@ -78,6 +83,25 @@ namespace Dune
     }
 
   private:
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (i_ == dim + 1)
+        return false;
+
+      const auto is = dereference();
+      if (is.inside().partitionType() == GhostEntity)
+      {
+        if (!is.neighbor())
+          return true;
+
+        // skip ghost neighbors
+        if (is.outside().partitionType() == GhostEntity)
+          return true;
+      }
+      return false;
+    }
+
     const GridImp* mMesh_;
     HostGridEntity hostEntity_;
     int i_;
