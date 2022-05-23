@@ -44,10 +44,11 @@ A CGAL triangulation is a set of simplicial cells and vertices where each cell g
 Facets are not explicitly represented: a facet is given by the pair of a cell $c$ and an index $i$ and has two implicit representations.
 For $d=3$, edges are represented by triples of a cell $c$ and two indices $i$ and $j$ that indicate the two vertices of the edge.
 
-![CGAL representation of cells and differing Dune numbering in brackets.\label{fig:wrapper}](img/wrapper.png)
+![CGAL representation of cells and differing Dune numbering in brackets. The vertex numbering is maintained, facets are renumbered, and the edges of tetrahedrons are equipped with indices according to the DUNE reference element numbering. \label{fig:wrapper}](img/wrapper.png)
 
 In order to match the Dune grid reference cell numbering we apply an index mapping, cf. Figure \ref{fig:wrapper}.
-Dune intersections can directly be represented by CGAL's cell-index representations of facets which are already equipped with an orientation.
+Here, the edges of tetrahedrons are equipped with indices according to the DUNE reference element numbering.
+Dune intersections, i.e., intersections of mesh entities of codimension 0 with a neighboring element or with the domain boundary, can directly be represented by CGAL's cell-index representations of facets which are already equipped with an orientation.
 The index and id sets of the Dune grid interface are realized by consecutive numbering of cells and vertices.
 Various iterators of CGAL triangulations can directly be used to construct the Dune grid range generators.
 Additional (non-standard Dune) iterators have been added, e.g. iterating over incident cells of a vertex.
@@ -75,9 +76,9 @@ Therefore, Dune-MMesh features capabilities of moving and re-meshing in spatial 
 
 We assume that movement is given by a shift of interface vertices (or all grid vertices), cf. Figure \ref{fig:movmark} (left).
 
-![Left: Moving the interface. Right: Marking cells for refinement (green) or coarsening (red).\label{fig:movmark}](img/movmark.png){ width=80% }
+![Left: Moving the interface is performed by shifting vertices. The blue shift vectors tranform the gray two-dimensional triangulation into the black one. Right: Marking cells for refinement (green) or coarsening (red).\label{fig:movmark}](img/movmark.png){ width=80% }
 
-To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with re-meshing routines.
+To prevent degeneration of the triangulation, i.e. cells have non-positive volume, Dune-MMesh is equipped with re-meshing routines that will be described in the subsequent.
 
 ### Adaptation
 
@@ -86,12 +87,13 @@ Adaption in Dune is usually hierarchical by definition and the adaptation proced
 1. Mark: Grid cells are marked for coarsening or refinement.
 2. Adapt: The cells are modified due to their markers and discrete functions are restricted or prolongated.
 
-In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is inavoidable.
+In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is unavoidable.
 However, we will try to follow the general Dune approach and separate the adaptation into two stages.
 
 __1. Mark__
 
 Dune-MMesh provides utility functions to mark cells either in expectation of a movement of vertices or regarding to their current geometrical properties, cf. Figure \ref{fig:movmark} (right).
+For instance, when moving the interface would cause a cell to get a negative volume, we mark this cell for coarsening (marked red in Figure \ref{fig:movmark}). Similarly, we use the edge length as indicator for coarsening or refinement (marked green).
 However, one can also use a proprietary procedure marking cells manually, or one can insert and remove vertices directly.
 
 __2. Adapt__
