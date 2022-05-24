@@ -189,7 +189,10 @@ namespace Dune
     //! The type of the underlying element handle
     using ElementHandle = HostGridEntity<0>;
 
-    //! The type of the underlying vertex handle
+    //! The type of the underlying edge handle
+    using FacetHandle = HostGridEntity<1>;
+
+    //! The type of the underlying edge handle
     using EdgeHandle = HostGridEntity<dimension-1>;
 
     //! The type of the underlying vertex handle
@@ -199,7 +202,7 @@ namespace Dune
     using ElementOutput = std::list<HostGridEntity<0>>;
 
     //! The type of the boundary edges output
-    using BoundaryEdgesOutput = std::list<HostGridEntity<1>>;
+    using BoundaryEdgesOutput = std::list<FacetHandle>;
 
     //! The type of a codim 0 entity
     using Entity = typename Traits::template Codim<0>::Entity;
@@ -440,7 +443,7 @@ namespace Dune
       return entity( typename Traits::template Codim<0>::EntitySeed( elementHandle ) );
     }
 
-    InterfaceElement entity(const HostGridEntity<1>& facetHandle) const
+    InterfaceElement entity(const FacetHandle& facetHandle) const
     {
       return entity( typename Traits::template Codim<1>::EntitySeed( facetHandle ) );
     }
@@ -657,14 +660,26 @@ namespace Dune
     Intersection asIntersection( const InterfaceEntity& interfaceEntity ) const
     {
       const auto& host = interfaceEntity.impl().hostEntity();
-      return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
+      return asIntersection(host);
     }
 
     //! Return a facet as intersection
     Intersection asIntersection( const Facet& facet ) const
     {
       const auto& host = facet.impl().hostEntity();
-      return MMeshLeafIntersection<const GridImp> ( This(), host.first, host.second );
+      return asIntersection(host);
+    }
+
+    //! Return a host facet as intersection
+    Intersection asIntersection( const FacetHandle& host ) const
+    {
+      FacetHandle hostFacet = host;
+
+      // make sure to get the intersection seen from inside at domain boundary
+      if ( hostgrid_.is_infinite(hostFacet.first) )
+        hostFacet = hostgrid_.mirror_facet( hostFacet );
+
+      return MMeshLeafIntersection<const GridImp> ( This(), hostFacet.first, hostFacet.second );
     }
 
     //! Locate an entity by coordinate using CGAL's locate

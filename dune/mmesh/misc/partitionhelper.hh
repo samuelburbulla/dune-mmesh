@@ -82,20 +82,31 @@ private:
     if (grid().comm().size() == 1)
       return 0; // interior
 
-    auto entry = partition_[Entity::codimension].find(e.impl().id());
-    if (entry != partition_[Entity::codimension].end())
-      return entry->second;
+    if constexpr (Entity::dimension == dim)
+    {
+      auto entry = partition_[Entity::codimension].find(e.impl().id());
+      if (entry != partition_[Entity::codimension].end())
+        return entry->second;
+    }
     else
-      return 0;
+    {
+      auto entry = interfacePartition_[Entity::codimension].find(e.impl().id());
+      if (entry != interfacePartition_[Entity::codimension].end())
+        return entry->second;
+    }
+
+    return 0;
   }
 
   //! Set partition marker
   template <class Entity>
   int& partition(const Entity& e)
   {
-    return partition_[Entity::codimension][e.impl().id()];
+    if constexpr (Entity::dimension == dim)
+      return partition_[Entity::codimension][e.impl().id()];
+    else
+      return interfacePartition_[Entity::codimension][e.impl().id()];
   }
-
 
   //! Compute partition type for every entity
   void computePartitions()
@@ -104,15 +115,17 @@ private:
       partition_[i].clear();
 
     // Set elements
-    forCodim<0>([this](const auto& e){
+    forEntityDim<dim>([this](const auto& fc){
+      const auto e = grid().entity(fc);
       if (e.impl().hostEntity()->info().rank == grid().comm().rank())
         partition(e) = 0;
       else
         partition(e) = -1;
     });
 
-    // Set facets and find ghost elements
-    forCodim<1>([this](const auto& e){
+    // Set interior and boundary facets and find ghost elements
+    forEntityDim<dim-1>([this](const auto& fc){
+      const auto e = grid().entity(fc);
       const auto is = grid().asIntersection( e );
 
       int pIn = partition( is.inside() );
@@ -144,31 +157,64 @@ private:
       }
       else
       {
-        partition(e) = pIn;
+        // interior
+        if (pIn == 0)
+          partition(e) = 0;
       }
     });
 
-    // Check again for ghost facets
-    forCodim<1>([this](const auto& e){
+    // Set for ghost facets
+    forEntityDim<dim-1>([this](const auto& fc){
+      const auto e = grid().entity(fc);
       const auto is = grid().asIntersection( e );
 
-      if (!is.neighbor() || partition(e) == 1)
+      if (partition(e) == 1)
         return;
 
-      int pIn = partition( is.inside() );
-      int pOut = partition( is.outside() );
-
-      // ghost
-      if (pIn == 2 || pOut == 2)
+      if (partition( is.inside() ) == 2)
         partition(e) = 2;
+
+      if (is.neighbor())
+        if (partition( is.outside() ) == 2)
+          partition(e) = 2;
     });
 
-    // TODO Codim dim-1
+    // Codim 2 in 3D
+    if constexpr (dim == 3)
+    {
+      forEntityDim<1>([this](const auto& fc){
+        const auto edge = grid().entity(fc);
+        std::size_t count = 0, interior = 0, ghost = 0;
+        for (const auto e : incidentElements(edge))
+        {
+          count++;
+          if (partition(e) == 0) interior++;
+          if (partition(e) == 2) ghost++;
+        }
+
+        // interior
+        if (interior == count)
+          partition(edge) = 0;
+
+        // ghost
+        else if (interior > 0 and ghost > 0)
+          partition(edge) = 1;
+
+        // ghost
+        else if (ghost > 0)
+          partition(edge) = 2;
+
+        // none
+        else
+          partition(edge) = -1;
+      });
+    }
 
     // Set vertices
-    forCodim<dim>([this](const auto& v){
+    forEntityDim<0>([this](const auto& fc){
+      const auto v = grid().entity(fc);
       std::size_t count = 0, interior = 0, ghost = 0;
-      for (const auto& e : incidentElements(v))
+      for (const auto e : incidentElements(v))
       {
         count++;
         if (partition(e) == 0) interior++;
@@ -196,7 +242,14 @@ private:
   //! Compute partition type for every interface entity
   void computeInterfacePartitions()
   {
-    // TODO
+//    for (int i = 0; i < dim; ++i)
+//      interfacePartition_[i].clear();
+//
+//    // Set elements
+//    forEntityDim<dim-1>([this](const auto& fc){
+//      const auto e = grid().interfaceGrid().entity(fc);
+//      partition(e) = 0;
+//    });
   }
 
   //! Set rank for every entity. We use a naiv partition slicing the x-axis here.
@@ -205,7 +258,8 @@ private:
     xbounds_[0] = std::numeric_limits<double>::max();
     xbounds_[1] = std::numeric_limits<double>::lowest();
 
-    forCodim<dim>([this](const auto& v){
+    forEntityDim<0>([this](const auto& fc){
+      auto v = grid().entity(fc);
       auto x = v.geometry().center()[0];
       xbounds_[0] = std::min(xbounds_[0], x);
       xbounds_[1] = std::max(xbounds_[1], x);
@@ -223,60 +277,44 @@ private:
       return 0;
     };
 
-    forCodim<0>([rank](const auto& e){
+    forEntityDim<dim>([this, rank](const auto& fc){
+      auto e = grid().entity(fc);
       e.impl().hostEntity()->info().rank = rank( e );
     });
   }
 
-  template <int codim, class F>
-  void forCodim(const F& f)
+  template <int edim, class F>
+  void forEntityDim(const F& f)
   {
-    if constexpr (codim == 0)
+    if constexpr (edim == dim)
     {
       if constexpr (dim == 2)
         for (auto fc = grid().getHostGrid().finite_faces_begin(); fc != grid().getHostGrid().finite_faces_end(); ++fc)
-          f( grid().entity(fc) );
+          f( fc );
 
       if constexpr (dim == 3)
         for (auto fc = grid().getHostGrid().finite_cells_begin(); fc != grid().getHostGrid().finite_cells_end(); ++fc)
-          f( grid().entity(fc) );
+          f( fc );
     }
 
-    if constexpr (codim == 1)
-    {
-      if constexpr (dim == 2)
-        for (auto fc = grid().getHostGrid().finite_edges_begin(); fc != grid().getHostGrid().finite_edges_end(); ++fc)
-          f( grid().entity(*fc) );
+    if constexpr (edim == 0)
+      for (auto fc = grid().getHostGrid().finite_vertices_begin(); fc != grid().getHostGrid().finite_vertices_end(); ++fc)
+        f( fc );
 
-      if constexpr (dim == 3)
-        for (auto fc = grid().getHostGrid().finite_facets_begin(); fc != grid().getHostGrid().finite_facets_end(); ++fc)
-          f( grid().entity(fc) );
-    }
+    if constexpr (edim == 1)
+      for (auto fc = grid().getHostGrid().finite_edges_begin(); fc != grid().getHostGrid().finite_edges_end(); ++fc)
+        f( *fc );
 
-    if constexpr (codim == 2)
-    {
-      if constexpr (dim == 2)
-        for (auto fc = grid().getHostGrid().finite_vertices_begin(); fc != grid().getHostGrid().finite_vertices_end(); ++fc)
-          f( grid().entity(fc) );
-
-      if constexpr (dim == 3)
-        for (auto fc = grid().getHostGrid().finite_edges_begin(); fc != grid().getHostGrid().finite_edges_end(); ++fc)
-          f( grid().entity(fc) );
-    }
-
-    if constexpr (codim == 3)
-    {
-      if constexpr (dim == 3)
-        for (auto fc = grid().getHostGrid().finite_vertices_begin(); fc != grid().getHostGrid().finite_vertices_end(); ++fc)
-          f( grid().entity(fc) );
-    }
+    if constexpr (dim == 3 && edim == 2)
+      for (auto fc = grid().getHostGrid().finite_facets_begin(); fc != grid().getHostGrid().finite_facets_end(); ++fc)
+        f( *fc );
   }
 
   const Grid& grid() const { return grid_; }
 
   std::array<double, 2> xbounds_;
   std::array<std::unordered_map<IdType, int>, dim+1> partition_;
-//  std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
+  std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
   const Grid& grid_;
 };
 

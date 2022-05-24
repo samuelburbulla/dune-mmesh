@@ -322,7 +322,10 @@ namespace Dune
     //! Return id
     IdType id() const
     {
-      return hostEntity_->info().id;
+      if constexpr ( codim == dim )
+        return hostEntity_->info().id;
+      else
+        return grid().globalIdSet().id( *this );
     }
 
     //! returns the grid

@@ -8,16 +8,16 @@
 namespace Dune
 {
   /**
-   * \brief Elements incident to a given vertex.
+   * \brief Elements incident to a given entity.
    */
-  template<typename Vertex>
-  inline auto incidentElements(const Vertex& vertex)
+  template<typename Entity>
+  inline auto incidentElements(const Entity& entity)
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    -> IteratorRange<decltype(vertex.impl().incidentBegin())>
+    -> IteratorRange<decltype(entity.impl().incidentBegin())>
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
-    static_assert(Vertex::mydimension == 0, "Incident element range iterator is only available for vertices!");
-    return IteratorRange<decltype(vertex.impl().incidentBegin())>(vertex.impl().incidentBegin(),vertex.impl().incidentEnd());
+    static_assert(Entity::mydimension <= 1, "Incident element range iterator is only available for vertices and edges!");
+    return IteratorRange<decltype(entity.impl().incidentBegin())>(entity.impl().incidentBegin(), entity.impl().incidentEnd());
   }
 
   /**

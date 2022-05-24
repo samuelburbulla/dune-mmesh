@@ -22,6 +22,14 @@ namespace Dune
 
   //! Forward declaration
   template<class GridImp, int dim>
+  class MMeshEdgeIncidentIteratorImp;
+
+  //!  The Incident Entity Iterator alias for edges
+  template<class Grid>
+  using MMeshEdgeIncidentIterator = EntityIterator<0, Grid, MMeshEdgeIncidentIteratorImp<Grid, Grid::dimension>>;
+
+  //! Forward declaration
+  template<class GridImp, int dim>
   class MMeshIncidentFacetsIteratorImp;
 
   //!  The Incident Facets Iterator alias
@@ -163,6 +171,69 @@ namespace Dune
 
     //! equality
     bool equals(const MMeshIncidentIteratorImp& iter) const {
+      return i_ == iter.i_;
+    }
+
+  private:
+    const GridImp* mMesh_;
+    ElementContainer elementContainer_;
+    std::size_t i_;
+  };
+
+
+  //! 3D
+  template<class GridImp>
+  class MMeshEdgeIncidentIteratorImp<GridImp, 3>
+  {
+  private:
+    //! The type of the requested vertex entity
+    typedef typename GridImp::template HostGridEntity<GridImp::dimension-1> HostGridEdge;
+    typedef typename GridImp::template HostGridEntity<0> HostGridEntity;
+
+    //! The type of the element circulator
+    using Circulator = typename GridImp::HostGridType::Cell_circulator;
+    using ElementContainer = std::vector<HostGridEntity>;
+
+  public:
+    enum {codimension = 0};
+
+    typedef typename GridImp::template Codim<0>::Entity Entity;
+
+    explicit MMeshEdgeIncidentIteratorImp(const GridImp* mMesh, const HostGridEdge& hostEntity)
+    : mMesh_(mMesh),
+    i_(0)
+    {
+      Circulator circulator = mMesh_->getHostGrid().incident_cells( hostEntity );
+      for(std::size_t i = 0; i < CGAL::circulator_size(circulator); circulator++, i++)
+        if (!mMesh->getHostGrid().is_infinite(circulator))
+          elementContainer_.push_back(circulator);
+    }
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     *  \param mMesh  pointer to grid instance
+     */
+    explicit MMeshEdgeIncidentIteratorImp(const GridImp* mMesh, const HostGridEdge& hostEntity, bool endDummy)
+    : mMesh_(mMesh)
+    {
+      Circulator circulator = mMesh_->getHostGrid().incident_cells( hostEntity );
+      for(std::size_t i = 0; i < CGAL::circulator_size(circulator); circulator++, i++)
+        if (!mMesh->getHostGrid().is_infinite(circulator))
+          ++i_;
+    }
+
+    //! prefix increment
+    void increment() {
+      ++i_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ mMesh_, elementContainer_[i_] }};
+    }
+
+    //! equality
+    bool equals(const MMeshEdgeIncidentIteratorImp& iter) const {
       return i_ == iter.i_;
     }
 

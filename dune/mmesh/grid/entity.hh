@@ -269,6 +269,22 @@ namespace Dune
       return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
+    //! First incident element
+    template <bool enable = true>
+    std::enable_if_t< codim == dim-1 && enable, MMeshEdgeIncidentIterator<GridImp> >
+    incidentBegin () const {
+      using Impl = typename MMeshEdgeIncidentIterator<GridImp>::Implementation;
+      return MMeshEdgeIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_) );
+    }
+
+    //! Last incident element
+    template <bool enable = true>
+    std::enable_if_t< codim == dim-1 && enable, MMeshEdgeIncidentIterator<GridImp> >
+    incidentEnd () const {
+      using Impl = typename MMeshEdgeIncidentIterator<GridImp>::Implementation;
+      return MMeshEdgeIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
+    }
+
     //! First incident facet
     template <bool enable = true>
     std::enable_if_t< codim == dim && enable, MMeshIncidentFacetsIterator<GridImp> >
