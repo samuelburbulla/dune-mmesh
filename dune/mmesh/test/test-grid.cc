@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   using Grid = Dune::MovingMesh<dim>;
 
   using GridFactory = Dune::GmshGridFactory< Grid >;
-  GridFactory gridFactory( (dim == 2) ? "grids/line2d.msh" : "grids/plane3d.msh" );
+  GridFactory gridFactory( (dim == 2) ? "grids/mimesh2d.msh" : "grids/plane3d.msh" );
 
   Grid& grid = *gridFactory.grid();
   const auto& igrid = grid.interfaceGrid();
@@ -49,10 +49,36 @@ int main(int argc, char *argv[])
   // Call grid check for interface grid
   gridcheck( igrid );
 
+  auto getElementPartition = [](const auto& grid)
+  {
+    const auto& indexSet = grid.leafIndexSet();
+    std::vector<int> partition (grid.size(0));
+    for (const auto& e : elements(grid.leafGridView(), Partitions::all))
+      partition[indexSet.index(e)] = e.partitionType();
+    return partition;
+  };
+
+  auto getVertexPartition = [](const auto& grid, int dim)
+  {
+    const auto& indexSet = grid.leafIndexSet();
+    std::vector<int> vpartition (grid.size(dim));
+    for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
+      vpartition[indexSet.index(v)] = v.partitionType();
+    return vpartition;
+  };
+
   VTKWriter vtkWriter( grid.leafGridView() );
+  auto ep = getElementPartition(grid);
+  vtkWriter.addCellData( ep, "partition" );
+  auto vp = getVertexPartition(grid, dim);
+  vtkWriter.addVertexData(vp, "partition");
   vtkWriter.write("test-grid");
 
   VTKWriter ivtkWriter( igrid.leafGridView() );
+  auto iep = getElementPartition(igrid);
+  ivtkWriter.addCellData( iep, "partition" );
+  auto ivp = getVertexPartition(igrid, dim-1);
+  ivtkWriter.addVertexData( ivp, "partition");
   ivtkWriter.write("test-igrid");
 
   return EXIT_SUCCESS;

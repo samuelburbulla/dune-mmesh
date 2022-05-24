@@ -61,7 +61,7 @@ struct PartitionHelper
             if (is.outside().partitionType() == InteriorEntity)
               return true;
       }
-      // On the interface, entities are ghost if all adjacent bulk elements are interior or ghost
+      // On the interface, entities are interior or ghost if some adjacent bulk element is interior
       else
       {
         for (std::size_t i = 0; i < e.subEntities(dim); ++i)
@@ -107,15 +107,32 @@ struct PartitionHelper
     return false;
   }
 
+  template <class Grid>
+  static std::array<double, 2> computeXBounds(const Grid& grid)
+  {
+    std::array<double, 2> xbounds = {1e100, -1e100};
+
+    auto vit = grid.getHostGrid().finite_vertices_begin();
+    auto vend = grid.getHostGrid().finite_vertices_end();
+    for (; vit != vend; vit++)
+    {
+      auto x = vit->point()[0];
+      xbounds[0] = std::min(xbounds[0], x);
+      xbounds[1] = std::max(xbounds[1], x);
+    }
+    return xbounds;
+  }
+
   template <class Entity>
   static int rank(const Entity& e)
   {
     int size = e.impl().grid().comm().size();
-    double xmin = 0.0, xmax = 1.0;
-    double dx = (xmax - xmin) / size;
+    static std::array<double, 2> xbounds = computeXBounds(e.impl().grid());
+    double dx = (xbounds[1] - xbounds[0]) / size;
 
+    auto x = e.geometry().center()[0];
     for (int i = 0; i < size; ++i)
-      if (e.geometry().center()[0] <= xmin + (i+1) * dx)
+      if (x <= xbounds[0] + (i+1) * dx)
         return i;
     return 0;
   }

@@ -62,7 +62,7 @@ namespace Dune
       std::array<std::size_t, dimensionworld> ids;
       for( int i = 0; i < dimensionworld; ++i )
         try {
-          ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().index );
+          ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().id );
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
@@ -90,8 +90,8 @@ namespace Dune
 
       std::array<std::size_t, 2> ids;
       try {
-          ids[0] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.second)->info().index );
-          ids[1] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.third)->info().index );
+          ids[0] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.second)->info().id );
+          ids[1] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.third)->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -114,7 +114,7 @@ namespace Dune
       auto hostEntity = e.impl().hostEntity();
       IndexType index;
       try {
-        index = vertexIndices_.at( hostEntity->info().index );
+        index = vertexIndices_.at( hostEntity->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -137,7 +137,7 @@ namespace Dune
       assert( i == 0 && codim == dimension );
       const HostGridEntity<dimension> hostEntity = e.impl().hostEntity();
       try {
-        return vertexIndices_.at( hostEntity->info().index );
+        return vertexIndices_.at( hostEntity->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -236,8 +236,8 @@ namespace Dune
           auto vh0 = eh->first->vertex((eh->second+1)%3);
           auto vh1 = eh->first->vertex((eh->second+2)%3);
 
-          std::size_t idx0 = vh0->info().index;
-          std::size_t idx1 = vh1->info().index;
+          std::size_t idx0 = vh0->info().id;
+          std::size_t idx1 = vh1->info().id;
 
           addVertexIndex( idx0, vertexCount );
           addVertexIndex( idx1, vertexCount );
@@ -289,7 +289,7 @@ namespace Dune
           std::array<std::size_t, dimensionworld> ids;
           for( int i = 0; i < dimensionworld; ++i )
           {
-            std::size_t idx = eh->first->vertex((eh->second+i+1)%4)->info().index;
+            std::size_t idx = eh->first->vertex((eh->second+i+1)%4)->info().id;
             addVertexIndex( idx, vertexCount );
             try {
               ids[i] = vertexIndices_.at( idx );

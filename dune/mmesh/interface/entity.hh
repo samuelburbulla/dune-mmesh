@@ -604,14 +604,14 @@ namespace Dune
       auto pIn = is.inside().partitionType();
       if (is.neighbor())
       {
-        auto pOut = is.inside().partitionType();
+        auto pOut = is.outside().partitionType();
         if (pIn == InteriorEntity && pOut == InteriorEntity)
           return InteriorEntity;
 
         if (pIn == GhostEntity && pOut == GhostEntity)
           return GhostEntity;
 
-        if (is.inside().impl().hostEntity()->info().rank < is.outside().impl().hostEntity()->info().rank)
+        if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
           return InteriorEntity;
         else
           return GhostEntity;
