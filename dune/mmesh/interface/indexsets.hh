@@ -278,6 +278,7 @@ namespace Dune
 
       vertexIndices_.clear();
       indexMap_.clear();
+      edgeIndexMap_.clear();
 
       // Count the finite edges and build index map
       std::size_t vertexCount = 0;

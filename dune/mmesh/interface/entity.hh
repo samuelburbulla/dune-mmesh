@@ -50,6 +50,9 @@ namespace Dune
     // equivalent entity in the host grid
     typedef typename GridImp::template MMeshInterfaceEntity<codim> MMeshInterfaceEntity;
 
+    //! define the type used for persistent indices
+    using IdType = MMeshImpl::MultiId;
+
   public:
     typedef typename GridImp::template Codim<codim>::Geometry Geometry;
 
@@ -142,25 +145,7 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
-      if constexpr (codim == dim)
-      {
-        int interior = 0, count = 0;
-        for (const auto& incident : incidentInterfaceElements( grid().entity(hostEntity_) ))
-        {
-          count++;
-          if (incident.partitionType() == InteriorEntity)
-            interior++;
-        }
-
-        if (interior == count)
-          return InteriorEntity;
-        else if (interior == 0)
-          return GhostEntity;
-        else
-          return BorderEntity;
-      }
-      else
-        return InteriorEntity;
+      return grid().getMMesh().partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Return the number of subEntities of codimension codim
@@ -332,6 +317,12 @@ namespace Dune
     const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
+    }
+
+    //! Return id
+    IdType id() const
+    {
+      return hostEntity_->info().id;
     }
 
     //! returns the grid
@@ -599,25 +590,7 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
-      const auto is = grid().getMMesh().asIntersection( *this );
-
-      auto pIn = is.inside().partitionType();
-      if (is.neighbor())
-      {
-        auto pOut = is.outside().partitionType();
-        if (pIn == InteriorEntity && pOut == InteriorEntity)
-          return InteriorEntity;
-
-        if (pIn == GhostEntity && pOut == GhostEntity)
-          return GhostEntity;
-
-        if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
-          return InteriorEntity;
-        else
-          return GhostEntity;
-      }
-      else
-        return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
+      return grid().getMMesh().partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Geometry of this entity

@@ -259,15 +259,15 @@ namespace Dune
     typedef typename GridImp::template Codim<0>::Entity Entity;
 
     explicit MMeshIncidentInterfaceElementsIteratorImp(const GridImp* igrid, const HostGridVertex& hostEntity)
-    : mMesh_(&igrid->getMMesh()),
+    : igrid_(igrid),
       i_(0)
     {
       ElementOutput elements;
-      mMesh_->getHostGrid().finite_incident_facets( hostEntity, std::back_inserter(elements) );
+      mMesh().getHostGrid().finite_incident_facets( hostEntity, std::back_inserter(elements) );
 
       typename ElementOutput::iterator fit;
       for(fit = elements.begin(); fit != elements.end(); fit++)
-        if ( mMesh_->isInterface( mMesh_->entity( *fit ) ) )
+        if ( mMesh().isInterface( mMesh().entity( *fit ) ) )
           elementContainer_.push_back( *fit );
     }
 
@@ -275,15 +275,15 @@ namespace Dune
      *  \param endDummy      Here only to distinguish it from the other constructor
      */
     explicit MMeshIncidentInterfaceElementsIteratorImp(const GridImp* igrid, const HostGridVertex& hostEntity, bool endDummy)
-    : mMesh_(&igrid->getMMesh()),
+    : igrid_(igrid),
       i_(0)
     {
       ElementOutput elements;
-      mMesh_->getHostGrid().finite_incident_facets( hostEntity, std::back_inserter(elements) );
+      mMesh().getHostGrid().finite_incident_facets( hostEntity, std::back_inserter(elements) );
 
       typename ElementOutput::iterator fit;
       for(fit = elements.begin(); fit != elements.end(); fit++)
-        if ( mMesh_->isInterface( mMesh_->entity( *fit ) ) )
+        if ( mMesh().isInterface( mMesh().entity( *fit ) ) )
           ++i_;
     }
 
@@ -294,7 +294,7 @@ namespace Dune
 
     //! dereferencing
     Entity dereference() const {
-      return Entity {{ &mMesh_->interfaceGrid(), elementContainer_[i_] }};
+      return Entity {{ igrid_, elementContainer_[i_] }};
     }
 
     //! equality
@@ -303,7 +303,9 @@ namespace Dune
     }
 
   private:
-    const typename GridImp::MMeshType* mMesh_;
+    const typename GridImp::MMeshType& mMesh() const { return igrid_->getMMesh(); }
+
+    const GridImp* igrid_;
     ElementContainer elementContainer_;
     std::size_t i_;
   };

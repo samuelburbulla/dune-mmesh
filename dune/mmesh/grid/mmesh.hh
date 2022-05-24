@@ -262,7 +262,8 @@ namespace Dune
      : hostgrid_(hostgrid),
        boundarySegments_(boundarySegments),
        boundaryIds_(boundaryIds),
-       interfaceSegments_(interfaceSegments)
+       interfaceSegments_(interfaceSegments),
+       partitionHelper_(*this)
     {
       leafIndexSet_ = std::make_unique<MMeshLeafIndexSet<const GridImp>>( This() );
       globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
@@ -1691,12 +1692,7 @@ namespace Dune
      */
     void loadBalance()
     {
-      for ( auto fc = hostgrid_.finite_faces_begin(); fc != hostgrid_.finite_faces_end(); ++fc) // TODO 3D
-      {
-        const auto element = entity(fc);
-        int rank = PartitionHelper::rank( element );
-        element.impl().setRank( rank );
-      }
+      partitionHelper_.distribute();
       update();
     };
 
@@ -1793,6 +1789,11 @@ namespace Dune
       return sequence_;
     }
 
+    const PartitionHelper<GridImp>& partitionHelper() const
+    {
+      return partitionHelper_;
+    }
+
   private:
     // count how much elements where marked
     mutable int coarsenMarked_;
@@ -1807,6 +1808,7 @@ namespace Dune
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
     MMeshCollectiveCommunication ccobj;
+    PartitionHelper<GridImp> partitionHelper_;
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;

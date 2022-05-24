@@ -640,6 +640,11 @@ namespace Dune
       return sequence_;
     }
 
+    const auto& partitionHelper() const
+    {
+      return mMesh_->partitionHelper();
+    }
+
   private:
     std::unique_ptr<MMeshInterfaceGridLeafIndexSet<const GridImp>> leafIndexSet_;
 

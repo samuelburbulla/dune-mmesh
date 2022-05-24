@@ -183,54 +183,7 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
-      if constexpr (codim == dim)
-      {
-        if (grid().comm().size() == 1)
-          return InteriorEntity;
-
-        std::size_t interior = 0, count = 0;
-        for (const auto& e : incidentElements( Entity(*this) ))
-        {
-          count++;
-          if (e.partitionType() == InteriorEntity)
-            interior++;
-        }
-
-        if (interior == count)
-          return InteriorEntity;
-        else if (interior == 0)
-          return GhostEntity;
-        else
-          return BorderEntity;
-      }
-      else if constexpr (codim == 1)
-      {
-        const auto is = grid().asIntersection( *this );
-
-        auto pIn = is.inside().partitionType();
-        if (is.neighbor())
-        {
-          auto pOut = is.inside().partitionType();
-          if (pIn == InteriorEntity && pOut == InteriorEntity)
-            return InteriorEntity;
-
-          if ((pIn == InteriorEntity && pOut == GhostEntity)
-            || (pIn == GhostEntity && pOut == InteriorEntity))
-            return BorderEntity;
-
-          return GhostEntity;
-        }
-        else
-          return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
-      }
-      else
-        return InteriorEntity;
-    }
-
-    //! Set the partition type for parallel computing
-    void setRank (int rank)
-    {
-      hostEntity_->info().rank = rank;
+      return mMesh_->partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Return the number of subEntities of codimension codim
@@ -663,16 +616,7 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
-      if (hostEntity_->info().rank == grid().comm().rank())
-        return InteriorEntity;
-      else
-        return GhostEntity;
-    }
-
-    //! Set the partition type for parallel computing
-    void setRank (int rank) const
-    {
-      hostEntity_->info().rank = rank;
+      return mMesh_->partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Geometry of this entity

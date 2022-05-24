@@ -38,16 +38,16 @@ int main(int argc, char *argv[])
 
   std::cout << "Rank " << grid.comm().rank() << ": Elements " << grid.size(0) << " (" << grid.ghostSize(0) << " ghost)" << std::endl;
   std::cout << "Rank " << grid.comm().rank() << ": Facets " << grid.size(1) << " (" << grid.ghostSize(1) << " ghost)" << std::endl;
-  std::cout << "Rank " << grid.comm().rank() << ": Vertices " << grid.size(2) << " (" << grid.ghostSize(2) << " ghost)" << std::endl;
+  std::cout << "Rank " << grid.comm().rank() << ": Vertices " << grid.size(dim) << " (" << grid.ghostSize(dim) << " ghost)" << std::endl;
 
   std::cout << "Interface Rank " << grid.comm().rank() << ": Elements " << igrid.size(0) << " (" << igrid.ghostSize(0) << " ghost)" << std::endl;
-  std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(1) << " (" << igrid.ghostSize(1) << " ghost)" << std::endl;
+  std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(dim-1) << " (" << igrid.ghostSize(dim-1) << " ghost)" << std::endl;
 
   // Call gridcheck from dune-grid
   gridcheck( grid );
 
   // Call grid check for interface grid
-  gridcheck( igrid );
+//  gridcheck( igrid );
 
   auto getElementPartition = [](const auto& grid)
   {

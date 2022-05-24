@@ -290,19 +290,19 @@ namespace Dune
       // Store the finite facet indices in a map
       codimIndexMap_[0].clear();
       std::size_t facetCount = 0;
-      for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
-        codimIndexMap_[0][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = facetCount++;
+      for (const auto& facet : facets(grid_->leafGridView(), Partitions::all))
+        codimIndexMap_[0][ grid_->globalIdSet().id( facet ) ] = facetCount++;
 
       // Store the finite edge indices in a map
       codimIndexMap_[1].clear();
       std::size_t edgeCount = 0;
-      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        codimIndexMap_[1][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = edgeCount++;
+      for (const auto& edge : edges(grid_->leafGridView(), Partitions::all))
+        codimIndexMap_[1][ grid_->globalIdSet().id( edge ) ] = edgeCount++;
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;
-      sizeOfCodim_[1] = hostgrid.number_of_finite_facets();
-      sizeOfCodim_[2] = hostgrid.number_of_finite_edges();
+      sizeOfCodim_[1] = facetCount;
+      sizeOfCodim_[2] = edgeCount;
       sizeOfCodim_[3] = vertexCount;
     }
 
