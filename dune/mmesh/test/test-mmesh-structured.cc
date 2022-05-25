@@ -51,6 +51,7 @@ void checkProperty( const std::string &name, const T& resultValue, const T& test
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     std::cout << "-- MMesh implementation test --" << std::endl;
 
     std::cout << "Build structured grid..." << std::endl;
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
     // Test MMesh index set
     checkProperty( "size of element index set",
                    indexSet.size(0),
-                   std::size_t ( pow(num_elements_per_dim,dim)*Factorial<dim>::factorial ) );
+                   std::size_t ( pow(num_elements_per_dim,dim)*factorial(dim) ) );
     checkProperty( "size of vertex index set",
                    indexSet.size(dim),
                    std::size_t ( pow(num_elements_per_dim+1,dim) ) );

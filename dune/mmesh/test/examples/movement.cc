@@ -15,8 +15,9 @@
 // dune-mmesh includes
 #include <dune/mmesh/mmesh.hh>
 
-int main()
+int main(int argc, char** argv)
 {
+  Dune::MPIHelper::instance(argc, argv);
   try
   {
     static constexpr int dim = GRIDDIM;

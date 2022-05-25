@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   using Grid = Dune::MovingMesh<dim>;
 
   using GridFactory = Dune::GmshGridFactory< Grid >;
-  GridFactory gridFactory( (dim == 2) ? "grids/mimesh2d.msh" : "grids/plane3d.msh" );
+  GridFactory gridFactory( (dim == 2) ? "grids/junction2d.msh" : "grids/plane3d.msh" );
 
   Grid& grid = *gridFactory.grid();
   const auto& igrid = grid.interfaceGrid();

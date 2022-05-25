@@ -632,6 +632,10 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
+      // for caching entities
+      if (hostEntity_ == decltype(hostEntity_)())
+        return InteriorEntity;
+
       return mMesh_->partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 

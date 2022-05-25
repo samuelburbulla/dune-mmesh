@@ -4,8 +4,9 @@
 #include <config.h>
 #include <dune/mmesh/mmesh.hh>
 
-int main()
+int main(int argc, char** argv)
 {
+  Dune::MPIHelper::instance(argc, argv);
   using Triangulation = Dune::MMeshDefaults::Triangulation<2>::type;
   // alternative: using Triangulation = Dune::MMeshDefaults::Delaunay<2>::type;
 

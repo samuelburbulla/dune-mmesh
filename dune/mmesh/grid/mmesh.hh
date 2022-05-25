@@ -1993,13 +1993,19 @@ namespace Dune
       static const unsigned int topologyId = Dune::GeometryType::simplex;
     };
 
-    /** \brief MMesh can not communicate
+    /** \brief MMesh can communicate on codim 0
     \ingroup MMesh
     */
     template<class HostGrid, int dim, int codim>
     struct canCommunicate<MMesh<HostGrid, dim>, codim>
     {
       static const bool v = false;
+    };
+
+    template<class HostGrid, int dim>
+    struct canCommunicate<MMesh<HostGrid, dim>, 0>
+    {
+      static const bool v = true;
     };
 
     /** \brief MMesh has entities for some codimensions

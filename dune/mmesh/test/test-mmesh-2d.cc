@@ -70,6 +70,7 @@ void checkProperty( const std::string &name, const T& resultValue, const T& test
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     std::cout << "-- MMesh implementation test --" << std::endl;
 
     std::cout << "Build simple grid..." << std::endl;

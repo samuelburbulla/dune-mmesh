@@ -68,6 +68,7 @@ void checkProperty( const std::string &name, const T& resultValue, const T& test
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     std::cout << "-- MMesh implementation test for 3D --" << std::endl;
 
     std::cout << "Build simple grid..." << std::endl;
@@ -91,7 +92,7 @@ int main(int argc, char *argv[])
     checkProperty( "size of element index set", indexSet.size(0), 2ul );
     checkProperty( "size of face index set", indexSet.size(1), 7ul );
     checkProperty( "size of edge index set", indexSet.size(2), 9ul );
-    checkProperty( "size of vertex index set", indexSet.size(3), 5ul );
+    checkProperty( "size of vertex index set", indexSet.size(3), 6ul );
 
     // Test iterators
     std::size_t countCells = 0;
@@ -129,7 +130,7 @@ int main(int argc, char *argv[])
 
     // Test MMesh mcmgmapper
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
-    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5ul );
+    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 6ul );
 
     int elementCount = 0;
     for(auto e : elements(gridView))

@@ -429,9 +429,7 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_end())
-    {
-      hostLeafIterator_--; // a bit surprisingly, we have to do this to match the number of vertices
-    }
+    {}
 
     //! prefix increment
     void increment() {
@@ -454,7 +452,7 @@ namespace Dune
     //! return if this iterator should further be incremented
     bool proceed()
     {
-      if (hostLeafIterator_ == --HostGridLeafIterator(mMesh_->getHostGrid().finite_vertices_end()))
+      if (hostLeafIterator_ == HostGridLeafIterator(mMesh_->getHostGrid().finite_vertices_end()))
         return false;
       return !mMesh_->partitionHelper().contains(pitype, dereference());
     }

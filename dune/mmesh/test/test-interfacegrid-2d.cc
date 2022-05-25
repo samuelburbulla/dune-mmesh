@@ -71,6 +71,7 @@ void checkProperty( const std::string &name, const T& resultValue, const T& test
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     std::cout << "-- MMesh interface implementation test --" << std::endl;
 
     std::cout << "Build two cell grid..." << std::endl;
