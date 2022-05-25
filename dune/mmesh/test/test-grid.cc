@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
   gridcheck( grid );
 
   // Call grid check for interface grid
-//  gridcheck( igrid );
+  gridcheck( igrid );
 
   auto getElementPartition = [](const auto& grid)
   {

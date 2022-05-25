@@ -310,6 +310,84 @@ namespace Dune
     std::size_t i_;
   };
 
+
+  //! Forward declaration
+  template<class GridImp, int dim>
+  class MMeshEdgeIncidentInterfaceElementsIteratorImp;
+
+  //!  The Incident Interface Elements Iterator alias
+  template<class Grid>
+  using MMeshEdgeIncidentInterfaceElementsIterator = EntityIterator<0, Grid,
+    MMeshEdgeIncidentInterfaceElementsIteratorImp<Grid, Grid::dimension>>;
+
+  //! 3D
+  template<class GridImp>
+  class MMeshEdgeIncidentInterfaceElementsIteratorImp<GridImp, 2>
+  {
+  private:
+    //! The type of the requested element
+    typedef typename GridImp::template MMeshInterfaceEntity<0> HostGridElement;
+
+    //! The type of the vertex entity
+    typedef typename GridImp::EdgeHandle HostGridEdge;
+
+    //! The type of the facet ciruclator
+    using Circulator = typename GridImp::HostGridType::Facet_circulator;
+
+    //! The type of the element container
+    using ElementContainer = std::vector<HostGridElement>;
+
+  public:
+    enum {codimension = 0};
+
+    typedef typename GridImp::template Codim<0>::Entity Entity;
+
+    explicit MMeshEdgeIncidentInterfaceElementsIteratorImp(const GridImp* igrid, const HostGridEdge& hostEntity)
+    : igrid_(igrid),
+    i_(0)
+    {
+      Circulator circulator = mMesh().getHostGrid().incident_facets(hostEntity);
+      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+        if ( mMesh().isInterface( mMesh().entity( *circulator ) ) )
+          elementContainer_.push_back( *circulator );
+    }
+
+    /** \brief Constructor which creates the end iterator
+     *  \param endDummy      Here only to distinguish it from the other constructor
+     */
+    explicit MMeshEdgeIncidentInterfaceElementsIteratorImp(const GridImp* igrid, const HostGridEdge& hostEntity, bool endDummy)
+    : igrid_(igrid),
+    i_(0)
+    {
+      Circulator circulator = mMesh().getHostGrid().incident_facets(hostEntity);
+      for ( std::size_t i = 0; i < CGAL::circulator_size(circulator); ++i, ++circulator )
+        if ( mMesh().isInterface( mMesh().entity( *circulator ) ) )
+          ++i_;
+    }
+
+    //! prefix increment
+    void increment() {
+      ++i_;
+    }
+
+    //! dereferencing
+    Entity dereference() const {
+      return Entity {{ igrid_, elementContainer_[i_] }};
+    }
+
+    //! equality
+    bool equals(const MMeshEdgeIncidentInterfaceElementsIteratorImp& iter) const {
+      return i_ == iter.i_;
+    }
+
+  private:
+    const typename GridImp::MMeshType& mMesh() const { return igrid_->getMMesh(); }
+
+    const GridImp* igrid_;
+    ElementContainer elementContainer_;
+    std::size_t i_;
+  };
+
 }  // namespace Dune
 
 #endif

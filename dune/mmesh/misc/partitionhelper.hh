@@ -111,7 +111,7 @@ private:
   //! Compute partition type for every entity
   void computePartitions()
   {
-    for (int i = 0; i < dim+1; ++i)
+    for (int i = 0; i <= dim; ++i)
       partition_[i].clear();
 
     // Set elements
@@ -225,7 +225,7 @@ private:
       if (interior == count)
         partition(v) = 0;
 
-      // ghost
+      // border
       else if (interior > 0 and ghost > 0)
         partition(v) = 1;
 
@@ -242,14 +242,111 @@ private:
   //! Compute partition type for every interface entity
   void computeInterfacePartitions()
   {
-//    for (int i = 0; i < dim; ++i)
-//      interfacePartition_[i].clear();
-//
-//    // Set elements
-//    forEntityDim<dim-1>([this](const auto& fc){
-//      const auto e = grid().interfaceGrid().entity(fc);
-//      partition(e) = 0;
-//    });
+    static constexpr int idim = dim-1;
+
+    for (int i = 0; i <= idim; ++i)
+      interfacePartition_[i].clear();
+
+    // Set interior elements
+    forEntityDim<idim>([this](const auto& fc){
+      if (!grid().isInterface( grid().entity(fc) ))
+        return;
+
+      const auto e = grid().interfaceGrid().entity(fc);
+      const auto is = grid().asIntersection(e);
+
+      if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
+        partition(e) = 0;
+      else
+        partition(e) = -1;
+    });
+
+    // Set ghost elements
+    forEntityDim<idim-1>([this](const auto& fc){
+      if (!grid().isInterface( grid().entity(fc) ))
+        return;
+
+      const auto e = grid().interfaceGrid().entity(fc);
+
+      bool haveIncidentInterior = [this, &e](){
+        for (const auto& incident : incidentInterfaceElements(e))
+          if (partition(incident) == 0)
+            return true;
+        return false;
+      }();
+
+      if (haveIncidentInterior)
+        for (const auto& incident : incidentInterfaceElements(e))
+          if (partition(incident) == -1)
+            partition(incident) = 2;
+    });
+
+    // Set facets
+    forEntityDim<idim-1>([this](const auto& fc){
+      if (!grid().isInterface( grid().entity(fc) ))
+        return;
+
+      const auto e = grid().interfaceGrid().entity(fc);
+
+      std::size_t count = 0, interior = 0, ghost = 0;
+      for (const auto& incident : incidentInterfaceElements(e))
+      {
+        count++;
+        if (partition(incident) == 0) interior++;
+        if (partition(incident) == 2) ghost++;
+      }
+
+      // interior
+      if (interior == count)
+        partition(e) = 0;
+
+      // border
+      else if (interior > 0 and ghost > 0)
+        partition(e) = 1;
+
+      // ghost
+      else if (ghost > 0)
+        partition(e) = 2;
+
+      // none
+      else
+        partition(e) = -1;
+    });
+
+    // Set vertices in 3d
+    if constexpr (dim == 3)
+    {
+      forEntityDim<idim-2>([this](const auto& fc){
+        if (!grid().isInterface( grid().entity(fc) ))
+          return;
+
+        const auto v = grid().interfaceGrid().entity(fc);
+
+        std::size_t count = 0, interior = 0, ghost = 0;
+        for (const auto& incident : incidentInterfaceElements(v))
+        {
+          count++;
+          if (partition(incident) == 0) interior++;
+          if (partition(incident) == 2) ghost++;
+        }
+
+        // interior
+        if (interior == count)
+          partition(v) = 0;
+
+        // border
+        else if (interior > 0 and ghost > 0)
+          partition(v) = 1;
+
+        // ghost
+        else if (ghost > 0)
+          partition(v) = 2;
+
+        // none
+        else
+          partition(v) = -1;
+      });
+    }
   }
 
   //! Set rank for every entity. We use a naiv partition slicing the x-axis here.
@@ -321,220 +418,3 @@ private:
 } // end namespace Dune
 
 #endif
-
-
-
-
-//
-//static constexpr int codim = Entity::codimension;
-//static constexpr int edim = Entity::dimension;
-//static constexpr int dimworld = Entity::Geometry::coorddimension;
-//
-//if constexpr (codim == 0)
-//{
-//  if (e.impl().hostEntity()->info().rank == grid().comm().rank())
-//    return InteriorEntity;
-//  else
-//    return GhostEntity;
-//}
-//
-//if constexpr (edim == dimworld)
-//{
-//  if constexpr (codim == dim)
-//  {
-//    if (grid().comm().size() == 1)
-//      return InteriorEntity;
-//
-//    std::size_t interior = 0, count = 0;
-//    for (const auto& e : incidentElements( e ))
-//    {
-//      count++;
-//      if (e.partitionType() == InteriorEntity)
-//        interior++;
-//    }
-//
-//    if (interior == count)
-//      return InteriorEntity;
-//    else if (interior == 0)
-//      return GhostEntity;
-//    else
-//      return BorderEntity;
-//  }
-//  else if constexpr (codim == 1)
-//  {
-//    const auto is = grid().asIntersection( e );
-//
-//    auto pIn = is.inside().partitionType();
-//    if (is.neighbor())
-//    {
-//      auto pOut = is.inside().partitionType();
-//      if (pIn == InteriorEntity && pOut == InteriorEntity)
-//        return InteriorEntity;
-//
-//      if ((pIn == InteriorEntity && pOut == GhostEntity)
-//          || (pIn == GhostEntity && pOut == InteriorEntity))
-//        return BorderEntity;
-//
-//      return GhostEntity;
-//    }
-//    else
-//      return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
-//  }
-//  else if constexpr (codim == 2)
-//  {
-//    return InteriorEntity; // TODO
-//  }
-//  else
-//    return InteriorEntity;
-//}
-//else // (edim != dimworld)
-//{
-//  if constexpr (codim == 0)
-//  {
-//    const auto is = grid().getMMesh().asIntersection( *this );
-//
-//    auto pIn = is.inside().partitionType();
-//    if (is.neighbor())
-//    {
-//      auto pOut = is.outside().partitionType();
-//      if (pIn == InteriorEntity && pOut == InteriorEntity)
-//        return InteriorEntity;
-//
-//      if (pIn == GhostEntity && pOut == GhostEntity)
-//        return GhostEntity;
-//
-//      if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
-//        return InteriorEntity;
-//      else
-//        return GhostEntity;
-//    }
-//    else
-//      return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
-//  }
-//  else
-//  {
-//    if constexpr (codim == dim)
-//    {
-//      int interior = 0, count = 0;
-//      for (const auto& incident : incidentInterfaceElements( e ))
-//      {
-//        count++;
-//        if (incident.partitionType() == InteriorEntity)
-//          interior++;
-//      }
-//
-//      if (interior == count)
-//        return InteriorEntity;
-//      else if (interior == 0)
-//        return GhostEntity;
-//      else
-//        return BorderEntity;
-//    }
-//    if constexpr (codim == 2)
-//    {
-//      return InteriorEntity; // TODO
-//    }
-//    else
-//      return InteriorEntity;
-//  }
-//}
-//}
-//
-//
-//
-//
-//// Codim 0 (interface)
-//template<class Entity, int dim>
-//int pt<Entity, 0, dim, true> (const Entity& e) const
-//{
-//  const auto is = grid().getMMesh().asIntersection( e );
-//
-//  int pIn = mmeshPartitionType( is.inside() );
-//  if (is.neighbor())
-//  {
-//    int pOut = mmeshPartitionType( is.outside() );
-//
-//    if (pIn == 0 && pOut == 0)
-//      return 0;
-//
-//    if (pIn == 2 && pOut == 2)
-//      return GhostEntity;
-//
-//    if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
-//      return 0;
-//    else
-//      return 2;
-//  }
-//  else
-//    return (pIn == InteriorEntity) ? InteriorEntity : GhostEntity;
-//}
-//
-//
-//if constexpr (codim == 0)
-//{
-//  if (e.impl().hostEntity()->info().rank == grid().comm().rank())
-//    return true;
-//
-//  // In the bulk, entities are ghost if a neighbor is interior
-//  if constexpr (dim == dimworld)
-//  {
-//    for (const auto& is : intersections(grid().leafGridView(), e))
-//      if (is.neighbor())
-//        if (is.outside().hostEntity()->info().rank == grid().comm().rank())
-//          return true;
-//  }
-//  // On the interface, entities are ghost if some adjacent bulk element is interior
-//  else
-//  {
-//    for (std::size_t i = 0; i < e.subEntities(dim); ++i)
-//    {
-//      const auto f = e.template subEntity<1>(i);
-//
-//      for (const auto incident : incidentInterfaceElements(f) )
-//        if (incident.partitionType() == InteriorEntity)
-//          return true;
-//    }
-//  }
-//}
-//
-//else if constexpr (codim == dim)
-//{
-//  if constexpr (codim == dimworld)
-//  {
-//    for (const auto& incident : incidentElements( e ))
-//      if (isPartOfThisRank(incident))
-//        return true;
-//  }
-//  else
-//  {
-//    for (const auto& incident : incidentInterfaceElements( e ))
-//      if (isPartOfThisRank(incident))
-//        return true;
-//  }
-//}
-//
-//else if constexpr (codim == 1)
-//{
-//  if constexpr (codim == dimworld)
-//  {
-//    const auto is = grid().asIntersection( e );
-//
-//    if (is.neighbor())
-//    {
-//      if (isPartOfThisRank(is.inside()) || isPartOfThisRank(is.outside()))
-//        return true;
-//    }
-//    else
-//      return isPartOfThisRank(is.inside());
-//  }
-//  else
-//    return true; // TODO
-//}
-//
-//else if constexpr (codim == 2)
-//{
-//  return true; // TODO
-//}
-//
-//return false;
-//}

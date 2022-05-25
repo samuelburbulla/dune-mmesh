@@ -297,8 +297,13 @@ namespace Dune
         using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
         return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
       }
+      else if constexpr ( codim == dim-1 )
+      {
+        using Impl = typename MMeshEdgeIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshEdgeIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      }
       else
-        DUNE_THROW( NotImplemented, "incidentInterfaceElementsBegin() for codim != dim" );
+        DUNE_THROW( NotImplemented, "incidentInterfaceElementsBegin() for codim <= dim-1" );
     }
 
     //! Last incident element
@@ -308,6 +313,11 @@ namespace Dune
       {
         using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
         return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      }
+      else if constexpr ( codim == dim-1 )
+      {
+        using Impl = typename MMeshEdgeIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshEdgeIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
       }
       else
         DUNE_THROW( NotImplemented, "incidentInterfaceElementsEnd() for codim != dim" );

@@ -4,10 +4,10 @@ dune_symlink_to_source_files(FILES
   grids
 )
 
-dune_add_test(NAME test-grid-2d SOURCES test-grid.cc)
+dune_add_test(NAME test-grid-2d SOURCES test-grid.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property( TARGET test-grid-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
-dune_add_test(NAME test-grid-3d SOURCES test-grid.cc)
+dune_add_test(NAME test-grid-3d SOURCES test-grid.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property( TARGET test-grid-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 
 dune_add_test(NAME test-mmesh-2d SOURCES test-mmesh-2d.cc)

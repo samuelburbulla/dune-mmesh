@@ -620,7 +620,9 @@ namespace Dune
       for ( const auto& iseg : interfaceSegments_ )
       {
         const auto& seg = iseg.first;
-        if ( (seg[0] == ids[0] && seg[1] == ids[1]) || (seg[1] == ids[0] && seg[2] == ids[1]) )
+        if ( (seg[0] == ids[0] && seg[1] == ids[1])
+          || (seg[1] == ids[0] && seg[2] == ids[1])
+          || (seg[0] == ids[0] && seg[2] == ids[1]) )
           return true;
       }
 
@@ -677,7 +679,7 @@ namespace Dune
 
       // make sure to get the intersection seen from inside at domain boundary
       if ( hostgrid_.is_infinite(hostFacet.first) )
-        hostFacet = hostgrid_.mirror_facet( hostFacet );
+        hostFacet = interfaceGrid().mirrorHostEntity( hostFacet );
 
       return MMeshLeafIntersection<const GridImp> ( This(), hostFacet.first, hostFacet.second );
     }

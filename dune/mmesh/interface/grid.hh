@@ -138,6 +138,9 @@ namespace Dune
     //! The type of the underlying vertex handle
     using VertexHandle = MMeshInterfaceEntity<dimension>;
 
+    //! The type of the underlying edge handle
+    using EdgeHandle = MMeshInterfaceEntity<dimension-1>;
+
     //! The type of the element output
     using ElementOutput = std::list<MMeshInterfaceEntity<0>>;
 
@@ -275,6 +278,13 @@ namespace Dune
     typename Traits::template Codim<0>::Entity entity(const MMeshInterfaceEntity<0>& hostEntity) const
     {
       return entity( typename Traits::template Codim<0>::EntitySeed( hostEntity ) );
+    }
+
+    /** \brief Create codim 0 entity from a host entity */
+    template<int dimw = dimension+1>
+    std::enable_if_t<dimw == 3, typename Traits::template Codim<1>::Entity> entity(const MMeshInterfaceEntity<1>& hostEntity) const
+    {
+      return entity( typename Traits::template Codim<1>::EntitySeed( hostEntity ) );
     }
 
     //! Iterator to first entity of given codim on level

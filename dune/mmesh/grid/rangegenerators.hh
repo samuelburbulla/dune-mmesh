@@ -98,16 +98,16 @@ namespace Dune
   /**
    * \brief Incident interface elements.
    */
-  template<typename Vertex>
-  inline auto incidentInterfaceElements(const Vertex& vertex)
+  template<typename Entity>
+  inline auto incidentInterfaceElements(const Entity& entity)
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-    -> IteratorRange<decltype(vertex.impl().incidentInterfaceElementsBegin())>
+    -> IteratorRange<decltype(entity.impl().incidentInterfaceElementsBegin())>
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
   {
-    static_assert(Vertex::mydimension == 0, "Incident interface vertices range iterator is only available for interface vertices!");
-    return IteratorRange<decltype(vertex.impl().incidentInterfaceElementsBegin())>(
-      vertex.impl().incidentInterfaceElementsBegin(),
-      vertex.impl().incidentInterfaceElementsEnd()
+    static_assert(Entity::mydimension <= 1, "Incident interface vertices range iterator is only available for interface vertices and edges!");
+    return IteratorRange<decltype(entity.impl().incidentInterfaceElementsBegin())>(
+      entity.impl().incidentInterfaceElementsBegin(),
+      entity.impl().incidentInterfaceElementsEnd()
     );
   }
 
