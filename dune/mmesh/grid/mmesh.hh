@@ -15,6 +15,7 @@
 // dune-common includes
 #include <dune/common/deprecated.hh>
 #include <dune/common/parallel/communication.hh>
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/version.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
@@ -266,6 +267,9 @@ namespace Dune
        boundarySegments_(boundarySegments),
        boundaryIds_(boundaryIds),
        interfaceSegments_(interfaceSegments),
+#ifdef HAVE_MPI
+       comm_( MPIHelper::getCommunicator() ),
+#endif
        partitionHelper_(*this)
     {
       leafIndexSet_ = std::make_unique<MMeshLeafIndexSet<const GridImp>>( This() );
@@ -274,6 +278,7 @@ namespace Dune
 
       interfaceGrid_ = std::make_shared<InterfaceGrid>( This(), interfaceBoundarySegments );
       indicator_.init(*this);
+      loadBalance();
     }
 
     //! This pointer to derived class
@@ -1709,6 +1714,9 @@ namespace Dune
      */
     void loadBalance()
     {
+      if (comm().size() == 1)
+        return;
+
       partitionHelper_.distribute();
       update();
     };
@@ -1731,7 +1739,7 @@ namespace Dune
     /** \brief Collective communication */
     const MMeshCollectiveCommunication& comm () const
     {
-      return ccobj;
+      return comm_;
     }
 
     template< class Data, class InterfaceType, class CommunicationDirection >
@@ -1740,7 +1748,9 @@ namespace Dune
       InterfaceType iftype,
       CommunicationDirection dir,
       int level = 0 ) const
-    {}
+    {
+      std::cout << "TODO: Communicate" << std::endl;
+    }
 
 
     // **********************************************************
@@ -1824,7 +1834,7 @@ namespace Dune
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
-    MMeshCollectiveCommunication ccobj;
+    MMeshCollectiveCommunication comm_;
     PartitionHelper<GridImp> partitionHelper_;
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;

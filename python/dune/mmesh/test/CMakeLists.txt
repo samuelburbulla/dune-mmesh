@@ -7,6 +7,7 @@ set(TESTS
   interfaceindicator
   normals
   distance
+  laplace
 )
 
 foreach(test ${TESTS})
