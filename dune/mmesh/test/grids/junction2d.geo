@@ -1,5 +1,5 @@
 lc = 0.3;
-lcf = 0.03;
+lcf = 0.015;
 
 // domain corners
 Point(1) = {0, 0, 0, lc};
@@ -23,7 +23,7 @@ Plane Surface(1) = {1};
 Physical Surface(1) = {1};
 
 // interface
-Point(7) = {0.5, 0.5, 0, lcf};
+Point(7) = {0.6, 0.5, 0, lcf};
 Point(8) = {0.75, 0.75, 0, lcf};
 Line(10) = {3, 7};
 Line(11) = {7, 6};

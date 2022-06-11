@@ -211,22 +211,8 @@ namespace Dune
     //! return the boundary segment index
     size_t boundarySegmentIndex() const
     {
-      auto face = interfaceEntity_.first;
-
-      std::vector< std::size_t > vertices;
-
-      if constexpr ( dimension == 1 )
-      {
-        vertices.push_back( face->vertex( cgalIndex_[index_] )->info().id );
-      }
-      else // dimension == 2
-      {
-        vertices.push_back( face->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().id );
-        vertices.push_back( face->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().id );
-        std::sort(vertices.begin(), vertices.end());
-      }
-
-      auto it = grid_->boundarySegments().find( vertices );
+      auto iid = grid_->globalIdSet().id( grid_->entity( getHostIntersection() ) );
+      auto it = grid_->boundarySegments().find( iid );
       if( it == grid_->boundarySegments().end() )
         return 0;
 

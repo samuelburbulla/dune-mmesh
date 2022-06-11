@@ -298,6 +298,21 @@ namespace Dune
     {
       globalIdSet_->update(This());
       leafIndexSet_->update(This());
+
+      if (comm().size() == 1)
+        localBoundarySegments_ = boundarySegments_;
+      else
+      {
+        localBoundarySegments_.clear();
+        std::size_t count = 0;
+        for (const auto& e : elements(this->leafGridView()))
+          for (const auto& is : intersections(this->leafGridView(), e))
+            if (is.boundary())
+            {
+              auto iid = globalIdSet_->template id<1>( entity( is.impl().getHostIntersection() ) );
+              localBoundarySegments_.insert( std::make_pair(iid, count++) );
+            }
+      }
     }
 
   public:
@@ -319,13 +334,13 @@ namespace Dune
 
     //! returns the number of boundary segments within the macro grid
     size_t numBoundarySegments () const {
-      return boundarySegments_.size();
+      return localBoundarySegments_.size();
     }
 
     //! returns the boundary segment to index map
     const BoundarySegments& boundarySegments() const
     {
-      return boundarySegments_;
+      return localBoundarySegments_;
     }
 
     //! returns the boundary segment index to boundary id map
@@ -1848,7 +1863,7 @@ namespace Dune
 
     //! The host grid which contains the actual grid hierarchy structure
     HostGrid hostgrid_;
-    BoundarySegments boundarySegments_;
+    BoundarySegments boundarySegments_, localBoundarySegments_;
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;
     RemeshingIndicator indicator_;

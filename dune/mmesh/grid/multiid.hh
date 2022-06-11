@@ -45,6 +45,11 @@ namespace Dune
         return vt_[0];
       }
 
+      operator VT() const
+      {
+        return vt_;
+      }
+
       ThisType& operator= ( const ThisType& b )
       {
         if (this != &b)

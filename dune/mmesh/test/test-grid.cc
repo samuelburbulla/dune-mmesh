@@ -22,8 +22,6 @@ int main(int argc, char *argv[])
 {
   MPIHelper::instance(argc, argv);
 
-  std::cout << "-- Grid check --" << std::endl;
-
   // Create Grid
   // ------------
   static constexpr int dim = GRIDDIM;

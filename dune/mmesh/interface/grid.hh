@@ -159,12 +159,10 @@ namespace Dune
     //! Constructor
     explicit MMeshInterfaceGrid(MMesh* mMesh, BoundarySegments boundarySegments = {})
      : mMesh_(mMesh),
-       boundarySegments_(boundarySegments),
-       numBoundarySegments_(boundarySegments.size())
+       boundarySegments_(boundarySegments)
     {
       leafIndexSet_ = std::make_unique<MMeshInterfaceGridLeafIndexSet<const GridImp>>( this );
       globalIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
-      localIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
 
       setIndices();
     }
@@ -188,12 +186,12 @@ namespace Dune
     /** \brief returns the number of boundary segments within the macro grid
      */
     size_t numBoundarySegments () const {
-      return numBoundarySegments_;
+      return localBoundarySegments_.size();
     }
 
     const BoundarySegments& boundarySegments() const
     {
-      return boundarySegments_;
+      return localBoundarySegments_;
     }
 
     void addBoundarySegment ( const std::vector< std::size_t >& ids, std::size_t bndSegIdx )
@@ -234,7 +232,7 @@ namespace Dune
 
     /** \brief Access to the LocalIdSet */
     const typename Traits::LocalIdSet& localIdSet() const {
-      return *localIdSet_;
+      return *globalIdSet_;
     }
 
 
@@ -514,7 +512,9 @@ namespace Dune
       InterfaceType iftype,
       CommunicationDirection dir,
       int level = 0 ) const
-    {}
+    {
+      // TODO
+    }
 
     //! Return if interface segment is part of the interface
     bool isInterface( const MMeshInterfaceEntity<0>& segment ) const
@@ -630,6 +630,17 @@ namespace Dune
     void setIndices()
     {
       leafIndexSet_->update(this);
+      globalIdSet_->update(this);
+
+      localBoundarySegments_.clear();
+      std::size_t count = 0;
+      for (const auto& e : elements(this->leafGridView()))
+        for (const auto& is : intersections(this->leafGridView(), e))
+          if (is.boundary())
+          {
+            auto iid = globalIdSet_->id( entity( is.impl().getHostIntersection() ) );
+            localBoundarySegments_.insert( std::make_pair(iid, count++) );
+          }
     }
 
     //! Return reference to MMesh
@@ -660,17 +671,13 @@ namespace Dune
 
     std::unique_ptr<MMeshInterfaceGridGlobalIdSet<const GridImp>> globalIdSet_;
 
-    std::unique_ptr<MMeshInterfaceGridGlobalIdSet<const GridImp>> localIdSet_;
-
     std::unordered_map< std::vector< std::size_t >, ConnectedComponent, HashUIntVector > childrenConnectedComponentMap_;
 
   protected:
     //! The host grid which contains the actual grid hierarchy structure
     MMesh* mMesh_;
 
-    BoundarySegments boundarySegments_;
-
-    std::size_t numBoundarySegments_;
+    BoundarySegments boundarySegments_, localBoundarySegments_;
 
     mutable std::unordered_map< MMeshImpl::MultiId, int > mark_;
 
