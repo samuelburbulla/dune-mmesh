@@ -28,15 +28,15 @@ namespace Dune
 
   //! 2D Geometry
 
-  template<int mydim, class GridImp>
-  class MMeshInterfaceGridGeometry<mydim, 2, GridImp> :
-    public AffineGeometry <typename GridImp::ctype, mydim, 2>
+  template<int md, class GridImp>
+  class MMeshInterfaceGridGeometry<md, 2, GridImp> :
+    public AffineGeometry <typename GridImp::ctype, md, 2>
   {
+  public:
+    static constexpr int mydim = md;
     static constexpr int coorddim = 2;
     typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
     typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
-
-  public:
 
     enum { dimension = GridImp::dimension };
     enum { dimensionworld = GridImp::dimensionworld };
@@ -46,25 +46,16 @@ namespace Dune
     //! Constructor from host geometry with codim 0
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices(hostEntity) )
-    {
-        circumcenter_ = this->corner(0);
-        circumcenter_ += this->corner(1);
-        circumcenter_ *= 0.5;
-    }
+    {}
 
     //! Constructor from vertex array
     MMeshInterfaceGridGeometry(const std::array<FVector, 2>& points)
      : BaseType( GeometryTypes::simplex(mydim), points )
-    {
-      circumcenter_ = this->corner(0);
-      circumcenter_ += this->corner(1);
-      circumcenter_ *= 0.5;
-    }
+    {}
 
     //! Constructor from host geometry with codim 1
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<1>& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { makeFieldVector( hostEntity->point() ) } ) ),
-       circumcenter_( this->corner(0) )
+     : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { makeFieldVector( hostEntity->point() ) } ) )
     {}
 
     //! Constructor for local geometry of intersection from intersection index for 3D
@@ -80,7 +71,7 @@ namespace Dune
     /** \brief Obtain the circumcenter */
     const FVector circumcenter () const
     {
-      return circumcenter_;
+      return computeCircumcenter(*this);
     }
 
   private:
@@ -95,22 +86,21 @@ namespace Dune
 
       return vertices;
     }
-
-    FVector circumcenter_;
   };
 
   //! 3D Geometry
 
-  template<int mydim, class GridImp>
-  class MMeshInterfaceGridGeometry<mydim, 3, GridImp> :
-    public AffineGeometry <typename GridImp::ctype, mydim, 3>
+  template<int md, class GridImp>
+  class MMeshInterfaceGridGeometry<md, 3, GridImp> :
+    public AffineGeometry <typename GridImp::ctype, md, 3>
   {
+  public:
+    static constexpr int mydim = md;
     static constexpr int coorddim = 3;
     typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
     typedef typename GridImp::ctype ctype;
     typedef FieldVector<ctype, coorddim> FVector;
 
-  public:
     enum { dimension = GridImp::dimension };
     enum { dimensionworld = GridImp::dimensionworld };
     enum { coorddimension = coorddim };
@@ -119,55 +109,27 @@ namespace Dune
     //! Constructor from host geometry with codim 0
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<0>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices<0>(hostEntity) )
-    {
-      // obtain circumcenter
-      const auto& cell     = hostEntity.first;
-      const auto& facetIdx = hostEntity.second;
-
-      // use the CGAL index convention to obtain the vertices
-      circumcenter_ = makeFieldVector(
-        CGAL::circumcenter(
-          cell->vertex( (facetIdx + 1) % 4 )->point(),
-          cell->vertex( (facetIdx + 2) % 4 )->point(),
-          cell->vertex( (facetIdx + 3) % 4 )->point()
-        )
-      );
-    }
+    {}
 
     //! Constructor from vertex list
     MMeshInterfaceGridGeometry(const std::array<FVector, 3>& points)
      : BaseType( GeometryTypes::simplex(mydim), points )
-    {
-      // obtain circumcenter
-      circumcenter_ = makeFieldVector(
-        CGAL::circumcenter(
-          makePoint( this->corner(0) ),
-          makePoint( this->corner(1) ),
-          makePoint( this->corner(2) )
-        )
-      );
-    }
+    {}
 
     //! Constructor from host geometry with codim 1
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<1>& hostEntity)
      : BaseType( GeometryTypes::simplex(mydim), getVertices<1>( hostEntity ) )
-    {
-      // obtain circumcenter
-      circumcenter_ = this->corner(0);
-      circumcenter_ += this->corner(1);
-      circumcenter_ *= 0.5;
-    }
+    {}
 
     //! Constructor from host geometry with codim 2
     MMeshInterfaceGridGeometry(const typename GridImp::template MMeshInterfaceEntity<2>& hostEntity)
-     : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { makeFieldVector( hostEntity->point() ) } ) ),
-                 circumcenter_( this->corner(0) )
+     : BaseType( GeometryTypes::simplex(mydim), std::array<FVector, 1>( { makeFieldVector( hostEntity->point() ) } ) )
     {}
 
     /** \brief Obtain the circumcenter */
     const FVector circumcenter () const
     {
-      return circumcenter_;
+      return computeCircumcenter(*this);
     }
 
   private:
@@ -204,20 +166,19 @@ namespace Dune
 
       return vertices;
     }
-
-    FVector circumcenter_;
   };
 
   //! The local geometry (2D)
-  template<int mydim, class GridImp>
-  class MMeshInterfaceGridGeometry<mydim, 1, GridImp> :
-    public AffineGeometry <typename GridImp::ctype, mydim, 1>
+  template<int md, class GridImp>
+  class MMeshInterfaceGridGeometry<md, 1, GridImp> :
+    public AffineGeometry <typename GridImp::ctype, md, 1>
   {
+  public:
+    static constexpr int mydim = md;
     static constexpr int coorddim = 1;
     typedef AffineGeometry <typename GridImp::ctype, mydim, coorddim> BaseType;
     typedef FieldVector<typename GridImp::ctype, coorddim> FVector;
 
-  public:
     enum { dimension = GridImp::dimension };
     enum { dimensionworld = GridImp::dimensionworld };
     enum { coorddimension = coorddim };

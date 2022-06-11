@@ -76,6 +76,45 @@ namespace Dune
     return CGAL::Point_3<PointKernel> ( v[ 0 ], v[ 1 ], v[ 2 ] );
   }
 
+  /** \brief Compute circumcenter
+   */
+  template <class Geometry>
+  auto computeCircumcenter(const Geometry& geo)
+  {
+    static constexpr int mydim = Geometry::mydim;
+
+    if constexpr (mydim == 3)
+    {
+      // obtain circumcenter by CGAL
+      return makeFieldVector(
+                             CGAL::circumcenter(
+                                                makePoint(geo.corner(0)),
+                                                makePoint(geo.corner(1)),
+                                                makePoint(geo.corner(2)),
+                                                makePoint(geo.corner(3))
+                                                )
+                             );
+    }
+
+    if constexpr (mydim == 2)
+    {
+      // obtain circumcenter by CGAL
+      return makeFieldVector(
+                             CGAL::circumcenter(
+                                                makePoint(geo.corner(0)),
+                                                makePoint(geo.corner(1)),
+                                                makePoint(geo.corner(2))
+                                                )
+                             );
+    }
+
+    if constexpr (mydim == 1)
+      return 0.5 * (geo.corner(0) + geo.corner(1));
+
+    if constexpr (mydim == 0)
+      return geo.corner(0);
+  }
+
 }  // namespace Dune
 
 #endif
