@@ -29,7 +29,9 @@ Line(10) = {3, 7};
 Line(11) = {7, 6};
 Line(12) = {7, 8};
 Line {10:12} In Surface{1};
+Physical Line(0) = {1:6};
 Physical Line(1) = {10:12};
+Physical Point(0) = {3, 6, 8};
 
 // conflict point
 Point(100) = {0.2, 0.52, 0, lcf};
