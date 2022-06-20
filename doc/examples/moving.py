@@ -173,6 +173,12 @@ runtime = 0
 
 uh.interpolate(u0(x))
 
+def L2Error(uh):
+    u = uexact(x, t)
+    return sqrt(integrate(gridView, dot(uh-u, uh-u), order=5))
+
+l2s = []
+
 # Disable edge movement
 em.interpolate([0,0])
 
@@ -188,6 +194,7 @@ while t.value < tEnd:
 
     uh_old.assign(uh)
     scheme.solve(target=uh)
+    l2s += [(t.value, L2Error(uh))]
 
     runtime += time()
 
@@ -197,10 +204,6 @@ while t.value < tEnd:
             plot(uh, figure=(fig, axs[a]), clim=[0,1], colorbar=None)
 
 print(f"Runtime: {runtime:.3f}s")
-
-def L2Error(uh):
-    u = uexact(x, t)
-    return sqrt(integrate(gridView, dot(uh-u, uh-u), order=5))
 
 L2 = L2Error(uh)
 print(f"L2-Error: {L2:.3f}")
@@ -221,6 +224,8 @@ runtimeAdapted = 0
 dtmin = 1e3
 
 uh.interpolate(u0(x))
+
+l2sAdapted = []
 
 i = 0
 t.assign(0)
@@ -244,6 +249,7 @@ while t.value < tEnd:
     scheme.solve(target=uh)
 
     hgrid.moveInterface(shifts*tau.value)
+    l2sAdapted += [(t.value, L2Error(uh))]
 
     runtimeAdapted += time()
 
@@ -262,3 +268,10 @@ print(f"L2-Error: {L2Adapted:.3f}")
 print(f"\nRuntime factor: {runtimeAdapted / runtime:.2f}x")
 print(f"Error improvement: {L2 / L2Adapted:.2f}x")
 
+import matplotlib.pyplot as plt
+fig = plt.figure()
+plt.plot([l2[0] for l2 in l2s], [l2[1] for l2 in l2s], label="Without adaptation")
+plt.plot([l2[0] for l2 in l2sAdapted], [l2[1] for l2 in l2sAdapted], label="Adapted")
+plt.legend(loc='best')
+plt.title('L2-Error')
+plt.show()
