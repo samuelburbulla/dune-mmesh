@@ -13,12 +13,10 @@ You find the full documentation of Dune-MMesh at [dune-mmesh.readthedocs.io](htt
 Note that Dune-MMesh has a list of dependencies: C++ compiler, CMake, Python3 + pip (+ venv), pkg-config, Boost, OpenMPI, SuiteSparse, Gmsh.
 
 The easiest starting point is to use Docker with a preconfigured setup.
-Build the corresponding Docker container as follows:
+Using the pre-built Docker container you can simply run:
 
 ````
-docker build -t mmesh \
-  https://raw.githubusercontent.com/samuelburbulla/dune-mmesh/master/scripts/Dockerfile
-docker run -it mmesh
+docker run -it ghcr.io/samuelburbulla/dune-mmesh:latest
 ````
 
 This will open an interactive shell in the Dune-MMesh's examples directory.
