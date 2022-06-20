@@ -2,7 +2,11 @@ add_subdirectory(examples EXCLUDE_FROM_ALL)
 
 dune_symlink_to_source_files(FILES
   grids
+  parameter
 )
+
+install(FILES massoperator.hh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/mmesh/test)
 
 dune_add_test(NAME test-grid-2d SOURCES test-grid.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property( TARGET test-grid-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
@@ -81,3 +85,6 @@ set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "G
 
 dune_add_test(NAME test-distance SOURCES test-distance.cc)
 set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc)
+set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )

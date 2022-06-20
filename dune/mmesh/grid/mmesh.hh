@@ -1699,7 +1699,6 @@ namespace Dune
           if (e.partitionType() == GhostEntity)
             size++;
 
-
       if (codim == 1)
         for (const auto& f : facets(this->leafGridView()))
           if (f.partitionType() == GhostEntity)

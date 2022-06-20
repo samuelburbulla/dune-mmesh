@@ -118,12 +118,12 @@ private:
     forEntityDim<dim>([this](const auto& fc){
       const auto e = grid().entity(fc);
       if (e.impl().hostEntity()->info().rank == grid().comm().rank())
-        partition(e) = 0;
+        partition(e) = 0; // interior
       else
-        partition(e) = -1;
+        partition(e) = 2; // ghost
     });
 
-    // Set interior and boundary facets and find ghost elements
+    // Set facets
     forEntityDim<dim-1>([this](const auto& fc){
       const auto e = grid().entity(fc);
       const auto is = grid().asIntersection( e );
@@ -139,44 +139,23 @@ private:
           partition(e) = 0;
 
         // border
-        else if (pIn == 0 && pOut != 0)
-        {
+        else if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
           partition(e) = 1;
-          partition(is.outside()) = 2; // set outside as ghost
-        }
 
-        else if (pIn != 0 && pOut == 0)
-        {
-          partition(e) = 1;
-          partition(is.inside()) = 2; // set inside as ghost
-        }
-
-        // none
+        // ghost
         else
-          partition(e) = -1;
+          partition(e) = 2;
       }
       else
       {
         // interior
         if (pIn == 0)
           partition(e) = 0;
-      }
-    });
 
-    // Set for ghost facets
-    forEntityDim<dim-1>([this](const auto& fc){
-      const auto e = grid().entity(fc);
-      const auto is = grid().asIntersection( e );
-
-      if (partition(e) == 1)
-        return;
-
-      if (partition( is.inside() ) == 2)
-        partition(e) = 2;
-
-      if (is.neighbor())
-        if (partition( is.outside() ) == 2)
+        // ghost
+        else
           partition(e) = 2;
+      }
     });
 
     // Codim 2 in 3D
@@ -196,17 +175,13 @@ private:
         if (interior == count)
           partition(edge) = 0;
 
-        // ghost
+        // border
         else if (interior > 0 and ghost > 0)
           partition(edge) = 1;
 
         // ghost
-        else if (ghost > 0)
-          partition(edge) = 2;
-
-        // none
         else
-          partition(edge) = -1;
+          partition(edge) = 2;
       });
     }
 
@@ -230,12 +205,8 @@ private:
         partition(v) = 1;
 
       // ghost
-      else if (ghost > 0)
-        partition(v) = 2;
-
-      // none
       else
-        partition(v) = -1;
+        partition(v) = 2;
     });
   }
 
@@ -256,29 +227,11 @@ private:
       const auto is = grid().asIntersection(e);
 
       if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
+        // interior
         partition(e) = 0;
       else
-        partition(e) = -1;
-    });
-
-    // Set ghost elements
-    forEntityDim<idim-1>([this](const auto& fc){
-      if (!grid().isInterface( grid().entity(fc) ))
-        return;
-
-      const auto e = grid().interfaceGrid().entity(fc);
-
-      bool haveIncidentInterior = [this, &e](){
-        for (const auto& incident : incidentInterfaceElements(e))
-          if (partition(incident) == 0)
-            return true;
-        return false;
-      }();
-
-      if (haveIncidentInterior)
-        for (const auto& incident : incidentInterfaceElements(e))
-          if (partition(incident) == -1)
-            partition(incident) = 2;
+        // ghost
+        partition(e) = 2;
     });
 
     // Set facets
@@ -305,12 +258,8 @@ private:
         partition(e) = 1;
 
       // ghost
-      else if (ghost > 0)
-        partition(e) = 2;
-
-      // none
       else
-        partition(e) = -1;
+        partition(e) = 2;
     });
 
     // Set vertices in 3d
@@ -339,12 +288,8 @@ private:
           partition(v) = 1;
 
         // ghost
-        else if (ghost > 0)
-          partition(v) = 2;
-
-        // none
         else
-          partition(v) = -1;
+          partition(v) = 2;
       });
     }
   }
@@ -369,7 +314,7 @@ private:
 
       auto x = e.geometry().center()[0];
       for (int i = 0; i < size; ++i)
-        if (x <= xbounds_[0] + (i+1) * dx)
+        if ((x > xbounds_[0] + i * dx) and (x <= xbounds_[0] + (i+1) * dx))
           return i;
       return 0;
     };
