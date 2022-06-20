@@ -49,6 +49,15 @@ set_property( TARGET test-curvature-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRID
 dune_add_test(NAME test-curvature-3d SOURCES test-curvature.cc)
 set_property( TARGET test-curvature-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 
+# Workaround to fix linking issue in dune-fem
+if(OPENMP_FOUND)
+  if(APPLE)
+    get_filename_component(OPENMP_LIB_PATH ${OpenMP_CXX_LIBRARIES} DIRECTORY)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp -L${OPENMP_LIB_PATH}")
+  endif()
+endif()
+# End of workaround
+
 dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
 set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
