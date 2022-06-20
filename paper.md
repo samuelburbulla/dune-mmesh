@@ -71,6 +71,7 @@ The interface grid also supports networks, cf. Figure \ref{fig:junction}, and it
 
 Most interface driven-problems have time-dependent interfaces $\Gamma = \Gamma(t)$.
 Therefore, Dune-MMesh features capabilities of moving and re-meshing in spatial dimension two.
+Here we follow the approach of moving the interface edges and adapt the mesh next to the interface.
 
 ### Moving Vertices
 
