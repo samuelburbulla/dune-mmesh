@@ -238,7 +238,7 @@ while t.value < tEnd:
     t.value += tau.value
     
     mark = hgrid.markElements()
-    ensure = hgrid.ensureInterfaceMovement(getShifts()*tau.value)
+    ensure = hgrid.ensureInterfaceMovement(getShifts()*2*tau.value)
     if mark or ensure:
         adapt([uh])
     

@@ -10,7 +10,7 @@
 
 PYBIND11_MODULE( _grid2d, module )
 {
-  auto cls = Dune::Python::insertClass< Dune::MovingMesh<2>, std::shared_ptr<Dune::MovingMesh<2>> >( module,
+  auto cls = Dune::Python::insertClass< Dune::MovingMesh<2> >( module,
     "HierarchicalGrid",
     pybind11::dynamic_attr(),
     Dune::Python::GenerateTypeName("Dune::MovingMesh<2>"),

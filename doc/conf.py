@@ -22,7 +22,7 @@ copyright = '2021, Samuel Burbulla'
 author = 'Samuel Burbulla, Andreas Dedner, Maximilian Hörl, Christian Rohde'
 
 # The full version, including alpha/beta/rc tags
-release = 'master'
+release = '1.3.2'
 
 
 # -- General configuration ---------------------------------------------------

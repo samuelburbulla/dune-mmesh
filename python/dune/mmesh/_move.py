@@ -16,6 +16,7 @@ def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[])
     Returns:
         Number of ensure and mark steps.
     """
+    igridFunctions += [igrid.hierarchicalGrid.one]
     hgrid = grid.hierarchicalGrid
 
     ensure = 0

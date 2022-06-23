@@ -1,8 +1,5 @@
-set(GRIDFILES
-  line
+add_python_targets(grids
+  __init__
   plane
+  line
 )
-
-foreach(test ${GRIDFILES})
- add_python_targets(test ${GRIDFILES})
-endforeach()

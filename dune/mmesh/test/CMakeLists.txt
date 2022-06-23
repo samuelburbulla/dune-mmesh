@@ -76,8 +76,8 @@ set_property(TARGET test-femadaptation APPEND PROPERTY COMPILE_DEFINITIONS "GRID
 #dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
 #set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
 
-dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
-set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+#dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
+#set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
 dune_add_test(NAME test-distance SOURCES test-distance.cc)
 set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )

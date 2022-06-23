@@ -1,12 +1,14 @@
 add_subdirectory(grids)
 
-add_python_targets(test __main__)
+add_python_targets(test
+  __init__
+  __main__
+)
 
 set(TESTS
   adaptation
   interfaceindicator
   normals
-  distance
 )
 
 foreach(test ${TESTS})

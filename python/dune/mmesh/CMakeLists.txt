@@ -7,7 +7,7 @@ add_python_targets(mmesh
   _move
   _skeletontrace
   _solve
-  utility
+  _utility
 )
 
 set(PRECOMPILE
@@ -15,8 +15,6 @@ set(PRECOMPILE
   _grid3d
   _interfacegrid2d
   _interfacegrid3d
-  _utility2d
-  _utility3d
 )
 
 foreach(obj ${PRECOMPILE})
