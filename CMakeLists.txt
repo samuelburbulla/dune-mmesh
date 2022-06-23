@@ -23,7 +23,8 @@ install(DIRECTORY "CGAL"
 )
 
 if( DUNE_ENABLE_PYTHONBINDINGS )
-  add_subdirectory(python)
+  add_subdirectory("python")
+  dune_python_install_package(PATH "python")
 endif()
 
 add_subdirectory(cmake/modules)
