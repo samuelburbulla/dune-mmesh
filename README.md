@@ -16,7 +16,7 @@ The easiest starting point is to use Docker with a preconfigured setup.
 Using the pre-built Docker container you can simply run:
 
 ````
-docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
+docker run -it ghcr.io/samuelburbulla/dune-mmesh:release-1.3.2
 ````
 
 This will open an interactive shell in the Dune-MMesh's examples directory.
