@@ -18,9 +18,9 @@ authors:
   - name: Christian Rohde
     affiliation: 1
 affiliations:
- - name: University of Stuttgart
+ - name: University of Stuttgart, Germany
    index: 1
- - name: University of Warwick
+ - name: University of Warwick, UK
    index: 2
 date: 05 October 2021
 bibliography: paper.bib
@@ -91,13 +91,13 @@ Adaption in Dune is usually hierarchical by definition and the adaptation proced
 In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is unavoidable.
 However, we will try to follow the general Dune approach and separate the adaptation into two stages.
 
-__1. Mark__
+__Stage 1: Mark__
 
 Dune-MMesh provides utility functions to mark cells either in expectation of a movement of vertices or regarding to their current geometrical properties, cf. Figure \ref{fig:movmark} (right).
 For instance, when moving the interface would cause a cell to get a negative volume, we mark this cell for coarsening (marked red in Figure \ref{fig:movmark}). Similarly, we use the edge length as indicator for coarsening or refinement (marked green).
 However, one can also use a proprietary procedure marking cells manually, or one can insert and remove vertices directly.
 
-__2. Adapt__
+__Stage 2: Adapt__
 
 After marking cells an adapt routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
