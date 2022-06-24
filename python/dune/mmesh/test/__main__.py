@@ -15,7 +15,7 @@ if __name__ == '__main__':
     for test in tests:
         i += 1
         script = os.path.split(test)[1].split('.')[0]
-        print("Test "+str(i)+"/"+str(N)+":", script, end='', flush=True)
+        print("Test "+str(i)+"/"+str(N)+":", script)
         try:
             subprocess.run([sys.executable, test], check=True)
             print(" - passed")
