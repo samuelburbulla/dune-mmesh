@@ -44,7 +44,12 @@
 #include "../misc/twistutility.hh"
 // Further includes below!
 
-
+#if HAVE_MPI
+  #include <dune/common/parallel/mpicommunication.hh>
+  using MMeshCollectiveCommunication = Dune::Communication<MPI_Comm>;
+#else
+  using MMeshCollectiveCommunication = Dune::Communication<No_Comm>;
+#endif
 
 namespace Dune
 {
@@ -75,7 +80,7 @@ namespace Dune
         MMeshImpl::MultiId,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >, // LocalIdSet
         MMeshImpl::MultiId,
-        CollectiveCommunication< No_Comm >,
+        MMeshCollectiveCommunication,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshEntitySeed
@@ -496,6 +501,26 @@ namespace Dune
     template<int codim, PartitionIteratorType PiType>
     typename Traits::template Codim<codim>::template Partition<PiType>::LeafIterator leafend() const {
       return MMeshLeafIterator<codim,PiType, const GridImp>(This(), true);
+    }
+
+    typename Traits::LevelIntersectionIterator ilevelbegin( const typename Traits::template Codim< 0 >::Entity& entity ) const
+    {
+      return entity.impl().ilevelbegin();
+    }
+
+    typename Traits::LevelIntersectionIterator ilevelend( const typename Traits::template Codim< 0 >::Entity& entity ) const
+    {
+      return entity.impl().ilevelend();
+    }
+
+    typename Traits::LeafIntersectionIterator ileafbegin( const typename Traits::template Codim< 0 >::Entity& entity ) const
+    {
+      return entity.impl().ileafbegin();
+    }
+
+    typename Traits::LeafIntersectionIterator ileafend( const typename Traits::template Codim< 0 >::Entity& entity ) const
+    {
+      return entity.impl().ileafend();
     }
 
     //! iterator to first interface entity
@@ -1650,8 +1675,8 @@ namespace Dune
     }
 
 
-    /** \brief dummy collective communication */
-    const CollectiveCommunication< No_Comm >& comm () const
+    /** \brief Collective communication */
+    const MMeshCollectiveCommunication& comm () const
     {
       return ccobj;
     }
@@ -1741,7 +1766,7 @@ namespace Dune
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
-    CollectiveCommunication< No_Comm > ccobj;
+    MMeshCollectiveCommunication ccobj;
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
     std::unique_ptr<MMeshGlobalIdSet<const GridImp>> globalIdSet_;
