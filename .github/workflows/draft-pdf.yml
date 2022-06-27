@@ -1,3 +1,5 @@
+name: Generate paper PDF
+
 on: [push]
 
 jobs:

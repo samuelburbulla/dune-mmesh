@@ -1,4 +1,4 @@
-name: test pypi packages
+name: Test PyPI packages
 
 # Controls when the action will run.
 on:

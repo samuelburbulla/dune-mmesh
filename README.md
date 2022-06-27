@@ -1,3 +1,8 @@
+[![Release](https://img.shields.io/github/v/release/samuelburbulla/dune-mmesh.svg)](https://github.com/samuelburbulla/dune-mmesh/releases)
+[![Test](https://github.com/samuelburbulla/dune-mmesh/actions/workflows/test.yml/badge.svg)](https://github.com/samuelburbulla/dune-mmesh/actions/)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.03959/status.svg)](https://doi.org/10.21105/joss.03959)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 # The Dune-MMesh Module
 
 In several physical and environmental processes that concern multiphase flows, biological systems, and geophysical phenomena, important physical processes occur along thin physical interfaces. These processes include effects that may alter the interface's position or topology over time creating a moving interface, which complicates traditional modeling techniques. Moving interface problems thus require advanced numerical tools with specific treatment of the interface and the simultaneous ability to implement complex physical effects.
