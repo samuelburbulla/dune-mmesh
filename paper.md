@@ -33,9 +33,9 @@ In several physical and environmental processes that concern multiphase flows, b
 
 # Statement of Need
 
-In this work, we present Dune-MMesh that is tailored for numerical applications with moving physical interfaces. Dune-MMesh is an implementation of the well-developed Dune [@BBD+21] grid interface and is well-suited for the numerical discretization of partial differential equations. The package wraps two and three dimensional CGAL triangulations [@CGAL] in high-level objects like intersections of grid entities, index and id sets and geometry transformations and exports a predefined set of facets as a separate interface grid.
+In this work, we present Dune-MMesh that is tailored for numerical applications with moving physical interfaces. Dune-MMesh is an implementation of the well-developed Dune [@BBD+21] grid interface and is well-suited for the numerical discretization of partial differential equations (PDEs). The package wraps two and three dimensional CGAL triangulations [@CGAL] in high-level objects like intersections of grid entities, index and id sets and geometry transformations and exports a predefined set of facets as a separate interface grid.
 In two dimensions, the arbitrary movement of vertices is enhanced with a re-meshing algorithm that implements non-hierarchical adaptation procedures. Besides the adaptation of the triangulation, Dune-MMesh provides the necessary data structures to adapt discrete functions defined on the bulk grid or the interface. This adaptation approach complements existing grid implementations within the Dune framework that strictly rely on hierarchical adaptation.
-Various examples in Python have been implemented based on the discretization module dune-fem [@DNK20] that demonstrate the versatile applicability of Dune-MMesh. Due to the ability to handle custom PDEs in their weak from written in Unified Form Language (UFL) and the mesh adaptation capabilities, we believe Dune-MMesh provides a useful tool for solving mixed-dimensional PDEs on moving interfaces that arise from various fields of modelling.
+Various examples in Python have been implemented based on the discretization module Dune-Fem [@DNK20] that demonstrate the versatile applicability of Dune-MMesh. Due to the ability to handle custom PDEs in their weak from written in Unified Form Language (UFL) and the mesh adaptation capabilities, we believe Dune-MMesh provides a useful tool for solving mixed-dimensional PDEs on moving interfaces that arise from various fields of modelling.
 
 # CGAL Wrapper
 
@@ -44,10 +44,10 @@ A CGAL triangulation is a set of simplicial cells and vertices where each cell g
 Facets are not explicitly represented: a facet is given by the pair of a cell $c$ and an index $i$ and has two implicit representations.
 For $d=3$, edges are represented by triples of a cell $c$ and two indices $i$ and $j$ that indicate the two vertices of the edge.
 
-![CGAL representation of cells and differing Dune numbering in brackets. The vertex numbering is maintained, facets are renumbered, and the edges of tetrahedrons are equipped with indices according to the DUNE reference element numbering. \label{fig:wrapper}](img/wrapper.png)
+![CGAL representation of cells and differing Dune numbering in brackets. The vertex numbering is maintained, facets are renumbered, and the edges of tetrahedrons are equipped with indices according to the Dune reference element numbering. \label{fig:wrapper}](img/wrapper.png)
 
 In order to match the Dune grid reference cell numbering we apply an index mapping, cf. Figure \ref{fig:wrapper}.
-Here, the edges of tetrahedrons are equipped with indices according to the DUNE reference element numbering.
+Here, the edges of tetrahedrons are equipped with indices according to the Dune reference element numbering.
 Dune intersections, i.e., intersections of mesh entities of codimension 0 with a neighboring element or with the domain boundary, can directly be represented by CGAL's cell-index representations of facets which are already equipped with an orientation.
 The index and id sets of the Dune grid interface are realized by consecutive numbering of cells and vertices.
 Various iterators of CGAL triangulations can directly be used to construct the Dune grid range generators.
@@ -83,7 +83,7 @@ To prevent degeneration of the triangulation, i.e. cells have non-positive volum
 
 ### Adaptation
 
-Adaption in Dune is usually hierarchical by definition and the adaptation procedure is performed in two stages:
+Adaptation in Dune is usually hierarchical by definition and the adaptation procedure is performed in two stages:
 
 1. Mark: Grid cells are marked for coarsening or refinement.
 2. Adapt: The cells are modified due to their markers and discrete functions are restricted or prolongated.
@@ -109,7 +109,7 @@ In all cells marked for coarsening, the least important vertex is removed.
 When a vertex is removed, the resulting star-shaped hole is re-triangulated with respect to the interface.
 
 For the purpose of projection, we introduce \emph{connected components}, see Figure \ref{fig:adaptconn} (right),
-and implement a generalized callback adaptation in dune-fem.
+and implement a generalized callback adaptation in Dune-Fem.
 
 ![Non-hierarchic projection with cut-set triangulation.\label{fig:projection}](img/projection.png)
 
@@ -128,7 +128,7 @@ It can be restricted to both sides of the interface and might be used in UFL for
 Analogously, the skeleton function is a discrete function that returns the interface's discrete function values on interface bulk facets.
 
 Both `trace` and `skeleton` can be used to couple bulk and interface problems.
-Such couplings occur, e.g., in mixed-dimensional PDEs.
+Such couplings occur, for example, in mixed-dimensional PDEs.
 
 # Coupled solve
 
