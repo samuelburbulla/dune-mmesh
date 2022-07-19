@@ -181,7 +181,7 @@ namespace Dune
     /** \brief Obtain the circumcenter */
     const FVector circumcenter () const
     {
-      computeCircumcenter(*this);
+      return computeCircumcenter(*this);
     }
 
   private:
