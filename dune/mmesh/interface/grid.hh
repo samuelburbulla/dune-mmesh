@@ -163,8 +163,6 @@ namespace Dune
     {
       leafIndexSet_ = std::make_unique<MMeshInterfaceGridLeafIndexSet<const GridImp>>( this );
       globalIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
-
-      setIndices();
     }
 
     /** \brief Return maximum level defined in this grid.

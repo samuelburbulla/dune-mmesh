@@ -274,11 +274,11 @@ namespace Dune
     {
       leafIndexSet_ = std::make_unique<MMeshLeafIndexSet<const GridImp>>( This() );
       globalIdSet_ = std::make_unique<MMeshGlobalIdSet<const GridImp>>( This() );
-      setIndices();
+      globalIdSet_->update(This());
 
       interfaceGrid_ = std::make_shared<InterfaceGrid>( This(), interfaceBoundarySegments );
-      indicator_.init(*this);
       loadBalance();
+      indicator_.init(*this);
     }
 
     //! This pointer to derived class
@@ -1728,10 +1728,8 @@ namespace Dune
      */
     void loadBalance()
     {
-      if (comm().size() == 1)
-        return;
-
-      partitionHelper_.distribute();
+      if (comm().size() > 1)
+        partitionHelper_.distribute();
       update();
     };
 

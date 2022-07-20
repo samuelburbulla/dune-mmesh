@@ -32,6 +32,7 @@ namespace Dune
       bool mightVanish = false;
       std::size_t componentNumber = 0;
       int rank = 0;
+      int partition = 0;
     };
 
     struct VertexInfo {
@@ -41,6 +42,7 @@ namespace Dune
       std::size_t insertionLevel = 0;
       bool isInterface = false;
       int boundaryFlag = -1;
+      int partition = 0;
     };
 
     /*!

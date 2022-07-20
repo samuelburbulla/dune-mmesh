@@ -66,11 +66,8 @@ struct PartitionHelper
     if (partitionType == 1)
       return BorderEntity;
 
-    if (partitionType == 2)
+    else
       return GhostEntity;
-
-    // we return GhostEntity even if it's not actually ghost (partitionType == -1)
-    return GhostEntity;
   }
 
 private:
@@ -79,33 +76,45 @@ private:
   template <class Entity>
   int partition(const Entity& e) const
   {
+    static constexpr int cd = Entity::codimension;
     if (grid().comm().size() == 1)
       return 0; // interior
 
     if constexpr (Entity::dimension == dim)
     {
-      auto entry = partition_[Entity::codimension].find(e.impl().id());
-      if (entry != partition_[Entity::codimension].end())
-        return entry->second;
+      if constexpr (Entity::codimension == 0 || Entity::codimension == dim)
+        return e.impl().hostEntity()->info().partition;
+      else
+      {
+        auto entry = partition_[cd-1].find(e.impl().id());
+        if (entry != partition_[cd-1].end())
+          return entry->second;
+      }
     }
     else
     {
-      auto entry = interfacePartition_[Entity::codimension].find(e.impl().id());
-      if (entry != interfacePartition_[Entity::codimension].end())
+      auto entry = interfacePartition_[cd].find(e.impl().id());
+      if (entry != interfacePartition_[cd].end())
         return entry->second;
     }
 
+    DUNE_THROW(InvalidStateException, "Partition not set yet!");
     return 0;
   }
 
   //! Set partition marker
   template <class Entity>
-  int& partition(const Entity& e)
+  void setPartition(const Entity& e, int partition)
   {
     if constexpr (Entity::dimension == dim)
-      return partition_[Entity::codimension][e.impl().id()];
+    {
+      if constexpr (Entity::codimension == 0 || Entity::codimension == dim)
+        e.impl().hostEntity()->info().partition = partition;
+      else
+        partition_[Entity::codimension-1][e.impl().id()] = partition;
+    }
     else
-      return interfacePartition_[Entity::codimension][e.impl().id()];
+      interfacePartition_[Entity::codimension][e.impl().id()] = partition;
   }
 
   //! Compute partition type for every entity
@@ -118,9 +127,9 @@ private:
     forEntityDim<dim>([this](const auto& fc){
       const auto e = grid().entity(fc);
       if (e.impl().hostEntity()->info().rank == grid().comm().rank())
-        partition(e) = 0; // interior
+        setPartition(e, 0); // interior
       else
-        partition(e) = 2; // ghost
+        setPartition(e, 2); // ghost
     });
 
     // Set facets
@@ -136,25 +145,25 @@ private:
 
         // interior
         if (pIn == 0 && pOut == 0)
-          partition(e) = 0;
+          setPartition(e, 0);
 
         // border
         else if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
-          partition(e) = 1;
+          setPartition(e, 1);
 
         // ghost
         else
-          partition(e) = 2;
+          setPartition(e, 2);
       }
       else
       {
         // interior
         if (pIn == 0)
-          partition(e) = 0;
+          setPartition(e, 0);
 
         // ghost
         else
-          partition(e) = 2;
+          setPartition(e, 2);
       }
     });
 
@@ -173,15 +182,15 @@ private:
 
         // interior
         if (interior == count)
-          partition(edge) = 0;
+          setPartition(edge, 0);
 
         // border
         else if (interior > 0 and ghost > 0)
-          partition(edge) = 1;
+          setPartition(edge, 1);
 
         // ghost
         else
-          partition(edge) = 2;
+          setPartition(edge, 2);
       });
     }
 
@@ -198,15 +207,15 @@ private:
 
       // interior
       if (interior == count)
-        partition(v) = 0;
+        setPartition(v, 0);
 
       // border
       else if (interior > 0 and ghost > 0)
-        partition(v) = 1;
+        setPartition(v, 1);
 
       // ghost
       else
-        partition(v) = 2;
+        setPartition(v, 2);
     });
   }
 
@@ -228,10 +237,10 @@ private:
 
       if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
         // interior
-        partition(e) = 0;
+        setPartition(e, 0);
       else
         // ghost
-        partition(e) = 2;
+        setPartition(e, 2);
     });
 
     // Set facets
@@ -251,15 +260,15 @@ private:
 
       // interior
       if (interior == count)
-        partition(e) = 0;
+        setPartition(e, 0);
 
       // border
       else if (interior > 0 and ghost > 0)
-        partition(e) = 1;
+        setPartition(e, 1);
 
       // ghost
       else
-        partition(e) = 2;
+        setPartition(e, 2);
     });
 
     // Set vertices in 3d
@@ -281,15 +290,15 @@ private:
 
         // interior
         if (interior == count)
-          partition(v) = 0;
+          setPartition(v, 0);
 
         // border
         else if (interior > 0 and ghost > 0)
-          partition(v) = 1;
+          setPartition(v, 1);
 
         // ghost
         else
-          partition(v) = 2;
+          setPartition(v, 2);
       });
     }
   }
@@ -355,7 +364,7 @@ private:
   const Grid& grid() const { return grid_; }
 
   std::array<double, 2> xbounds_;
-  std::array<std::unordered_map<IdType, int>, dim+1> partition_;
+  std::array<std::unordered_map<IdType, int>, dim-1> partition_;
   std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
   const Grid& grid_;
 };
