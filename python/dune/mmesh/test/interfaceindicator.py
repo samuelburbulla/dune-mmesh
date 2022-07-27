@@ -4,60 +4,45 @@ from dune.mmesh import interfaceIndicator
 from dune.fem.space import lagrange
 from dune.fem.scheme import galerkin
 from dune.fem.function import integrate
+from dune.fem.view import geometryGridView
 from ufl import *
-
 
 # 2D
 from dune.mmesh.test.grids import line
-grid = mmesh((reader.gmsh, line.filename), 2)
-igrid = grid.hierarchicalGrid.interfaceGrid
-
-I = interfaceIndicator(igrid)
-
-space = lagrange(grid, order=1)
-u  = TrialFunction(space)
-uu = TestFunction(space)
-n = FacetNormal(space)
-x = SpatialCoordinate(space)
-topbottom = conditional(x[1] < 1e-6, 1, 0) + conditional(x[1] > 1-1e-6, 1, 0)
-
-A  = inner(grad(u), grad(uu)) * dx
-A += 1e6 * (avg(u) - 1) * avg(uu) * I*dS
-A += 1e6 * (u - 0) * uu * topbottom * ds
-
-scheme = galerkin([A == 0])
-uh = space.function(name="uh")
-scheme.solve(uh)
-
-grid.writeVTK("interfaceindicator-2d", pointdata=[uh])
-
-intU = integrate(grid, uh, order=1)
-assert(abs(intU - 0.5) < 1e-2)
-
+grid2 = mmesh((reader.gmsh, line.filename), 2)
 
 # 3D
 from dune.mmesh.test.grids import plane
-grid  = mmesh((reader.gmsh, plane.filename), 3)
-igrid = grid.hierarchicalGrid.interfaceGrid
+grid3  = mmesh((reader.gmsh, plane.filename), 3)
 
-I = interfaceIndicator(igrid)
-
-space = lagrange(grid, order=1)
-u  = TrialFunction(space)
-uu = TestFunction(space)
-n = FacetNormal(space)
+# 2D GeometryGrid
+space = lagrange(grid2, order=1, dimRange=2)
 x = SpatialCoordinate(space)
-topbottom = conditional(x[1] < 1e-6, 1, 0) + conditional(x[1] > 1-1e-6, 1, 0)
+disp = space.interpolate(x, name="disp")
+geoGrid = geometryGridView(disp)
 
-A  = inner(grad(u), grad(uu)) * dx
-A += 1e6 * (avg(u) - 1) * avg(uu) * I*dS
-A += 1e6 * (u - 0) * uu * topbottom * ds
 
-scheme = galerkin([A == 0])
-uh = space.function(name="uh")
-scheme.solve(uh)
+for grid in [grid2, grid3, geoGrid]:
+  igrid = grid.hierarchicalGrid.interfaceGrid
+  I = interfaceIndicator(igrid, grid=grid)
 
-grid.writeVTK("interfaceindicator-2d", pointdata=[uh])
+  space = lagrange(grid, order=1)
+  u  = TrialFunction(space)
+  uu = TestFunction(space)
+  n = FacetNormal(space)
+  x = SpatialCoordinate(space)
+  topbottom = conditional(x[1] < 1e-6, 1, 0) + conditional(x[1] > 1-1e-6, 1, 0)
 
-intU = integrate(grid, uh, order=1)
-assert(abs(intU - 0.5) < 1e-2)
+  A  = inner(grad(u), grad(uu)) * dx
+  A += 1e6 * (avg(u) - 1) * avg(uu) * I*dS
+  A += 1e6 * (u - 0) * uu * topbottom * ds
+
+  scheme = galerkin([A == 0])
+  uh = space.function(name="uh")
+  scheme.solve(uh)
+
+  grid.writeVTK("interfaceindicator", pointdata=[uh])
+
+  intU = integrate(grid, uh, order=1)
+  print(intU)
+  assert(abs(intU - 0.5) < 1e-2)
