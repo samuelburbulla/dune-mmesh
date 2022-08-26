@@ -183,7 +183,11 @@ namespace Dune
     //! The partition type for parallel computing
     PartitionType partitionType () const
     {
-      return mMesh_->partitionHelper().partitionType( grid().entity(hostEntity_) );
+      const auto& ph = mMesh_->partitionHelper();
+      if constexpr (codim == 0 || codim == dim)
+        return ph.partitionType( hostEntity_->info().partition );
+      else
+        return ph.partitionType( grid().entity(hostEntity_) );
     }
 
     //! Return the number of subEntities of codimension codim
@@ -636,7 +640,8 @@ namespace Dune
       if (hostEntity_ == decltype(hostEntity_)())
         return InteriorEntity;
 
-      return mMesh_->partitionHelper().partitionType( grid().entity(hostEntity_) );
+      const auto& ph = mMesh_->partitionHelper();
+      return ph.partitionType( hostEntity_->info().partition );
     }
 
     //! Geometry of this entity

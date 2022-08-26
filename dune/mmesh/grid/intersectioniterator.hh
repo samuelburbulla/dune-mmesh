@@ -89,14 +89,16 @@ namespace Dune
       if (i_ == dim + 1)
         return false;
 
-      const auto is = dereference();
-      if (is.inside().partitionType() == GhostEntity)
+      // return intersection only if adjacent entities are not ghost
+      if (hostEntity_->info().partition == 2)
       {
-        if (!is.neighbor())
+        const auto& neighborHostEntity = hostEntity_->neighbor(dim-i_);
+
+        if (mMesh_->getHostGrid().is_infinite(neighborHostEntity))
           return true;
 
         // skip ghost neighbors
-        if (is.outside().partitionType() == GhostEntity)
+        if (neighborHostEntity->info().partition == 2)
           return true;
       }
       return false;

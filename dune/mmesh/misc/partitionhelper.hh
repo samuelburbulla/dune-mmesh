@@ -31,8 +31,11 @@ struct PartitionHelper
   template <class Entity>
   bool contains(PartitionIteratorType pitype, const Entity& e) const
   {
-    int partitionType = partition(e);
+    return contains(pitype, partition(e));
+  }
 
+  bool contains(PartitionIteratorType pitype, int partitionType) const
+  {
     if (partitionType == -1)
       return false;
 
@@ -58,12 +61,15 @@ struct PartitionHelper
   template <class Entity>
   PartitionType partitionType(const Entity& e) const
   {
-    int partitionType = partition(e);
+    return partitionType( partition(e) );
+  }
 
-    if (partitionType == 0)
+  PartitionType partitionType(int partition) const
+  {
+    if (partition == 0)
       return InteriorEntity;
 
-    if (partitionType == 1)
+    if (partition == 1)
       return BorderEntity;
 
     else

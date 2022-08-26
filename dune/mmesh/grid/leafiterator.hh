@@ -83,7 +83,7 @@ namespace Dune
     {
       if (hostLeafIterator_ == mMesh_->getHostGrid().finite_faces_end())
         return false;
-      return !mMesh_->partitionHelper().contains(pitype, dereference());
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
     }
 
     const GridImp* mMesh_;
@@ -202,7 +202,7 @@ namespace Dune
     {
       if (hostLeafIterator_ == mMesh_->getHostGrid().finite_vertices_end())
         return false;
-      return !mMesh_->partitionHelper().contains(pitype, dereference());
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
     }
 
     const GridImp* mMesh_;
@@ -454,7 +454,7 @@ namespace Dune
     {
       if (hostLeafIterator_ == HostGridLeafIterator(mMesh_->getHostGrid().finite_vertices_end()))
         return false;
-      return !mMesh_->partitionHelper().contains(pitype, dereference());
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
     }
 
     const GridImp* mMesh_;

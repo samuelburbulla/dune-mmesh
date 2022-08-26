@@ -5,8 +5,11 @@
 # include "config.h"
 #endif
 #include <iostream>
+#include <chrono>
+#include <thread>
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
+#include <dune/common/timer.hh>
 
 #include <dune/grid/test/gridcheck.hh>
 #include <dune/grid/test/checktwists.hh>
@@ -33,13 +36,35 @@ int main(int argc, char *argv[])
   Grid& grid = *gridFactory.grid();
   const auto& igrid = grid.interfaceGrid();
   grid.loadBalance();
+  const auto& gv = grid.leafGridView();
 
-  std::cout << "Rank " << grid.comm().rank() << ": Elements " << grid.size(0) << " (" << grid.ghostSize(0) << " ghost)" << std::endl;
-  std::cout << "Rank " << grid.comm().rank() << ": Facets " << grid.size(1) << " (" << grid.ghostSize(1) << " ghost)" << std::endl;
-  std::cout << "Rank " << grid.comm().rank() << ": Vertices " << grid.size(dim) << " (" << grid.ghostSize(dim) << " ghost)" << std::endl;
+  static constexpr bool verbose = false;
+  if constexpr (verbose)
+  {
+    std::cout << "Rank " << grid.comm().rank() << ": Elements " << grid.size(0) << " (" << grid.ghostSize(0) << " ghost)" << std::endl;
+    std::cout << "Rank " << grid.comm().rank() << ": Facets " << grid.size(1) << " (" << grid.ghostSize(1) << " ghost)" << std::endl;
+    std::cout << "Rank " << grid.comm().rank() << ": Vertices " << grid.size(dim) << " (" << grid.ghostSize(dim) << " ghost)" << std::endl;
 
-  std::cout << "Interface Rank " << grid.comm().rank() << ": Elements " << igrid.size(0) << " (" << igrid.ghostSize(0) << " ghost)" << std::endl;
-  std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(dim-1) << " (" << igrid.ghostSize(dim-1) << " ghost)" << std::endl;
+    std::cout << "Interface Rank " << grid.comm().rank() << ": Elements " << igrid.size(0) << " (" << igrid.ghostSize(0) << " ghost)" << std::endl;
+    std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(dim-1) << " (" << igrid.ghostSize(dim-1) << " ghost)" << std::endl;
+  }
+
+  Dune::Timer timer;
+  timer.start();
+
+  double vol = 0.0;
+  for (const auto& e : elements(gv, Dune::Partitions::interior))
+  {
+    vol += e.geometry().volume();
+    std::this_thread::sleep_for(std::chrono::microseconds(10)); // to see strong scaling
+  }
+  double sumvol = grid.comm().sum(vol);
+
+  if (grid.comm().rank() == 0)
+  {
+    std::cout << "Vol = " << sumvol << std::endl;
+    std::cout << "Took " << timer.elapsed() << std::endl;
+  }
 
   // Call gridcheck from dune-grid
   gridcheck( grid );
@@ -47,37 +72,40 @@ int main(int argc, char *argv[])
   // Call grid check for interface grid
   gridcheck( igrid );
 
-  auto getElementPartition = [](const auto& grid)
+  if constexpr (verbose)
   {
-    const auto& indexSet = grid.leafIndexSet();
-    std::vector<int> partition (grid.size(0));
-    for (const auto& e : elements(grid.leafGridView(), Partitions::all))
-      partition[indexSet.index(e)] = e.partitionType();
-    return partition;
-  };
+    auto getElementPartition = [](const auto& grid)
+    {
+      const auto& indexSet = grid.leafIndexSet();
+      std::vector<int> partition (grid.size(0));
+      for (const auto& e : elements(grid.leafGridView(), Partitions::all))
+        partition[indexSet.index(e)] = e.partitionType();
+      return partition;
+    };
 
-  auto getVertexPartition = [](const auto& grid, int dim)
-  {
-    const auto& indexSet = grid.leafIndexSet();
-    std::vector<int> vpartition (grid.size(dim));
-    for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
-      vpartition[indexSet.index(v)] = v.partitionType();
-    return vpartition;
-  };
+    auto getVertexPartition = [](const auto& grid, int dim)
+    {
+      const auto& indexSet = grid.leafIndexSet();
+      std::vector<int> vpartition (grid.size(dim));
+      for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
+        vpartition[indexSet.index(v)] = v.partitionType();
+      return vpartition;
+    };
 
-  VTKWriter vtkWriter( grid.leafGridView() );
-  auto ep = getElementPartition(grid);
-  vtkWriter.addCellData( ep, "partition" );
-  auto vp = getVertexPartition(grid, dim);
-  vtkWriter.addVertexData(vp, "partition");
-  vtkWriter.write("test-grid");
+    VTKWriter vtkWriter( grid.leafGridView() );
+    auto ep = getElementPartition(grid);
+    vtkWriter.addCellData( ep, "partition" );
+    auto vp = getVertexPartition(grid, dim);
+    vtkWriter.addVertexData(vp, "partition");
+    vtkWriter.write("test-grid");
 
-  VTKWriter ivtkWriter( igrid.leafGridView() );
-  auto iep = getElementPartition(igrid);
-  ivtkWriter.addCellData( iep, "partition" );
-  auto ivp = getVertexPartition(igrid, dim-1);
-  ivtkWriter.addVertexData( ivp, "partition");
-  ivtkWriter.write("test-igrid");
+    VTKWriter ivtkWriter( igrid.leafGridView() );
+    auto iep = getElementPartition(igrid);
+    ivtkWriter.addCellData( iep, "partition" );
+    auto ivp = getVertexPartition(igrid, dim-1);
+    ivtkWriter.addVertexData( ivp, "partition");
+    ivtkWriter.write("test-igrid");
+  }
 
   return EXIT_SUCCESS;
 }
