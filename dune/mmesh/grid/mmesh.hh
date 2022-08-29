@@ -42,6 +42,7 @@
 #include "../remeshing/ratioindicator.hh"
 #include "../interface/traits.hh"
 #include "../misc/boundaryidprovider.hh"
+#include "../misc/communication.hh"
 #include "../misc/partitionhelper.hh"
 #include "../misc/twistutility.hh"
 // Further includes below!
@@ -289,14 +290,22 @@ namespace Dune
     //! update the grid indices and ids
     void update()
     {
+      setIds();
       setIndices();
+      interfaceGrid_->setIds();
       interfaceGrid_->setIndices();
     }
 
   private:
-    void setIndices()
+    //! compute the grid ids
+    void setIds()
     {
       globalIdSet_->update(This());
+    }
+
+    //! compute the grid indices
+    void setIndices()
+    {
       leafIndexSet_->update(This());
 
       if (comm().size() == 1)
@@ -383,6 +392,7 @@ namespace Dune
       InterfaceGridConnectedComponent connectedComponent ( ientity );
       interfaceGrid_->markAsRefined( {ids}, connectedComponent );
 
+      interfaceGrid_->setIds();
       interfaceGrid_->setIndices();
     }
 
@@ -1358,7 +1368,15 @@ namespace Dune
         ci++;
       }
 
-      // update ids and index set
+      // first update ids
+      setIds();
+      interfaceGrid_->setIds();
+
+      // then, update partitions
+      if (comm().size() > 1)
+        partitionHelper_.updatePartitions();
+
+      // afterwards, update index sets
       setIndices();
 
       if ( buildComponents )
@@ -1756,12 +1774,38 @@ namespace Dune
 
     template< class Data, class InterfaceType, class CommunicationDirection >
     void communicate (
-      Data &data,
-      InterfaceType iftype,
-      CommunicationDirection dir,
+      Data &dataHandle,
+      InterfaceType interface,
+      CommunicationDirection direction,
       int level = 0 ) const
     {
-      std::cout << "TODO: Communicate" << std::endl;
+      if (comm().size() <= 1)
+        return;
+
+      if( (interface == InteriorBorder_All_Interface) || (interface == All_All_Interface) )
+      {
+        MMeshCommunication<GridImp> communication( partitionHelper_ );
+        const auto& gv = this->leafGridView();
+
+        switch( direction )
+        {
+        case ForwardCommunication:
+          communication( gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         dataHandle, InteriorEntity, GhostEntity,
+                         (interface == All_All_Interface) );
+          break;
+
+        case BackwardCommunication:
+          communication( gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         dataHandle, GhostEntity, InteriorEntity,
+                         (interface == All_All_Interface) );
+          break;
+        }
+      }
+      else
+        DUNE_THROW( NotImplemented, "Communication on interface type " << interface << " not implemented." );
     }
 
 

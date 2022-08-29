@@ -10,36 +10,22 @@
 #include <iostream>
 #include <sstream>
 
-//#define USE_OLD_RANNACHERTUREK_SPACE
-
 // Includes from DUNE-FEM
 // ----------------------
 
 // include Lagrange discrete function space
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#include <dune/fem/space/lagrange.hh>
+#include <dune/fem/space/discontinuousgalerkin.hh>
 #include <dune/fem/space/common/adaptationmanager.hh>
 #include <dune/fem/function/localfunction/bindable.hh>
+#include <dune/fem/io/file/vtkio.hh>
 
-#if HAVE_PETSC && defined USE_PETSCDISCRETEFUNCTION
-#include <dune/fem/function/petscdiscretefunction.hh>
-#include <dune/fem/operator/linear/petscoperator.hh>
-#include <dune/fem/solver/petscinverseoperators.hh>
-#elif HAVE_DUNE_ISTL && defined USE_BLOCKVECTORFUNCTION
-#include <dune/fem/function/blockvectorfunction.hh>
-#include <dune/fem/operator/linear/istloperator.hh>
-#include <dune/fem/solver/istlinverseoperators.hh>
-#else
 #include <dune/fem/function/adaptivefunction.hh>
 #include <dune/fem/operator/linear/spoperator.hh>
-#if HAVE_SUITESPARSE_UMFPACK && defined USE_UMFPACK
-#include <dune/fem/solver/umfpacksolver.hh>
-#else
 #include <dune/fem/solver/krylovinverseoperators.hh>
-#endif
-#endif
 
 #include <dune/fem/space/common/interpolate.hh>
+#include <dune/common/timer.hh>
 
 #include <dune/fem/misc/l2norm.hh>
 #include <dune/fem/misc/h1norm.hh>
@@ -53,29 +39,15 @@
 // -----------------------
 
 typedef Dune::MovingMesh<2> GridType;
+static constexpr int polOrder = 1;
 
 typedef Dune::Fem::AdaptiveLeafGridPart< GridType, Dune::InteriorBorder_Partition > GridPartType;
 typedef Dune::Fem::FunctionSpace< typename GridType::ctype, typename GridType::ctype, GridType::dimensionworld, 1 > SpaceType;
-typedef Dune::Fem::DynamicLagrangeDiscreteFunctionSpace< SpaceType, GridPartType > DiscreteSpaceType;
-//typedef Dune::Fem::LagrangeSpace< SpaceType, GridPartType > DiscreteSpaceType;
+typedef Dune::Fem::LagrangeDiscontinuousGalerkinSpace< SpaceType, GridPartType, polOrder > DiscreteSpaceType;
 
-#if HAVE_PETSC && defined USE_PETSCDISCRETEFUNCTION
-typedef Dune::Fem::PetscDiscreteFunction< DiscreteSpaceType > DiscreteFunctionType;
-typedef Dune::Fem::PetscLinearOperator< DiscreteFunctionType, DiscreteFunctionType > LinearOperatorType;
-typedef Dune::Fem::PetscInverseOperator< DiscreteFunctionType, LinearOperatorType > InverseOperatorType;
-#elif HAVE_DUNE_ISTL && defined USE_BLOCKVECTORFUNCTION
-typedef Dune::Fem::ISTLBlockVectorDiscreteFunction< DiscreteSpaceType > DiscreteFunctionType;
-typedef Dune::Fem::ISTLLinearOperator< DiscreteFunctionType, DiscreteFunctionType > LinearOperatorType;
-typedef Dune::Fem::ISTLInverseOperator< DiscreteFunctionType, Dune::Fem::SolverParameter::cg > InverseOperatorType;
-#else
 typedef Dune::Fem::AdaptiveDiscreteFunction< DiscreteSpaceType > DiscreteFunctionType;
 typedef Dune::Fem::SparseRowLinearOperator< DiscreteFunctionType, DiscreteFunctionType > LinearOperatorType;
-#if HAVE_SUITESPARSE_UMFPACK && defined USE_UMFPACK
-typedef Dune::Fem::UMFPACKInverseOperator< DiscreteFunctionType > InverseOperatorType;
-#else
 typedef Dune::Fem::KrylovInverseOperator< DiscreteFunctionType > InverseOperatorType;
-#endif
-#endif
 
 // TestGrid
 // --------
@@ -171,129 +143,92 @@ struct Algorithm
 {
   typedef Dune::FieldVector< double, 2 > ErrorType;
   typedef Function< GridPartType, SpaceType::RangeType > FunctionType;
-  typedef Dune::FemPy::VirtualizedGridFunction< GridPartType, typename SpaceType::RangeType > VGridFunctionType;
 
-  explicit Algorithm ( GridType &grid );
-  ErrorType operator() ( int step, int polOrder );
-  ErrorType finalize ( DiscreteFunctionType &u );
-  DiscreteSpaceType &space ();
-  void nextMesh ();
-  void resetMesh (const int steps);
+  explicit Algorithm ( GridType &grid )
+  : grid_( grid )
+  {}
+
+  ErrorType operator() ( int step );
+
+  void nextMesh ()
+  {
+    grid_.globalRefine( 2 );
+    grid_.loadBalance();
+  }
 
 private:
-  GridPartType gridPart_;
-  FunctionType function_;
+  GridType& grid_;
 };
 
-inline Algorithm::Algorithm ( GridType &grid )
-: gridPart_( grid ), function_(gridPart_)
+inline Algorithm::ErrorType Algorithm::operator() ( int step )
 {
-}
-
-inline void Algorithm :: nextMesh ()
-{
-  Dune::Fem::GlobalRefine::apply(gridPart_.grid(), Dune::DGFGridInfo< GridType >::refineStepsForHalf() );
-}
-
-inline void Algorithm :: resetMesh (const int steps)
-{
-  gridPart_.grid().globalRefine( -steps * Dune::DGFGridInfo< GridType >::refineStepsForHalf() );
-}
-
-inline Algorithm::ErrorType Algorithm::operator() ( int step, int polOrder )
-{
-  DiscreteSpaceType space( gridPart_, polOrder );
+  GridPartType gridPart( grid_ );
+  DiscreteSpaceType space( gridPart );
   DiscreteFunctionType solution( "solution", space );
-
-  // get operator
-  MassOperatorType massOperator( space );
-
-  // assemble RHS
-  DiscreteFunctionType rhs( "rhs", space );
-
-  // create virtualized grid function to test this class
-  VGridFunctionType vF( function_ );
-
-  massOperator.assembleRHS( vF, rhs );
-
-  unsigned long maxIter = space.size();
-  maxIter = space.gridPart().comm().sum( maxIter );
-
-  // clear result
   solution.clear();
 
-  // apply solver
+  MassOperatorType massOperator( space );
+  DiscreteFunctionType rhs( "rhs", space );
+  FunctionType function_( gridPart );
+
   InverseOperatorType inverseOperator;
   inverseOperator.bind( massOperator );
 
-  inverseOperator.parameter().setTolerance( 1e-10 );
-  inverseOperator.parameter().setMaxIterations( maxIter );
+  // apply solver
+  Dune::Timer timer;
+  timer.start();
+  massOperator.assembleRHS( function_, rhs );
+  if ( grid_.comm().rank() == 0 )
+    std::cout << "Took " << timer.elapsed() << std::endl;
 
   inverseOperator( rhs, solution );
-  return finalize( solution );
-}
 
+  // write vtk
+  Dune::Fem::VTKIO< GridPartType > vtkIO( gridPart, Dune::VTK::nonconforming );
+  vtkIO.addVertexData( function_ );
+  vtkIO.addVertexData( solution );
+  vtkIO.write( "test-l2projection-" + std::to_string(step) );
 
-inline Algorithm::ErrorType Algorithm::finalize ( DiscreteFunctionType &solution )
-{
-  const GridPartType &gridPart = solution.space().gridPart();
+  // return error
   ErrorType error;
-
   Dune::Fem::L2Norm< GridPartType > l2norm( gridPart );
   Dune::Fem::H1Norm< GridPartType > h1norm( gridPart );
 
-  // create virtualized grid function to test this class
-  VGridFunctionType vF( function_ );
-
-  DiscreteFunctionType rhs( solution );
-
-  Dune::Fem::interpolate( vF, rhs );
-
-  {
-    // create virtualized grid function to test this class
-    // this is only for testing, error needs to be recomputed
-    VGridFunctionType vF2( rhs );
-    error[ 0 ] = l2norm.distance( vF2, solution );
-    error[ 1 ] = h1norm.distance( vF2, solution );
-  }
-
-  error[ 0 ] = l2norm.distance( vF, solution );
-  error[ 1 ] = h1norm.distance( vF, solution );
-  std::cout << error <<std::endl;
+  error[ 0 ] = l2norm.distance( function_, solution );
+  error[ 1 ] = h1norm.distance( function_, solution );
+//  std::cout << error << std::endl;
   return error;
 }
 
-void run( GridType& grid, const int polOrder )
-{
-  const int nrSteps = 4;
 
-  std::cout<< "testing with polorder "<< polOrder <<std::endl;
+void run( GridType& grid )
+{
+  const int nrSteps = 1;
+
   Algorithm algorithm( grid );
   std::vector< typename Algorithm::ErrorType > error( nrSteps );
-  for( int step = 0; step<nrSteps; ++step )
+  for( int step = 0; step < nrSteps; ++step )
   {
-    error[ step ] = algorithm( step, polOrder );
-//    algorithm.nextMesh();
+    error[ step ] = algorithm( step );
+    algorithm.nextMesh();
   }
 
-  for( int step = 1; step <nrSteps; ++step )
+  for( int step = 1; step < nrSteps; ++step )
   {
     double l2eoc = log( error[ step ][ 0 ] / error[ step -1 ][ 0 ] ) / log( 0.5 );
     double h1eoc = log( error[ step ][ 1 ] / error[ step -1 ][ 1 ] ) / log( 0.5 );
+//    std::cout << "EOC: " << l2eoc << "   " << h1eoc << std::endl;
 
-    if( std::abs( l2eoc -1 - polOrder )  > 0.2 )
+    if( std::abs( l2eoc-1 - polOrder ) > 0.2 )
     {
       DUNE_THROW(Dune::InvalidStateException,"EOC check of solving mass matrix system failed L2eoc " << l2eoc << " " << polOrder);
     }
 
-    if( std::abs( h1eoc - polOrder )  > 0.2 )
+    if( std::abs( h1eoc - polOrder ) > 0.2 )
     {
-      //note: This will fail with Yaspgrid, bug in Geometry JacobianInverse
       DUNE_THROW(Dune::InvalidStateException,"EOC check of solving mass matrix system failed H1eoc " << h1eoc << " " << polOrder);
     }
   }
-
-  algorithm.resetMesh(nrSteps);
 }
 
 
@@ -312,8 +247,10 @@ try
   Dune::Fem::Parameter::append( (argc < 2) ? "parameter" : argv[ 1 ] );
 
   GridType &grid = TestGrid::grid();
-  for( int p=1; p<2; ++p )
-    run( grid, p );
+  grid.globalRefine( 2 * 5 );
+  grid.loadBalance();
+
+  run( grid );
 
   Dune::Fem::Parameter::write( "parameter.log" );
 

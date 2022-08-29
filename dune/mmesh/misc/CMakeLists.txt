@@ -1,6 +1,7 @@
 set(HEADERS
   boundaryidprovider.hh
   capabilities.hh
+  communication.hh
   partitionhelper.hh
   persistentcontainer.hh
   twistutility.hh

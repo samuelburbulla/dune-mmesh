@@ -76,6 +76,32 @@ struct PartitionHelper
       return GhostEntity;
   }
 
+  void updatePartitions()
+  {
+    computePartitions();
+    computeInterfacePartitions();
+  }
+
+  //! List of connected ranks
+  std::vector< int > links () const
+  {
+    const int rank = comm().rank();
+    const int size = comm().size();
+    std::vector< int > links;
+    if (rank > 0)
+      links.push_back( rank - 1 );
+    if (rank < size-1)
+      links.push_back( rank + 1 );
+
+    // TODO: is this sufficient? Improve efficiency.
+    return links;
+  }
+
+  auto& comm() const
+  {
+    return grid().comm();
+  }
+
 private:
 
   //! Get partition marker

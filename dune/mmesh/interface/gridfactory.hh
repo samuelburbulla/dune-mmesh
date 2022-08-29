@@ -194,6 +194,7 @@ namespace Dune
 
     auto getGrid ()
     {
+      mMesh_->interfaceGridPtr()->setIds();
       mMesh_->interfaceGridPtr()->setIndices();
       mMesh_->interfaceGridPtr()->setBoundarySegments( boundarySegments_ );
 

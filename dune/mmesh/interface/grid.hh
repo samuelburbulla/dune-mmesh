@@ -624,11 +624,16 @@ namespace Dune
     }
 
   public:
-    //! compute the grid indices and ids
+    //! compute the grid ids
+    void setIds()
+    {
+      globalIdSet_->update(this);
+    }
+
+    //! compute the grid indices
     void setIndices()
     {
       leafIndexSet_->update(this);
-      globalIdSet_->update(this);
 
       localBoundarySegments_.clear();
       std::size_t count = 0;
