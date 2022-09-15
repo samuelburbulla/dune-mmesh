@@ -179,9 +179,12 @@ inline Algorithm::ErrorType Algorithm::operator() ( int step )
   timer.start();
   massOperator.assembleRHS( function_, rhs );
   if ( grid_.comm().rank() == 0 )
-    std::cout << "Took " << timer.elapsed() << std::endl;
+    std::cout << "assmbleRHS took " << timer.elapsed() << std::endl;
 
+  timer.reset();
   inverseOperator( rhs, solution );
+  if ( grid_.comm().rank() == 0 )
+    std::cout << "inverseOperator took " << timer.elapsed() << std::endl;
 
   // write vtk
   Dune::Fem::VTKIO< GridPartType > vtkIO( gridPart, Dune::VTK::nonconforming );
@@ -196,7 +199,8 @@ inline Algorithm::ErrorType Algorithm::operator() ( int step )
 
   error[ 0 ] = l2norm.distance( function_, solution );
   error[ 1 ] = h1norm.distance( function_, solution );
-//  std::cout << error << std::endl;
+  if ( grid_.comm().rank() == 0 )
+    std::cout << error << std::endl;
   return error;
 }
 

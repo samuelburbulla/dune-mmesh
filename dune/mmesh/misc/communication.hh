@@ -2,11 +2,12 @@
 #define DUNE_MMESH_MISC_COMMUNICATION_HH
 
 #include <vector>
+#include <mpi.h>
 #include <dune/common/hybridutilities.hh>
 #include <dune/grid/common/gridenums.hh>
 #include <dune/common/parallel/variablesizecommunicator.hh>
 
-#include <mpi.h>
+#include "objectstream.hh"
 
 namespace Dune
 {
@@ -16,8 +17,6 @@ namespace Dune
   {
     typedef MMeshCommunication< Grid > This;
     typedef PartitionHelper< Grid > PartitionHelperType;
-    typedef MessageBuffer< std::size_t > BufferType;
-
 
     // prohibit copying and assignment
     MMeshCommunication( const This & );
@@ -43,8 +42,9 @@ namespace Dune
                       const PartitionType sendType, const PartitionType recvType,
                       const bool packAll ) const
     {
-      const auto& links = partitionHelper_.links();
+      typedef MMeshImpl::ObjectStream BufferType;
 
+      const auto& links = partitionHelper_.links();
       // vector of message buffers
       std::vector< BufferType > buffer;
       for (std::size_t i = 0; i < links.size(); ++i)
@@ -87,8 +87,11 @@ namespace Dune
       {
         const int dest = links[ link ];
         MPI_Request& request = mpiRequests[ link ];
-        BufferType* os = &buffer[ link ];
-        MPI_Isend( os, os->size(), MPI_BYTE, dest, tag_, comm, &request );
+        BufferType& os = buffer[ link ];
+
+        char* buffer = os._buf + os._rb;
+        int bufferSize = os._wb  - os._rb;
+        MPI_Isend( buffer, bufferSize, MPI_BYTE, dest, tag_, comm, &request );
       }
 
       // receive data
@@ -154,6 +157,7 @@ namespace Dune
     mutable int tag_;
 
     //! Receive operation for a link
+    template< class BufferType >
     bool probeAndReceive( const int link, BufferType& buffer ) const
     {
       const auto& comm = partitionHelper_.comm();
@@ -171,13 +175,13 @@ namespace Dune
         MPI_Get_count( &status, MPI_BYTE, &bufferSize );
 
         // reserve memory
-        if ( buffer.size() != bufferSize )
-          buffer = BufferType( bufferSize );
-        buffer.reset();
+        buffer.reserve( bufferSize );
+        buffer.clear();
 
         // MPI receive (blocking)
-        MPI_Recv( buffer, bufferSize, MPI_BYTE, status.MPI_SOURCE, tag_, comm, &status);
+        MPI_Recv( buffer.raw(), bufferSize, MPI_BYTE, status.MPI_SOURCE, tag_, comm, &status);
 
+        buffer.seekp( bufferSize );
         return true;
       }
 
@@ -199,7 +203,7 @@ namespace Dune
 
     typedef typename Grid::template Codim< codim >::Entity Entity;
 
-    template< class DataHandleIF >
+    template< class DataHandleIF, class BufferType >
     static void apply ( const std::size_t links,
                         const PartitionHelperType &partitionHelper,
                         DataHandleIF &dataHandle,
@@ -219,7 +223,6 @@ namespace Dune
         for (int link = 0; link < links; ++link)
         {
           std::size_t size = dataHandle.size( entity );
-//          buffer[ link ] = BufferType( size );
 
           // write data to message buffer using data handle
           dataHandle.gather( buffer[ link ], entity );
@@ -239,7 +242,7 @@ namespace Dune
   {
     using Element = typename Grid::template Codim< 0 >::Entity;
 
-    template< class DataHandleIF >
+    template< class DataHandleIF, class BufferType >
     static void apply ( const std::size_t links,
                         const PartitionHelperType &partitionHelper,
                         DataHandleIF &dataHandle,
@@ -257,7 +260,7 @@ namespace Dune
         // get subentity
         const auto& entity = element.template subEntity< codim >( subEntity );
 
-        for (int link = 0; link < partitionHelper.links().size(); ++link)
+        for (int link = 0; link < links; ++link)
         {
           std::size_t size = dataHandle.size( entity );
 
