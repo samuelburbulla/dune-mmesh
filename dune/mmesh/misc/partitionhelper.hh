@@ -92,8 +92,6 @@ struct PartitionHelper
       links.push_back( rank - 1 );
     if (rank < size-1)
       links.push_back( rank + 1 );
-
-    // TODO: is this sufficient? Improve efficiency.
     return links;
   }
 

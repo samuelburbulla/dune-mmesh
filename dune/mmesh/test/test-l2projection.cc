@@ -41,7 +41,7 @@
 typedef Dune::MovingMesh<2> GridType;
 static constexpr int polOrder = 1;
 
-typedef Dune::Fem::AdaptiveLeafGridPart< GridType, Dune::InteriorBorder_Partition > GridPartType;
+typedef Dune::Fem::AdaptiveLeafGridPart< GridType, Dune::All_Partition > GridPartType;
 typedef Dune::Fem::FunctionSpace< typename GridType::ctype, typename GridType::ctype, GridType::dimensionworld, 1 > SpaceType;
 typedef Dune::Fem::LagrangeDiscontinuousGalerkinSpace< SpaceType, GridPartType, polOrder > DiscreteSpaceType;
 
@@ -221,16 +221,17 @@ void run( GridType& grid )
   {
     double l2eoc = log( error[ step ][ 0 ] / error[ step -1 ][ 0 ] ) / log( 0.5 );
     double h1eoc = log( error[ step ][ 1 ] / error[ step -1 ][ 1 ] ) / log( 0.5 );
-//    std::cout << "EOC: " << l2eoc << "   " << h1eoc << std::endl;
+    if ( grid.comm().rank() == 0 )
+      std::cout << "EOC: " << l2eoc << "   " << h1eoc << std::endl;
 
     if( std::abs( l2eoc-1 - polOrder ) > 0.2 )
     {
-      DUNE_THROW(Dune::InvalidStateException,"EOC check of solving mass matrix system failed L2eoc " << l2eoc << " " << polOrder);
+      DUNE_THROW(Dune::InvalidStateException, "EOC check of solving mass matrix system failed L2eoc " << l2eoc << " " << polOrder);
     }
 
     if( std::abs( h1eoc - polOrder ) > 0.2 )
     {
-      DUNE_THROW(Dune::InvalidStateException,"EOC check of solving mass matrix system failed H1eoc " << h1eoc << " " << polOrder);
+      DUNE_THROW(Dune::InvalidStateException, "EOC check of solving mass matrix system failed H1eoc " << h1eoc << " " << polOrder);
     }
   }
 }
@@ -253,6 +254,9 @@ try
   GridType &grid = TestGrid::grid();
   grid.globalRefine( 2 * 5 );
   grid.loadBalance();
+
+  if ( grid.comm().rank() == 0 )
+    std::cout << grid.size(0) << " cells" << std::endl;
 
   run( grid );
 

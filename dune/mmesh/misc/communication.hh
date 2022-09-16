@@ -45,10 +45,11 @@ namespace Dune
       typedef MMeshImpl::ObjectStream BufferType;
 
       const auto& links = partitionHelper_.links();
+
       // vector of message buffers
-      std::vector< BufferType > buffer;
-      for (std::size_t i = 0; i < links.size(); ++i)
-        buffer.emplace_back( 2 );
+      std::vector< BufferType > buffer( links.size() );
+      for( int link = 0; link < links.size(); ++link )
+        buffer[ link ].clear();
 
       // pack data on send entities
       for( PackIterator it = packBegin; it != packEnd; ++it )
@@ -88,10 +89,9 @@ namespace Dune
         const int dest = links[ link ];
         MPI_Request& request = mpiRequests[ link ];
         BufferType& os = buffer[ link ];
-
-        char* buffer = os._buf + os._rb;
-        int bufferSize = os._wb  - os._rb;
-        MPI_Isend( buffer, bufferSize, MPI_BYTE, dest, tag_, comm, &request );
+        char* buf = os._buf + os._rb;
+        int bufSize = os._wb  - os._rb;
+        MPI_Isend( buf, bufSize, MPI_BYTE, dest, tag_, comm, &request );
       }
 
       // receive data
@@ -179,7 +179,7 @@ namespace Dune
         buffer.clear();
 
         // MPI receive (blocking)
-        MPI_Recv( buffer.raw(), bufferSize, MPI_BYTE, status.MPI_SOURCE, tag_, comm, &status);
+        MPI_Recv( buffer._buf, bufferSize, MPI_BYTE, status.MPI_SOURCE, tag_, comm, &status );
 
         buffer.seekp( bufferSize );
         return true;
@@ -224,6 +224,9 @@ namespace Dune
         {
           std::size_t size = dataHandle.size( entity );
 
+          // write size into stream
+          buffer[ link ].write( size );
+
           // write data to message buffer using data handle
           dataHandle.gather( buffer[ link ], entity );
         }
@@ -262,7 +265,9 @@ namespace Dune
 
         for (int link = 0; link < links; ++link)
         {
-          std::size_t size = dataHandle.size( entity );
+          // read size from stream
+          std::size_t size( 0 );
+          buffer[ link ].read( size );
 
           // read data from message buffer using data handle
           dataHandle.scatter( buffer[ link ], entity, size );

@@ -42,7 +42,7 @@ namespace MMeshImpl
   {
     using Traits = ObjectStreamTraits;
   public:
-    char * _buf;
+    char *_buf;
     size_t _rb, _wb, _len;
   protected:
     const size_t _bufChunk;
@@ -54,20 +54,22 @@ namespace MMeshImpl
     public:
       virtual std::string what () const { return "EOFException"; }
     };
+
     class OutOfMemoryException {};
-    inline ObjectStream (size_t chunk)
-      : _buf(0), _rb(0) , _wb(0) , _len (0) , _bufChunk(chunk) , _owner(true)
-    {
-    }
+
+    inline ObjectStream (size_t chunk = 0)
+      : _buf(0), _rb(0), _wb(0), _len(0), _bufChunk(chunk), _owner(true)
+    {}
 
     inline ObjectStream (const ObjectStream & os)
-      : _buf(0), _rb(0) , _wb(0) , _len (0) , _bufChunk(os._bufChunk) , _owner(true)
+      : _buf(0), _rb(0), _wb(0), _len(0), _bufChunk(os._bufChunk), _owner(true)
     {
       assign(os);
     }
 
     // reset write and read postitions
     inline void clear() { _wb = 0; _rb = 0; }
+
     // reset read position
     inline void resetReadPosition() { _rb = 0; }
 
@@ -75,7 +77,7 @@ namespace MMeshImpl
     void seekp( const size_t pos )
     {
       _wb = pos;
-      alugrid_assert ( _wb <= _len );
+      assert ( _wb <= _len );
     }
 
     // return's true if size > 0 and read position is zero
@@ -92,7 +94,7 @@ namespace MMeshImpl
     inline void reserve(size_t s)
     {
       const size_t newSize = _wb + s;
-      if (newSize > _len) reallocateBuffer( newSize);
+      if (newSize > _len) reallocateBuffer( newSize );
     }
 
     // delete stream
@@ -123,6 +125,7 @@ namespace MMeshImpl
     ////////////////////////////////////
     // to behave like stringstream
     ////////////////////////////////////
+
     // put char
     inline void put (const signed char a)  { write(a); }
 
@@ -142,13 +145,14 @@ namespace MMeshImpl
 
     // good function
     bool good () const { return (this->_rb < this->_wb); }
+
     /////////////////////////////////////
 
   protected:
     template <class T>
     inline void writeT (const T & a, const bool checkLength )
     {
-      alugrid_assert ( _owner );
+      assert ( _owner );
       const size_t ap = _wb;
       _wb += sizeof(T);
 
@@ -157,7 +161,7 @@ namespace MMeshImpl
       {
         reallocateBuffer(_wb);
       }
-      alugrid_assert ( _wb <= _len );
+      assert ( _wb <= _len );
 
       // call assignment operator of type T
       Traits::copy( static_cast< void * >( getBuff( ap ) ), &a, 1 );
@@ -169,11 +173,7 @@ namespace MMeshImpl
     {
       const size_t ap = _rb;
       _rb += sizeof(T);
-
-#ifndef NO_OBJECTSTREAM_DEBUG
-      if ( checkLength && _rb > _wb) throw EOFException ();
-#endif
-      alugrid_assert ( _rb <= _wb );
+      assert ( _rb <= _wb );
 
       // call assignment operator of type T
       Traits::copy( &a, static_cast< const void * >( getBuff( ap ) ), 1 );
@@ -199,24 +199,21 @@ namespace MMeshImpl
     {
       if( length == 0 ) return;
       // actual read position
-      os.write( getBuff(_rb) ,length);
+      os.write( getBuff(_rb), length);
       removeObject(length);
     }
 
     // writes hole stream of os to this stream
     inline void writeStream (const ObjectStream & os)
     {
-      write(os._buf,os._wb);
+      write(os._buf, os._wb);
     }
 
     // increments the read position without actualy read data
     inline void removeObject(const size_t length)
     {
       _rb += length;
-#ifndef NO_OBJECTSTREAM_DEBUG
-      if( _rb > _wb) throw EOFException ();
-#endif
-      alugrid_assert ( _rb <= _wb );
+      assert ( _rb <= _wb );
     }
 
     //! free allocated memory
@@ -252,13 +249,13 @@ namespace MMeshImpl
     // compatibility with ostream
     inline void write(const char* buff, const size_t length )
     {
-      alugrid_assert ( _owner );
+      assert ( _owner );
       if( length == 0 ) return;
 
       const size_t newWb = _wb + length;
       if (newWb > _len) reallocateBuffer(newWb);
 
-      memcpy( getBuff(_wb) , buff , length );
+      memcpy( getBuff(_wb), buff, length );
       _wb = newWb;
     }
 
@@ -268,10 +265,7 @@ namespace MMeshImpl
       if( length == 0 ) return;
 
       const size_t newRb = _rb + length;
-#ifndef NO_OBJECTSTREAM_DEBUG
-      if (newRb > _wb) throw EOFException ();
-#endif
-      alugrid_assert ( newRb <= _wb );
+      assert ( newRb <= _wb );
 
       memcpy( buff, getBuff(_rb), length );
       _rb = newRb;
@@ -288,11 +282,12 @@ namespace MMeshImpl
     // reallocated the buffer if necessary
     inline void reallocateBuffer(size_t newSize)
     {
-      alugrid_assert ( _owner );
+      assert ( _owner );
       _len += _bufChunk;
       if(_len < newSize) _len = newSize;
       _buf = (char *) realloc (_buf, _len);
-      if (!_buf) {
+      if (!_buf)
+      {
         perror ("**EXCEPTION in ObjectStream :: reallocateBuffer(size_t) ");
         throw OutOfMemoryException ();
       }
@@ -309,7 +304,7 @@ namespace MMeshImpl
     // assign buffer
     inline void assign(const ObjectStream & os)
     {
-      alugrid_assert ( _buf == 0 );
+      assert ( _buf == 0 );
       if( os._len > 0 )
       {
         _len = os._len;
@@ -326,12 +321,12 @@ namespace MMeshImpl
       return;
     }
 
-    inline void assign(char * buff, const size_t length )
+    inline void assign(char * buff, const size_t length)
     {
       if( length == 0 ) return;
 
       // if length > 0, buff should be valid
-      alugrid_assert ( buff );
+      assert ( buff );
 
       // set length
       _wb = _len = length;
