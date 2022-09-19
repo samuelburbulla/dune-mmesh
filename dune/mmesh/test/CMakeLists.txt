@@ -86,5 +86,5 @@ set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "G
 dune_add_test(NAME test-distance SOURCES test-distance.cc)
 set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
-dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc)
+dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
