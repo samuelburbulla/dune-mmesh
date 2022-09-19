@@ -8,6 +8,7 @@ set(TESTS
   normals
   distance
   laplace
+  monolithicsolve
 )
 
 foreach(test ${TESTS})

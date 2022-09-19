@@ -54,8 +54,6 @@
   using Comm = Dune::No_Comm;
 #endif
 
-using MMeshCollectiveCommunication = Dune::Communication<Comm>;
-
 namespace Dune
 {
 
@@ -85,7 +83,7 @@ namespace Dune
         MMeshImpl::MultiId,
         MMeshGlobalIdSet< const MMesh<HostGrid, dim> >, // LocalIdSet
         MMeshImpl::MultiId,
-        MMeshCollectiveCommunication,
+        Communication<Comm>,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshEntitySeed
@@ -1766,8 +1764,8 @@ namespace Dune
     }
 
 
-    /** \brief Collective communication */
-    const MMeshCollectiveCommunication& comm () const
+    /** \brief Communication */
+    const Communication<Comm>& comm () const
     {
       return comm_;
     }
@@ -1894,7 +1892,7 @@ namespace Dune
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;
     std::unordered_map< IdType, std::size_t > createdEntityConnectedComponentMap_;
 
-    MMeshCollectiveCommunication comm_;
+    Communication<Comm> comm_;
     PartitionHelper<GridImp> partitionHelper_;
 
     std::unique_ptr<MMeshLeafIndexSet<const GridImp>> leafIndexSet_;
