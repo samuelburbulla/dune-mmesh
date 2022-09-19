@@ -41,7 +41,7 @@
 typedef Dune::MovingMesh<2> GridType;
 static constexpr int polOrder = 1;
 
-typedef Dune::Fem::AdaptiveLeafGridPart< GridType, Dune::All_Partition > GridPartType;
+typedef Dune::Fem::AdaptiveLeafGridPart< GridType > GridPartType;
 typedef Dune::Fem::FunctionSpace< typename GridType::ctype, typename GridType::ctype, GridType::dimensionworld, 1 > SpaceType;
 typedef Dune::Fem::LagrangeDiscontinuousGalerkinSpace< SpaceType, GridPartType, polOrder > DiscreteSpaceType;
 
@@ -211,10 +211,11 @@ void run( GridType& grid )
 
   Algorithm algorithm( grid );
   std::vector< typename Algorithm::ErrorType > error( nrSteps );
-  for( int step = 0; step < nrSteps; ++step )
+  error[ 0 ] = algorithm( 0 );
+  for( int step = 1; step < nrSteps; ++step )
   {
-    error[ step ] = algorithm( step );
     algorithm.nextMesh();
+    error[ step ] = algorithm( step );
   }
 
   for( int step = 1; step < nrSteps; ++step )

@@ -222,23 +222,6 @@ namespace MMeshImpl
       removeObj();
     }
 
-    // static alloc of char buffer for use in mpAccess_MPI
-    inline static char * allocateBuffer(const size_t newSize)
-    {
-      // do nothing for size = 0
-      if( newSize == 0 ) return 0;
-
-      // make sure that char has size of 1,
-      // otherwise check doExchange in mpAccess_MPI.cc
-      char * buffer = (char *) malloc (newSize * sizeof(char));
-      if( !buffer )
-      {
-        perror( "**EXCEPTION in ObjectStream::allocateBuffer( size_t ) " );
-        throw OutOfMemoryException();
-      }
-      return buffer;
-    }
-
     // static free for use with all buffers here
     inline static void freeBuffer(char * buffer)
     {

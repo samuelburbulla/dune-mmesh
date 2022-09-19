@@ -33,6 +33,7 @@ namespace Dune
       std::size_t componentNumber = 0;
       int rank = 0;
       int partition = 0;
+      std::unordered_set<int> connectivity;
     };
 
     struct VertexInfo {

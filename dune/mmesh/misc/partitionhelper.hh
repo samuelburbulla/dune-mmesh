@@ -15,6 +15,8 @@ struct PartitionHelper
 {
   static constexpr int dim = Grid::dimension;
   using IdType = typename Grid::IdType;
+  using ConnectivityType = std::unordered_set<int>;
+  using LinksType = std::vector<int>;
 
   PartitionHelper(const Grid& grid) : grid_(grid) {}
 
@@ -83,11 +85,11 @@ struct PartitionHelper
   }
 
   //! List of connected ranks
-  std::vector< int > links () const
+  LinksType links () const
   {
     const int rank = comm().rank();
     const int size = comm().size();
-    std::vector< int > links;
+    LinksType links;
     if (rank > 0)
       links.push_back( rank - 1 );
     if (rank < size-1)
@@ -98,6 +100,20 @@ struct PartitionHelper
   auto& comm() const
   {
     return grid().comm();
+  }
+
+  //! Get connectivity (list of ranks)
+  template <class Entity>
+  ConnectivityType connectivity(const Entity &e) const
+  {
+    if constexpr (Entity::dimension == dim)
+      return e.impl().hostEntity()->info().connectivity;
+    else
+      try {
+        return interfaceConnectivity_.at(e.impl().id());
+      } catch (std::out_of_range&) {
+        return ConnectivityType();
+      }
   }
 
 private:
@@ -147,6 +163,26 @@ private:
       interfacePartition_[Entity::codimension][e.impl().id()] = partition;
   }
 
+  //! Add connectivity
+  template <class Entity>
+  void addConnectivity(const Entity &e, int rank)
+  {
+    if constexpr (Entity::dimension == dim)
+      e.impl().hostEntity()->info().connectivity.insert(rank);
+    else
+      interfaceConnectivity_[e.impl().id()].insert(rank);
+  }
+
+  //! Clear connectivity
+  template <class Entity>
+  void clearConnectivity(const Entity &e)
+  {
+    if constexpr (Entity::dimension == dim)
+      e.impl().hostEntity()->info().connectivity.clear();
+    else
+      interfaceConnectivity_[e.impl().id()].clear();
+  }
+
   //! Compute partition type for every entity
   void computePartitions()
   {
@@ -160,6 +196,8 @@ private:
         setPartition(e, 0); // interior
       else
         setPartition(e, 2); // ghost
+
+      clearConnectivity(e);
     });
 
     // Set facets
@@ -179,7 +217,11 @@ private:
 
         // border
         else if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
+        {
           setPartition(e, 1);
+          addConnectivity(is.inside(), is.outside().impl().hostEntity()->info().rank);
+          addConnectivity(is.outside(), is.inside().impl().hostEntity()->info().rank);
+        }
 
         // ghost
         else
@@ -271,6 +313,8 @@ private:
       else
         // ghost
         setPartition(e, 2);
+
+      clearConnectivity(e);
     });
 
     // Set facets
@@ -280,12 +324,19 @@ private:
 
       const auto e = grid().interfaceGrid().entity(fc);
 
+      auto rankOf = [&](const auto& e)
+      {
+        return grid().asIntersection(e).inside().impl().hostEntity()->info().rank;
+      };
+
       std::size_t count = 0, interior = 0, ghost = 0;
+      std::unordered_set<int> connectivity;
       for (const auto& incident : incidentInterfaceElements(e))
       {
         count++;
         if (partition(incident) == 0) interior++;
         if (partition(incident) == 2) ghost++;
+        connectivity.insert( rankOf(incident) );
       }
 
       // interior
@@ -294,7 +345,14 @@ private:
 
       // border
       else if (interior > 0 and ghost > 0)
+      {
         setPartition(e, 1);
+
+        for (const auto& incident : incidentInterfaceElements(e))
+          for (auto rank : connectivity)
+            if (rank != rankOf(incident))
+              addConnectivity(incident, rank);
+      }
 
       // ghost
       else
@@ -396,6 +454,7 @@ private:
   std::array<double, 2> xbounds_;
   std::array<std::unordered_map<IdType, int>, dim-1> partition_;
   std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
+  std::unordered_map<IdType, ConnectivityType> interfaceConnectivity_;
   const Grid& grid_;
 };
 

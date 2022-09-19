@@ -17,6 +17,7 @@ namespace Dune
   {
     typedef MMeshCommunication< Grid > This;
     typedef PartitionHelper< Grid > PartitionHelperType;
+    typedef typename PartitionHelperType::LinksType Links;
 
     // prohibit copying and assignment
     MMeshCommunication( const This & );
@@ -43,8 +44,7 @@ namespace Dune
                       const bool packAll ) const
     {
       typedef MMeshImpl::ObjectStream BufferType;
-
-      const auto& links = partitionHelper_.links();
+      const Links& links = partitionHelper_.links();
 
       // vector of message buffers
       std::vector< BufferType > buffer( links.size() );
@@ -56,10 +56,10 @@ namespace Dune
       {
         const typename PackIterator::Entity &entity = *it;
 
-        if (entity.partitionType() == sendType) // TODO: hasConnectivity
+        if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-            PackData<codim>::apply(links.size(), partitionHelper_, dataHandle, buffer, entity);
+            PackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
           });
         }
       }
@@ -70,11 +70,10 @@ namespace Dune
         for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )
         {
           const typename UnpackIterator::Entity &entity = *it;
-
-          if (entity.partitionType() == recvType)
+          if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-              PackData<codim>::apply(links.size(), partitionHelper_, dataHandle, buffer, entity);
+              PackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
             });
           }
         }
@@ -85,14 +84,7 @@ namespace Dune
       const auto& comm = partitionHelper_.comm();
 
       for (int link = 0; link < links.size(); ++link)
-      {
-        const int dest = links[ link ];
-        MPI_Request& request = mpiRequests[ link ];
-        BufferType& os = buffer[ link ];
-        char* buf = os._buf + os._rb;
-        int bufSize = os._wb  - os._rb;
-        MPI_Isend( buf, bufSize, MPI_BYTE, dest, tag_, comm, &request );
-      }
+        MPI_Isend( buffer[ link ]._buf, buffer[ link ]._wb, MPI_BYTE, links[ link ], tag_, comm, &mpiRequests[ link ] );
 
       // receive data
       int numReceived = 0;
@@ -105,8 +97,7 @@ namespace Dune
         {
           if( !linkReceived[ link ] )
           {
-            BufferType& os = buffer[ link ];
-            if( probeAndReceive( links[ link ], os ) )
+            if( probeAndReceive( links[ link ], buffer[ link ] ) )
             {
               ++numReceived;
               linkReceived[ link ] = true;
@@ -123,10 +114,10 @@ namespace Dune
       {
         const typename UnpackIterator::Entity &entity = *it;
 
-        if (entity.partitionType() == recvType)
+        if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-              UnpackData<codim>::apply(links.size(), partitionHelper_, dataHandle, buffer, entity);
+              UnpackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
           });
         }
       }
@@ -138,18 +129,17 @@ namespace Dune
         {
           const typename PackIterator::Entity &entity = *it;
 
-          if (entity.partitionType() == sendType)
+          if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-                UnpackData<codim>::apply(links.size(), partitionHelper_, dataHandle, buffer, entity);
+                UnpackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
             });
           }
         }
       }
 
       tag_++;
-      if (tag_ < 0)
-        tag_ = 0;
+      if (tag_ < 0) tag_ = 0;
     }
 
   private:
@@ -162,7 +152,7 @@ namespace Dune
     {
       const auto& comm = partitionHelper_.comm();
       MPI_Status status;
-      int available;
+      int available = 0;
 
       // check for any message with tag
       MPI_Iprobe( link, tag_, comm, &available, &status );
@@ -171,7 +161,7 @@ namespace Dune
       if( available )
       {
         // length of message
-        int bufferSize;
+        int bufferSize = -1;
         MPI_Get_count( &status, MPI_BYTE, &bufferSize );
 
         // reserve memory
@@ -204,7 +194,7 @@ namespace Dune
     typedef typename Grid::template Codim< codim >::Entity Entity;
 
     template< class DataHandleIF, class BufferType >
-    static void apply ( const std::size_t links,
+    static void apply ( const Links& links,
                         const PartitionHelperType &partitionHelper,
                         DataHandleIF &dataHandle,
                         std::vector< BufferType > &buffer,
@@ -214,14 +204,19 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
+      const auto& connectivity = partitionHelper.connectivity(element);
+
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
       {
         // get subentity
         const Entity &entity = element.template subEntity< codim >( subEntity );
 
-        for (int link = 0; link < links; ++link)
+        for (int link = 0; link < links.size(); ++link)
         {
+          if (connectivity.count(links[link]) == 0)
+            continue;
+
           std::size_t size = dataHandle.size( entity );
 
           // write size into stream
@@ -246,7 +241,7 @@ namespace Dune
     using Element = typename Grid::template Codim< 0 >::Entity;
 
     template< class DataHandleIF, class BufferType >
-    static void apply ( const std::size_t links,
+    static void apply ( const Links& links,
                         const PartitionHelperType &partitionHelper,
                         DataHandleIF &dataHandle,
                         std::vector< BufferType > &buffer,
@@ -256,6 +251,8 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
+      const auto& connectivity = partitionHelper.connectivity(element);
+
       // get number of sub entities
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
@@ -263,8 +260,11 @@ namespace Dune
         // get subentity
         const auto& entity = element.template subEntity< codim >( subEntity );
 
-        for (int link = 0; link < links; ++link)
+        for (int link = 0; link < links.size(); ++link)
         {
+          if (connectivity.count(links[link]) == 0)
+            continue;
+
           // read size from stream
           std::size_t size( 0 );
           buffer[ link ].read( size );

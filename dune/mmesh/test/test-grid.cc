@@ -83,6 +83,15 @@ int main(int argc, char *argv[])
       return partition;
     };
 
+    auto getConnectivity = [](const auto& grid)
+    {
+      const auto& indexSet = grid.leafIndexSet();
+      std::vector<int> connectivity (grid.size(0));
+      for (const auto& e : elements(grid.leafGridView(), Partitions::all))
+        connectivity[indexSet.index(e)] = (grid.partitionHelper().connectivity(e).size() > 0);
+      return connectivity;
+    };
+
     auto getVertexPartition = [](const auto& grid, int dim)
     {
       const auto& indexSet = grid.leafIndexSet();
@@ -95,6 +104,8 @@ int main(int argc, char *argv[])
     VTKWriter vtkWriter( grid.leafGridView() );
     auto ep = getElementPartition(grid);
     vtkWriter.addCellData( ep, "partition" );
+    auto hc = getConnectivity(grid);
+    vtkWriter.addCellData( hc, "connectivity" );
     auto vp = getVertexPartition(grid, dim);
     vtkWriter.addVertexData(vp, "partition");
     vtkWriter.write("test-grid");
@@ -102,6 +113,8 @@ int main(int argc, char *argv[])
     VTKWriter ivtkWriter( igrid.leafGridView() );
     auto iep = getElementPartition(igrid);
     ivtkWriter.addCellData( iep, "partition" );
+    auto ihc = getConnectivity(igrid);
+    ivtkWriter.addCellData( ihc, "connectivity" );
     auto ivp = getVertexPartition(igrid, dim-1);
     ivtkWriter.addVertexData( ivp, "partition");
     ivtkWriter.write("test-igrid");
