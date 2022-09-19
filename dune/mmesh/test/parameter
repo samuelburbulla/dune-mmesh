@@ -6,15 +6,14 @@ fem.io.macroGridFile_3d: unitcube3.dgf
 # toggle verbosity of on process (-1: off, p: process p is verbose, in general 0 is a good choice)
 fem.verboserank: -1
 
-# verbosity of the cg inverse operator
+# verbosity of the inverse operator
 fem.solver.verbose: 0
 
 # valid are: "default", "cg", "minres" , "bicg", "bicgstab", "gmres"
 fem.solver.method: cg
 
 # valid are:  "default", "none", "asm", "sor", "jacobi", "ilu", "icc", "hypre", "lu"
-# fem.solver.preconditioning.method: default
-petsc.preconditioning.levels: 2
+fem.solver.preconditioning.method: ssor
 
 fem.io.macroGridFile: macrogrid
 

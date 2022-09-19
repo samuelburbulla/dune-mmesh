@@ -42,16 +42,16 @@
 #include "../remeshing/ratioindicator.hh"
 #include "../interface/traits.hh"
 #include "../misc/boundaryidprovider.hh"
-#include "../misc/communication.hh"
-#include "../misc/partitionhelper.hh"
 #include "../misc/twistutility.hh"
 // Further includes below!
 
 #if HAVE_MPI
   #include <dune/common/parallel/mpicommunication.hh>
+  #include "../misc/communication.hh"
+  #include "../misc/partitionhelper.hh"
   using Comm = MPI_Comm;
 #else
-  using Comm = No_Comm;
+  using Comm = Dune::No_Comm;
 #endif
 
 using MMeshCollectiveCommunication = Dune::Communication<Comm>;
@@ -1782,6 +1782,7 @@ namespace Dune
       if (comm().size() <= 1)
         return;
 
+#if HAVE_MPI
       if( (interface == InteriorBorder_All_Interface) || (interface == All_All_Interface) )
       {
         MMeshCommunication<GridImp> communication( partitionHelper_ );
@@ -1806,6 +1807,9 @@ namespace Dune
       }
       else
         DUNE_THROW( NotImplemented, "Communication on interface type " << interface << " not implemented." );
+#else
+        DUNE_THROW( NotImplemented, "MPI not found!" );
+#endif //HAVE_MPI
     }
 
 
