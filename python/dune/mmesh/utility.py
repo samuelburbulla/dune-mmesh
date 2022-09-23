@@ -2,7 +2,8 @@ import logging, traceback
 logger = logging.getLogger(__name__)
 
 import io
-from dune.generator import algorithm
+from dune.generator import algorithm, builder
+from dune.common.hashit import hashIt
 from dune.generator.exceptions import CompileError
 
 def interfaceIndicator(igrid, grid=None, restrict=True):
@@ -10,21 +11,50 @@ def interfaceIndicator(igrid, grid=None, restrict=True):
 
     Args:
         igrid: The interfacegrid.
-        grid: deprecated
+        grid: The bulk grid. Pass this parameter if the bulk grid is wrapped, e.g., by a geometryGridView.
         restrict (bool, optional): If True, the returned UFL expression is restricted.
 
     Returns:
         Skeleton function that is one at interface edges.
     """
-    if grid is not None:
-        print("Note: Not needed to pass the grid parameter to interfaceIndicator any more!")
 
-    grid = igrid.hierarchicalGrid.bulkGrid
+    # Pre-compiled version
+    if grid is None:
+        grid = igrid.hierarchicalGrid.bulkGrid
+        if igrid.dimension == 1:
+            import dune.mmesh._utility2d as module
+        else:
+            import dune.mmesh._utility3d as module
 
-    if igrid.dimension == 1:
-        import dune.mmesh._utility2d as module
+    # JIT version for wrapped grid
     else:
-        import dune.mmesh._utility3d as module
+        moduleName = "interfaceindicator_" + hashIt(grid.cppTypeName)
+        signature = ""
+        source = """
+#include <config.h>
+#include <dune/mmesh/mmesh.hh>
+#include <dune/python/mmesh/utility.hh>
+#include <dune/python/grid/hierarchical.hh>
+#include <dune/python/common/typeregistry.hh>
+#include <dune/python/pybind11/pybind11.h>
+#include <dune/python/pybind11/stl.h>
+"""
+        includes = sorted(set(grid.cppIncludes))
+        source += "".join(["#include <" + i + ">\n" for i in includes])
+        source += """
+PYBIND11_MODULE( """ + moduleName + """, module )
+{
+  // InterfaceIndicator
+  auto clsIndicator = Dune::Python::insertClass< Dune::Fem::InterfaceIndicator< typename """ + grid.cppTypeName + """ > >(
+    module,
+    "InterfaceIndicator",
+    Dune::Python::GenerateTypeName("Dune::Fem::InterfaceIndicator< typename """ + grid.cppTypeName + """ >"),
+    Dune::Python::IncludeFiles{"dune/mmesh/mmesh.hh", "dune/python/grid/hierarchical.hh", "dune/python/mmesh/utility.hh"}
+  ).first;
+  Dune::Fem::registerInterfaceIndicator( module, clsIndicator );
+}
+"""
+        module = builder.load(moduleName, source, signature)
 
     indicator = module.InterfaceIndicator(grid)
     from dune.ufl import GridFunction
