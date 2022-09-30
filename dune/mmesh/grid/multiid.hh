@@ -21,39 +21,39 @@ namespace Dune
       using T = std::size_t;
       using VT = std::vector<T>;
 
-      MultiId() {}
+      // we use an array as internal storage to make MultiId trivially copyable
+      using Storage = std::array<T, 4>;
+
+      MultiId() : size_(0), hash_(-1) {}
 
       MultiId( const MultiId& other )
-       : vt_ ( other.vt_ )
+       : vt_ ( other.vt_ ), size_( other.size_ ), hash_( other.hash_ )
       {}
 
-      MultiId( const VT& vt )
-       : vt_ ( vt )
-      {}
+      MultiId( const std::vector<T>& vt )
+       : size_( vt.size() ), hash_(-1)
+      {
+        int i = 0;
+        for (const auto& v : vt)
+          vt_[ i++ ] = v;
+      }
 
       MultiId( std::initializer_list<T> l )
-       : vt_ ( l )
+       : MultiId ( std::vector<T>(l) )
       {}
 
       MultiId( T t )
-       : vt_ ( { t } )
+       : MultiId ( { t } )
       {}
-
-      operator std::size_t() const
-      {
-        assert( vt_.size() == 1 );
-        return vt_[0];
-      }
-
-      operator VT() const
-      {
-        return vt_;
-      }
 
       ThisType& operator= ( const ThisType& b )
       {
         if (this != &b)
+        {
           vt_ = b.vt_;
+          size_ = b.size_;
+          hash_ = b.hash_;
+        }
         return *this;
       }
 
@@ -61,12 +61,29 @@ namespace Dune
       {
         if( size() != b.size() )
           return size() < b.size();
-        return vt_ < b.vt_;
+
+        for( int i = 0; i < size_; ++i )
+          if( vt_[i] != b.vt_[i] )
+            return vt_[i] < b.vt_[i];
+
+        return false;
       }
 
       bool operator== ( const ThisType& b ) const
       {
-        return vt_ == b.vt_;
+        if( size() != b.size() )
+          return false;
+
+        for( int i = 0; i < size_; ++i )
+          if( vt_[i] != b.vt_[i] )
+            return false;
+
+        return true;
+      }
+
+      bool operator<= ( const ThisType& b ) const
+      {
+        return !b.operator<(*this);
       }
 
       bool operator!= ( const ThisType& b ) const
@@ -76,16 +93,41 @@ namespace Dune
 
       std::size_t size() const
       {
-        return vt_.size();
+        return size_;
       }
 
-      const VT& vt() const
+      VT vt() const
       {
-        return vt_;
+        std::vector<T> vec;
+        vec.reserve(size_);
+        for(int i = 0; i < size_; ++i)
+          vec.push_back(vt_[i]);
+        return vec;
+      }
+
+      //! Hash function with caching
+      std::size_t hash() const
+      {
+        if (hash_ == std::size_t(-1))
+        {
+          if( size_ == 0 )
+          {
+            hash_ = 0;
+            return hash_;
+          }
+
+          static constexpr std::hash<std::size_t> hasher;
+          hash_ = hasher(vt_[0]);
+          for ( std::size_t i = 1; i < size_; ++i )
+            hash_ = hash_ ^ (hasher(vt_[i]) << i);
+        }
+        return hash_;
       }
 
     private:
-      VT vt_;
+      Storage vt_;
+      std::size_t size_;
+      mutable std::size_t hash_;
     };
 
   }  // end namespace MMeshImpl
@@ -96,10 +138,9 @@ namespace std
   //! overload std::hash
   template <> struct hash<Dune::MMeshImpl::MultiId>
   {
-    size_t operator()(const Dune::MMeshImpl::MultiId& x) const
+    size_t operator()(const Dune::MMeshImpl::MultiId& id) const
     {
-      static constexpr Dune::HashUIntVector hashUIntVector;
-      return hashUIntVector( x.vt() );
+      return id.hash();
     }
   };
 

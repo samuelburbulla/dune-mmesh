@@ -164,7 +164,7 @@ namespace Dune
       if( it != insertionIndexMap_.end() )
         return it->second;
       else
-        return mMesh_->interfaceGrid().globalIdSet().id( entity );
+        return 0; // should not happen
     }
 
     /** \brief return insertion index of vertex entity

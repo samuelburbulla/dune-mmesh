@@ -90,10 +90,9 @@ struct PartitionHelper
     const int rank = comm().rank();
     const int size = comm().size();
     LinksType links;
-    if (rank > 0)
-      links.push_back( rank - 1 );
-    if (rank < size-1)
-      links.push_back( rank + 1 );
+    for (int i = 0; i < size; i++)
+      if (i != rank)
+        links.push_back( i );
     return links;
   }
 
@@ -407,13 +406,12 @@ private:
     auto rank = [this](const auto& e)
     {
       int size = grid().comm().size();
-      double dx = (xbounds_[1] - xbounds_[0]) / size;
-
       auto x = e.geometry().center()[0];
-      for (int i = 0; i < size; ++i)
-        if ((x > xbounds_[0] + i * dx) and (x <= xbounds_[0] + (i+1) * dx))
-          return i;
-      return 0;
+      double r = (x - xbounds_[0]) / (xbounds_[1] - xbounds_[0]);
+      int rank = int(r * size);
+      if (rank == size) rank = size-1;
+      assert(0 <= rank && rank < size);
+      return rank;
     };
 
     forEntityDim<dim>([this, rank](const auto& fc){

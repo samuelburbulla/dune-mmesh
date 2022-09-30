@@ -107,9 +107,6 @@ namespace Dune
 
     bool hasEntity( const Entity& entity ) const
     {
-      if ( entities_.size() == 0 )
-        return false;
-
       const IdType& id = mMesh_->globalIdSet().id( entity );
       return ( entityIdToCachingPtr_.find( id ) != entityIdToCachingPtr_.end() );
     }

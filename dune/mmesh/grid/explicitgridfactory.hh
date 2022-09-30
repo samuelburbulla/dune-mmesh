@@ -54,12 +54,15 @@ namespace Dune
 
     //! type of a Dune boundary segment
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
+    //! type of an id
+    typedef typename Grid::IdType IdType;
+
     //! type of the boundary segment id map
-    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
+    typedef std::unordered_map< IdType, std::size_t > BoundarySegments;
     typedef std::unordered_map< std::size_t, std::size_t > BoundaryIds;
 
     //! type of the interface segment set
-    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > InterfaceSegments;
+    typedef std::unordered_map< IdType, std::size_t > InterfaceSegments;
 
     template< int codim >
     struct Codim
@@ -402,7 +405,7 @@ namespace Dune
 
       // Mark interface vertices as isInterface
       for( const auto& interfaceSeg : interfaceSegments_ )
-        for( const auto& v : interfaceSeg.first )
+        for( const auto& v : interfaceSeg.first.vt() )
           vhs_[v]->info().isInterface = true;
 
       // Check if all inserted elements really exist in the triangulation

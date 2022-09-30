@@ -88,3 +88,9 @@ set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2
 
 dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-comm SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-mpi SOURCES test-mpi.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-mpi APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )

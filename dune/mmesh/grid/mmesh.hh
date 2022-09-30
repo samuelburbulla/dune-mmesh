@@ -154,14 +154,17 @@ namespace Dune
     //! The field type
     using FieldType = typename Point::R::RT;
 
+    //! The type of an id
+    using IdType = MMeshImpl::MultiId;
+
     //! The boundary segment map
-    using BoundarySegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
+    using BoundarySegments = std::unordered_map< IdType, std::size_t >;
 
     //! The boundary id map
     using BoundaryIds = std::unordered_map< std::size_t, std::size_t >;
 
     //! The interface segment set
-    using InterfaceSegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
+    using InterfaceSegments = std::unordered_map< IdType, std::size_t >;
 
     //**********************************************************
     // The Interface Methods
@@ -236,9 +239,6 @@ namespace Dune
 
     //! The type of a connected component of interface grid entities
     using InterfaceGridConnectedComponent = MMeshInterfaceConnectedComponent<const InterfaceGrid>;
-
-    //! The type of an id
-    using IdType = MMeshImpl::MultiId;
 
     //! The type of a refinement insertion point
     using RefinementInsertionPoint = RefinementInsertionPointStruct<Point, Edge, IdType, VertexHandle, InterfaceGridConnectedComponent>;
@@ -316,7 +316,7 @@ namespace Dune
           for (const auto& is : intersections(this->leafGridView(), e))
             if (is.boundary())
             {
-              auto iid = globalIdSet_->template id<1>( entity( is.impl().getHostIntersection() ) );
+              IdType iid = globalIdSet_->template id<1>( entity( is.impl().getHostIntersection() ) );
               localBoundarySegments_.insert( std::make_pair(iid, count++) );
             }
       }
@@ -647,7 +647,7 @@ namespace Dune
 
       for ( const auto& iseg : interfaceSegments_ )
       {
-        const auto& seg = iseg.first;
+        const auto& seg = iseg.first.vt();
         if ( (seg[0] == ids[0] && seg[1] == ids[1])
           || (seg[1] == ids[0] && seg[2] == ids[1])
           || (seg[0] == ids[0] && seg[2] == ids[1]) )
@@ -1559,33 +1559,25 @@ namespace Dune
           const auto& hostEntity = entity.impl().hostEntity();
           const IdType id = this->globalIdSet().id( entity );
 
-          // search for entity in existing components
           bool found = false;
-          for( std::size_t componentId = 0; componentId < connectedComponents_.size(); ++componentId )
+          const std::size_t componentId = hostEntity->info().componentNumber - 1;
+
+          // check if component for entity exists already and add entity if necessary
+          if( componentId < connectedComponents_.size() )
           {
-            ConnectedComponent& component = connectedComponents_[ componentId ];
-            if ( component.componentNumber() == hostEntity->info().componentNumber )
+            // sth. changed, we have to update the component to include this entity
+            if( !entity.isNew() )
             {
-              found = true;
-
-              // sth. changed, we have to update the component to include this entity
-              if( !entity.isNew() )
-              {
-                if ( !component.hasEntity( entity ) )
-                  component.update( entity );
-              }
-
-              vanishingEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
-              break;
+              ConnectedComponent& component = connectedComponents_[ componentId ];
+              if ( !component.hasEntity( entity ) )
+                component.update( entity );
             }
-          }
 
-          // if not found, create a new component
-          if (!found)
+            vanishingEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
+          }
+          // else create new component
+          else
           {
-            const std::size_t componentId = hostEntity->info().componentNumber - 1;
-            if (connectedComponents_.size() < componentId + 1)
-              connectedComponents_.resize( componentId + 1 );
             connectedComponents_[ componentId ] = ConnectedComponent( This(), entity );
             vanishingEntityConnectedComponentMap_.insert( std::make_pair( id, componentId ) );
           }
@@ -1850,8 +1842,8 @@ namespace Dune
       const auto& it = createdEntityConnectedComponentMap_.find( this->globalIdSet().id( entity ) );
       assert( it->second < connectedComponents_.size() );
       assert( it != createdEntityConnectedComponentMap_.end() );
-      assert( connectedComponents_[ it->second ].size() > 0 );
-      return connectedComponents_[ it->second ];
+      assert( connectedComponents_.at( it->second ).size() > 0 );
+      return connectedComponents_.at( it->second );
     }
 
     const RemeshingIndicator& indicator() const
@@ -1886,7 +1878,7 @@ namespace Dune
     mutable std::size_t componentCount_;
 
     //! The storage of the connected components of entities
-    std::vector< ConnectedComponent > connectedComponents_;
+    std::unordered_map< IdType, ConnectedComponent > connectedComponents_;
 
     //! Maps the entities to its connected components
     std::unordered_map< IdType, std::size_t > vanishingEntityConnectedComponentMap_;

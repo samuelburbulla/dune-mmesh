@@ -47,19 +47,21 @@ namespace Dune
       const Links& links = partitionHelper_.links();
 
       // vector of message buffers
-      std::vector< BufferType > buffer( links.size() );
+      std::vector< BufferType > sendBuffers( links.size() ), recvBuffers( links.size() );
       for( int link = 0; link < links.size(); ++link )
-        buffer[ link ].clear();
+      {
+        sendBuffers[ link ].clear();
+        recvBuffers[ link ].clear();
+      }
 
       // pack data on send entities
       for( PackIterator it = packBegin; it != packEnd; ++it )
       {
         const typename PackIterator::Entity &entity = *it;
-
-        if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
+        if (entity.partitionType() == sendType)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-            PackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
+            PackData<codim>::apply(links, partitionHelper_, dataHandle, sendBuffers, entity);
           });
         }
       }
@@ -70,54 +72,63 @@ namespace Dune
         for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )
         {
           const typename UnpackIterator::Entity &entity = *it;
-          if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
+          if (entity.partitionType() == recvType)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-              PackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
+              PackData<codim>::apply(links, partitionHelper_, dataHandle, sendBuffers, entity);
             });
           }
         }
       }
 
-      // send data
-      MPI_Request* mpiRequests = new MPI_Request[ links.size() ];
+      // Invert links
       const auto& comm = partitionHelper_.comm();
+      std::vector<int> invertedLinks (comm.size());
+      for (int l = 0; l < links.size(); ++l)
+        invertedLinks[ links[ l ] ] = l;
 
-      for (int link = 0; link < links.size(); ++link)
-        MPI_Isend( buffer[ link ]._buf, buffer[ link ]._wb, MPI_BYTE, links[ link ], tag_, comm, &mpiRequests[ link ] );
-
-      // receive data
-      int numReceived = 0;
-      std::vector< bool > linkReceived ( links.size() );
-
-      // if message was not received yet, check again
-      while( numReceived < links.size() )
+      // Exchange data
+      for (int r = 0; r < comm.size(); ++r)
       {
-        for (int link = 0; link < links.size(); ++link )
+        if (r == comm.rank())
         {
-          if( !linkReceived[ link ] )
+          // Send to all ranks
+          for (int link = 0; link < links.size(); ++link)
           {
-            if( probeAndReceive( links[ link ], buffer[ link ] ) )
-            {
-              ++numReceived;
-              linkReceived[ link ] = true;
-            }
+            BufferType& buf = sendBuffers[ link ];
+            int dest = links[ link ];
+            MPI_Ssend( buf._buf, buf._wb, MPI_BYTE, dest, tag_, comm );
           }
         }
-      }
+        else
+        {
+          // Receive
+          int link = invertedLinks[ r ];
+          BufferType& buf = recvBuffers[ link ];
 
-      // wait until all processes are done with receiving
-      MPI_Waitall( links.size(), mpiRequests, MPI_STATUSES_IGNORE );
+          MPI_Status status;
+          MPI_Probe( r, tag_, comm, &status );
+
+          int bufferSize;
+          MPI_Get_count( &status, MPI_BYTE, &bufferSize );
+          buf.reserve( bufferSize );
+          buf.clear();
+
+          MPI_Recv( buf._buf, bufferSize, MPI_BYTE, r, tag_, comm, &status );
+          buf.seekp( bufferSize );
+
+          buf.seekp( bufferSize );
+        }
+      }
 
       // unpack data on receive entities
       for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )
       {
         const typename UnpackIterator::Entity &entity = *it;
-
-        if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
+        if (entity.partitionType() == recvType)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-              UnpackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
+              UnpackData<codim>::apply(links, partitionHelper_, dataHandle, recvBuffers, entity);
           });
         }
       }
@@ -128,11 +139,10 @@ namespace Dune
         for( PackIterator it = packBegin; it != packEnd; ++it )
         {
           const typename PackIterator::Entity &entity = *it;
-
-          if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
+          if (entity.partitionType() == sendType)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
-                UnpackData<codim>::apply(links, partitionHelper_, dataHandle, buffer, entity);
+                UnpackData<codim>::apply(links, partitionHelper_, dataHandle, recvBuffers, entity);
             });
           }
         }
@@ -145,42 +155,7 @@ namespace Dune
   private:
     const PartitionHelperType &partitionHelper_;
     mutable int tag_;
-
-    //! Receive operation for a link
-    template< class BufferType >
-    bool probeAndReceive( const int link, BufferType& buffer ) const
-    {
-      const auto& comm = partitionHelper_.comm();
-      MPI_Status status;
-      int available = 0;
-
-      // check for any message with tag
-      MPI_Iprobe( link, tag_, comm, &available, &status );
-
-      // receive message if available flag is true
-      if( available )
-      {
-        // length of message
-        int bufferSize = -1;
-        MPI_Get_count( &status, MPI_BYTE, &bufferSize );
-
-        // reserve memory
-        buffer.reserve( bufferSize );
-        buffer.clear();
-
-        // MPI receive (blocking)
-        MPI_Recv( buffer._buf, bufferSize, MPI_BYTE, status.MPI_SOURCE, tag_, comm, &status );
-
-        buffer.seekp( bufferSize );
-        return true;
-      }
-
-      // not received yet
-      return false;
-    }
   };
-
-
 
   // MMeshCommunication::PackData
   // -----------------------------------
@@ -204,8 +179,6 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
-      const auto& connectivity = partitionHelper.connectivity(element);
-
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
       {
@@ -214,9 +187,6 @@ namespace Dune
 
         for (int link = 0; link < links.size(); ++link)
         {
-          if (connectivity.count(links[link]) == 0)
-            continue;
-
           std::size_t size = dataHandle.size( entity );
 
           // write size into stream
@@ -251,8 +221,6 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
-      const auto& connectivity = partitionHelper.connectivity(element);
-
       // get number of sub entities
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
@@ -262,7 +230,8 @@ namespace Dune
 
         for (int link = 0; link < links.size(); ++link)
         {
-          if (connectivity.count(links[link]) == 0)
+          // make sure entity belongs to the rank of the link
+          if (links[link] != element.impl().hostEntity()->info().rank)
             continue;
 
           // read size from stream

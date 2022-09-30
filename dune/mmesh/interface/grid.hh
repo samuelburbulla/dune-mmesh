@@ -99,8 +99,9 @@ namespace Dune
     static constexpr int dimensionworld = MMesh::dimension;
 
     using FieldType = typename MMesh::FieldType;
+    using IdType = typename MMesh::IdType;
 
-    using BoundarySegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
+    using BoundarySegments = std::unordered_map< IdType, std::size_t >;
 
     //**********************************************************
     // The Interface Methods

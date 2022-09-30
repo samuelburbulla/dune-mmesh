@@ -15,7 +15,7 @@
 
 // include Lagrange discrete function space
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#include <dune/fem/space/discontinuousgalerkin.hh>
+#include <dune/fem/space/lagrange.hh>
 #include <dune/fem/space/common/adaptationmanager.hh>
 #include <dune/fem/function/localfunction/bindable.hh>
 #include <dune/fem/io/file/vtkio.hh>
@@ -43,7 +43,7 @@ static constexpr int polOrder = 1;
 
 typedef Dune::Fem::AdaptiveLeafGridPart< GridType > GridPartType;
 typedef Dune::Fem::FunctionSpace< typename GridType::ctype, typename GridType::ctype, GridType::dimensionworld, 1 > SpaceType;
-typedef Dune::Fem::LagrangeDiscontinuousGalerkinSpace< SpaceType, GridPartType, polOrder > DiscreteSpaceType;
+typedef Dune::Fem::LagrangeDiscreteFunctionSpace< SpaceType, GridPartType, polOrder > DiscreteSpaceType;
 
 typedef Dune::Fem::AdaptiveDiscreteFunction< DiscreteSpaceType > DiscreteFunctionType;
 typedef Dune::Fem::SparseRowLinearOperator< DiscreteFunctionType, DiscreteFunctionType > LinearOperatorType;
@@ -253,7 +253,7 @@ try
   Dune::Fem::Parameter::append( (argc < 2) ? "parameter" : argv[ 1 ] );
 
   GridType &grid = TestGrid::grid();
-  grid.globalRefine( 2 * 5 );
+  grid.globalRefine( 5 * TestGrid::refineStepsForHalf() );
   grid.loadBalance();
 
   if ( grid.comm().rank() == 0 )
