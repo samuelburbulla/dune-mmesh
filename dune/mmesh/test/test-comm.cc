@@ -10,7 +10,7 @@
 #include <dune/common/timer.hh>
 
 #include <dune/fem/function/adaptivefunction.hh>
-#include <dune/fem/space/lagrange.hh>
+#include <dune/fem/space/discontinuousgalerkin.hh>
 #include <dune/fem/quadrature/cachingquadrature.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/misc/l2norm.hh>
@@ -82,7 +82,7 @@ struct DataHandle
 static constexpr int polOrd = 1;
 using GridPartType = AdaptiveLeafGridPart< GridType >;
 using SpaceType = FunctionSpace<double, double, dim, 1>;
-using DiscreteFunctionSpaceType = LagrangeDiscreteFunctionSpace<SpaceType, GridPartType, polOrd>;
+using DiscreteFunctionSpaceType = LagrangeDiscontinuousGalerkinSpace<SpaceType, GridPartType, polOrd>;
 using DiscreteFunctionType = AdaptiveDiscreteFunction< DiscreteFunctionSpaceType >;
 
 struct ExactSolution
@@ -181,9 +181,9 @@ int main(int argc, char *argv[])
     if (!verbose) return;
     std::cout << "Rank " << grid.comm().rank() << " (" << (before ? "before" : "after ") << "): ";
     for (const auto d : data)
-      std::cout << d << "  ";
+      std::cout << d << ",  ";
     for (const auto d : dataVertex)
-      std::cout << d << "  ";
+      std::cout << d << ",  ";
     std::cout << std::flush << std::endl;
   };
 

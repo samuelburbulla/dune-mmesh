@@ -253,7 +253,6 @@ try
   Dune::Fem::Parameter::append( (argc < 2) ? "parameter" : argv[ 1 ] );
 
   GridType &grid = TestGrid::grid();
-  grid.globalRefine( 5 * TestGrid::refineStepsForHalf() );
   grid.loadBalance();
 
   if ( grid.comm().rank() == 0 )

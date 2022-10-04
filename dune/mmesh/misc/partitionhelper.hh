@@ -194,9 +194,30 @@ private:
       if (e.impl().hostEntity()->info().rank == grid().comm().rank())
         setPartition(e, 0); // interior
       else
-        setPartition(e, 2); // ghost
+        setPartition(e, -1); // none
 
       clearConnectivity(e);
+    });
+
+    // Set ghosts
+    forEntityDim<dim-1>([this](const auto& fc){
+      const auto e = grid().entity(fc);
+      const auto is = grid().asIntersection( e );
+      if (is.neighbor())
+      {
+        const auto& inside = is.inside();
+        const auto& outside = is.outside();
+        int pIn = partition( inside );
+        int pOut = partition( outside );
+
+        // border
+        if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
+        {
+          setPartition(pIn == 0 ? outside : inside, 2); // ghost
+          addConnectivity(inside, outside.impl().hostEntity()->info().rank);
+          addConnectivity(outside, inside.impl().hostEntity()->info().rank);
+        }
+      }
     });
 
     // Set facets
@@ -215,16 +236,16 @@ private:
           setPartition(e, 0);
 
         // border
-        else if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
-        {
+        else if ((pIn == 0 && pOut == 2) or (pIn == 2 && pOut == 0))
           setPartition(e, 1);
-          addConnectivity(is.inside(), is.outside().impl().hostEntity()->info().rank);
-          addConnectivity(is.outside(), is.inside().impl().hostEntity()->info().rank);
-        }
 
         // ghost
-        else
+        else if (pIn == 2 || pOut == 2)
           setPartition(e, 2);
+
+        // none
+        else
+          setPartition(e, -1);
       }
       else
       {
@@ -233,8 +254,12 @@ private:
           setPartition(e, 0);
 
         // ghost
-        else
+        else if (pIn == 2)
           setPartition(e, 2);
+
+        // none
+        else
+          setPartition(e, -1);
       }
     });
 
@@ -260,8 +285,12 @@ private:
           setPartition(edge, 1);
 
         // ghost
-        else
+        else if (interior == 0 and ghost > 0)
           setPartition(edge, 2);
+
+        // none
+        else
+          setPartition(edge, -1);
       });
     }
 
@@ -285,8 +314,12 @@ private:
         setPartition(v, 1);
 
       // ghost
-      else
+      else if (interior == 0 and ghost > 0)
         setPartition(v, 2);
+
+      // none
+      else
+        setPartition(v, -1);
     });
   }
 

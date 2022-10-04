@@ -89,7 +89,7 @@ namespace Dune
       if (i_ == dim + 1)
         return false;
 
-      // return intersection only if adjacent entities are not ghost
+      // on ghosts return intersection only if adjacent entity is interior
       if (hostEntity_->info().partition == 2)
       {
         const auto& neighborHostEntity = hostEntity_->neighbor(dim-i_);
@@ -98,7 +98,7 @@ namespace Dune
           return true;
 
         // skip ghost neighbors
-        if (neighborHostEntity->info().partition == 2)
+        if (neighborHostEntity->info().partition != 0)
           return true;
       }
       return false;

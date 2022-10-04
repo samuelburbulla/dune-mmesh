@@ -58,7 +58,7 @@ namespace Dune
       for( PackIterator it = packBegin; it != packEnd; ++it )
       {
         const typename PackIterator::Entity &entity = *it;
-        if (entity.partitionType() == sendType)
+        if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
             PackData<codim>::apply(links, partitionHelper_, dataHandle, sendBuffers, entity);
@@ -72,7 +72,7 @@ namespace Dune
         for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )
         {
           const typename UnpackIterator::Entity &entity = *it;
-          if (entity.partitionType() == recvType)
+          if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
               PackData<codim>::apply(links, partitionHelper_, dataHandle, sendBuffers, entity);
@@ -125,7 +125,7 @@ namespace Dune
       for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )
       {
         const typename UnpackIterator::Entity &entity = *it;
-        if (entity.partitionType() == recvType)
+        if (entity.partitionType() == recvType && partitionHelper_.connectivity(entity).size() > 0)
         {
           Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
               UnpackData<codim>::apply(links, partitionHelper_, dataHandle, recvBuffers, entity);
@@ -139,7 +139,7 @@ namespace Dune
         for( PackIterator it = packBegin; it != packEnd; ++it )
         {
           const typename PackIterator::Entity &entity = *it;
-          if (entity.partitionType() == sendType)
+          if (entity.partitionType() == sendType && partitionHelper_.connectivity(entity).size() > 0)
           {
             Hybrid::forEach(std::make_index_sequence<dimension+1>{}, [&](auto codim){
                 UnpackData<codim>::apply(links, partitionHelper_, dataHandle, recvBuffers, entity);
@@ -179,6 +179,8 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
+      const auto& connectivity = partitionHelper.connectivity(element);
+
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
       {
@@ -187,6 +189,10 @@ namespace Dune
 
         for (int link = 0; link < links.size(); ++link)
         {
+          // make sure entity belongs to the link
+          if (connectivity.count(links[link]) == 0)
+            continue;
+
           std::size_t size = dataHandle.size( entity );
 
           // write size into stream
