@@ -233,7 +233,10 @@ int main(int argc, char *argv[])
   ProjectionAllPartitionNoComm::project<ExactSolution, DiscreteFunctionType, Partitions::InteriorBorder>( f, solution );
 
   // communicate
+  Dune::Timer timer;
+  timer.start();
   space.communicate(solution, DFCommunicationOperation::Add());
+  timer.stop();
 
   // calculate l2 error again on all elements
   double error = l2norm.distance( f, solution );
@@ -244,7 +247,7 @@ int main(int argc, char *argv[])
     DUNE_THROW(InvalidStateException, "Communication not working correctly on rank " << grid.comm().rank() << ": " << old_error << " -> " << error);
   else
     if (grid.comm().rank() == 0)
-      std::cout << "Communication was successful." << std::endl;
+      std::cout << "Communication was successful and took " << timer.elapsed() << std::endl;
 
   return EXIT_SUCCESS;
 }

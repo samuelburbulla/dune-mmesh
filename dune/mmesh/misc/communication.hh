@@ -83,7 +83,7 @@ namespace Dune
 
       // Invert links
       const auto& comm = partitionHelper_.comm();
-      std::vector<int> invertedLinks (comm.size());
+      std::vector<int> invertedLinks (comm.size(), -1);
       for (int l = 0; l < links.size(); ++l)
         invertedLinks[ links[ l ] ] = l;
 
@@ -92,7 +92,7 @@ namespace Dune
       {
         if (r == comm.rank())
         {
-          // Send to all ranks
+          // Send to all links
           for (int link = 0; link < links.size(); ++link)
           {
             BufferType& buf = sendBuffers[ link ];
@@ -104,6 +104,10 @@ namespace Dune
         {
           // Receive
           int link = invertedLinks[ r ];
+
+          if (link == -1)
+            continue;
+
           BufferType& buf = recvBuffers[ link ];
 
           MPI_Status status;

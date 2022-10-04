@@ -90,9 +90,10 @@ struct PartitionHelper
     const int rank = comm().rank();
     const int size = comm().size();
     LinksType links;
-    for (int i = 0; i < size; i++)
-      if (i != rank)
-        links.push_back( i );
+    if (rank > 0)
+      links.push_back( rank-1 );
+    if (rank < size-1)
+      links.push_back( rank+1 );
     return links;
   }
 
