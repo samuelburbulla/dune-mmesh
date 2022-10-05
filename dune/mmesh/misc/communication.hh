@@ -81,49 +81,55 @@ namespace Dune
         }
       }
 
-      // Invert links
+      // Send to all links
       const auto& comm = partitionHelper_.comm();
-      std::vector<int> invertedLinks (comm.size(), -1);
-      for (int l = 0; l < links.size(); ++l)
-        invertedLinks[ links[ l ] ] = l;
-
-      // Exchange data
-      for (int r = 0; r < comm.size(); ++r)
+      MPI_Request sendRequests[links.size()];
+      for (int link = 0; link < links.size(); ++link)
       {
-        if (r == comm.rank())
-        {
-          // Send to all links
-          for (int link = 0; link < links.size(); ++link)
-          {
-            BufferType& buf = sendBuffers[ link ];
-            int dest = links[ link ];
-            MPI_Ssend( buf._buf, buf._wb, MPI_BYTE, dest, tag_, comm );
-          }
-        }
-        else
-        {
-          // Receive
-          int link = invertedLinks[ r ];
+        BufferType& buf = sendBuffers[ link ];
+        int dest = links[ link ];
+        MPI_Request& request = sendRequests[ link ];
+        MPI_Isend( buf._buf, buf._wb, MPI_BYTE, dest, tag_, comm, &request );
+      }
 
-          if (link == -1)
+      // Receive data
+      int count = 0;
+      std::vector<bool> received (links.size(), false);
+      MPI_Request recvRequests[links.size()];
+      while( count < links.size() )
+      {
+        for (int link = 0; link < links.size(); ++link)
+        {
+          if (received[ link ])
             continue;
 
-          BufferType& buf = recvBuffers[ link ];
+          int source = links[ link ];
 
+          int available = 0;
           MPI_Status status;
-          MPI_Probe( r, tag_, comm, &status );
+          MPI_Iprobe( source, tag_, comm, &available, &status );
 
-          int bufferSize;
-          MPI_Get_count( &status, MPI_BYTE, &bufferSize );
-          buf.reserve( bufferSize );
-          buf.clear();
+          if (available)
+          {
+            int bufferSize;
+            MPI_Get_count( &status, MPI_BYTE, &bufferSize );
 
-          MPI_Recv( buf._buf, bufferSize, MPI_BYTE, r, tag_, comm, &status );
-          buf.seekp( bufferSize );
+            BufferType& buf = recvBuffers[ link ];
+            buf.reserve( bufferSize );
+            buf.clear();
 
-          buf.seekp( bufferSize );
+            MPI_Request& request = recvRequests[ link ];
+            MPI_Irecv( buf._buf, bufferSize, MPI_BYTE, source, tag_, comm, &request );
+            buf.seekp( bufferSize );
+
+            count++;
+            received[ link ] = true;
+          }
         }
       }
+
+      MPI_Waitall( links.size(), sendRequests, MPI_STATUSES_IGNORE );
+      MPI_Waitall( links.size(), recvRequests, MPI_STATUSES_IGNORE );
 
       // unpack data on receive entities
       for( UnpackIterator it = unpackBegin; it != unpackEnd; ++it )

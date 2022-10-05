@@ -195,8 +195,12 @@ int main(int argc, char *argv[])
   // Print
   printData();
 
+  Dune::Timer timer; timer.start();
   grid.communicate( dataHandle, InteriorBorder_All_Interface, ForwardCommunication );
   grid.communicate( dataHandleVertex, InteriorBorder_All_Interface, ForwardCommunication );
+  auto maxT = grid.comm().max( timer.elapsed() );
+  if (grid.comm().rank() == 0)
+    std::cout << "Comm took " << maxT << std::endl;
 
   // Print
   printData(false);
@@ -233,7 +237,7 @@ int main(int argc, char *argv[])
   ProjectionAllPartitionNoComm::project<ExactSolution, DiscreteFunctionType, Partitions::InteriorBorder>( f, solution );
 
   // communicate
-  Dune::Timer timer;
+  timer.reset();
   timer.start();
   space.communicate(solution, DFCommunicationOperation::Add());
   timer.stop();

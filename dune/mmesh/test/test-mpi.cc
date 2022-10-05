@@ -19,17 +19,24 @@ int main(int argc, char *argv[])
   using Comm = Dune::Communication<MPI_Comm>;
   auto comm = Comm( Dune::MPIHelper::getCommunicator() );
 
+  // Create links
   const int rank = comm.rank();
   const int size = comm.size();
   std::vector<int> links;
-  for (int i = 0; i < size; i++)
-    if (i != rank)
-      links.push_back( i );
+  if (rank > 0)
+    links.push_back( rank-1 );
+  if (rank < size-1)
+    links.push_back( rank+1 );
 
-  // Create data
-  std::vector<int> data (comm.size());
-  for (int i = 0; i < data.size(); ++i)
-    data[ i ] = rank;
+  // Create data (my rank for all links)
+  using DataType = std::array<int, 1500>;
+  std::vector<DataType> data (links.size());
+  for (int link = 0; link < links.size(); ++link)
+  {
+    DataType d;
+    std::fill(d.begin(), d.end(), rank);
+    data[ link ] = d;
+  }
 
   // Write buffers
   using BufferType = Dune::MMeshImpl::ObjectStream;
@@ -37,53 +44,75 @@ int main(int argc, char *argv[])
   std::vector<BufferType> recvBuffers (links.size());
 
   for (int link = 0; link < links.size(); ++link)
-  {
-    auto r = links[ link ];
-    int d = data[ r ];
-    sendBuffers[ link ].write( d );
-  }
-
-  std::vector<int> invertedLinks (size);
-  for (int l = 0; l < links.size(); ++l)
-    invertedLinks[ links[ l ] ] = l;
+    sendBuffers[ link ].write( data[ link ] );
 
   int tag = 0;
+  Dune::Timer timer;
+  timer.start();
 
   // Send
-  for (int r = 0; r < comm.size(); ++r)
+  MPI_Request sendRequests[links.size()];
+  for (int link = 0; link < links.size(); ++link)
   {
-    if (r == rank)
-      for (int link = 0; link < links.size(); ++link)
-      {
-        BufferType& buf = sendBuffers[ link ];
-        int dest = links[ link ];
-        MPI_Ssend(buf._buf, buf._wb, MPI_BYTE, dest, tag, comm);
-      }
-    else
+    BufferType& buf = sendBuffers[ link ];
+    int dest = links[ link ];
+    MPI_Request& request = sendRequests[ link ];
+    MPI_Isend(buf._buf, buf._wb, MPI_BYTE, dest, tag, comm, &request);
+  }
+
+  // Receive
+  int count = 0;
+  std::vector<bool> received (links.size(), false);
+  MPI_Request recvRequests[links.size()];
+  while( count < links.size() )
+  {
+    for (int link = 0; link < links.size(); ++link)
     {
-      int link = invertedLinks[ r ];
-      BufferType& buf = recvBuffers[ link ];
+      if (received[ link ])
+        continue;
 
+      int source = links[ link ];
+
+      int available = 0;
       MPI_Status status;
-      MPI_Probe(r, tag, MPI_COMM_WORLD, &status);
+      MPI_Iprobe( source, tag, comm, &available, &status );
 
-      int bufferSize;
-      MPI_Get_count(&status, MPI_BYTE, &bufferSize);
-      buf.reserve(bufferSize);
+      if (available)
+      {
+        int bufferSize;
+        MPI_Get_count(&status, MPI_BYTE, &bufferSize);
 
-      MPI_Recv(buf._buf, bufferSize, MPI_BYTE, r, tag, comm, &status);
-      buf.seekp(bufferSize);
+        BufferType& buf = recvBuffers[ link ];
+        buf.reserve(bufferSize);
+        buf.clear();
+
+        MPI_Request& request = recvRequests[ link ];
+        MPI_Irecv(buf._buf, bufferSize, MPI_BYTE, source, tag, comm, &request);
+        buf.seekp(bufferSize);
+
+        count++;
+        received[ link ] = true;
+      }
     }
   }
 
+  MPI_Waitall( links.size(), sendRequests, MPI_STATUSES_IGNORE );
+  MPI_Waitall( links.size(), recvRequests, MPI_STATUSES_IGNORE );
+
+  auto maxT = comm.max( timer.elapsed() );
+  if (comm.rank() == 0)
+    std::cout << "Comm took " << maxT << std::endl;
+
   for (int link = 0; link < links.size(); ++link)
   {
-    int e;
-    auto r = links[ link ];
+    DataType e;
     recvBuffers[ link ].read( e );
-    std::cout << rank << ": " << e << std::endl;
-    assert( e == r );
+    data[ link ] = e;
   }
+
+  // Check data
+  for (int link = 0; link < links.size(); ++link)
+    assert( data[ link ][0] == links[link]  );
 
   return EXIT_SUCCESS;
 }
