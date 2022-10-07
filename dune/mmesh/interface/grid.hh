@@ -14,6 +14,7 @@
 
 #include <dune/common/deprecated.hh>
 #include <dune/common/parallel/communication.hh>
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/version.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
@@ -160,7 +161,10 @@ namespace Dune
     //! Constructor
     explicit MMeshInterfaceGrid(MMesh* mMesh, BoundarySegments boundarySegments = {})
      : mMesh_(mMesh),
-       boundarySegments_(boundarySegments)
+       boundarySegments_(boundarySegments),
+       #ifdef HAVE_MPI
+       comm_( MPIHelper::getCommunicator() )
+      #endif
     {
       leafIndexSet_ = std::make_unique<MMeshInterfaceGridLeafIndexSet<const GridImp>>( this );
       globalIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
@@ -502,17 +506,47 @@ namespace Dune
     /** \brief Collective communication */
     const Communication< Comm >& comm () const
     {
-      return ccobj;
+      return comm_;
     }
 
     template< class Data, class InterfaceType, class CommunicationDirection >
     void communicate (
-      Data &data,
-      InterfaceType iftype,
-      CommunicationDirection dir,
+      Data &dataHandle,
+      InterfaceType interface,
+      CommunicationDirection direction,
       int level = 0 ) const
     {
-      // TODO
+      if (comm().size() <= 1)
+        return;
+
+#if HAVE_MPI
+      if( (interface == InteriorBorder_All_Interface) || (interface == All_All_Interface) )
+      {
+        MMeshCommunication<GridImp, MMeshType> communication( getMMesh().partitionHelper() );
+        const auto& gv = this->leafGridView();
+
+        switch( direction )
+        {
+        case ForwardCommunication:
+          communication( gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         dataHandle, InteriorEntity, GhostEntity,
+                         (interface == All_All_Interface) );
+          break;
+
+        case BackwardCommunication:
+          communication( gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         dataHandle, GhostEntity, InteriorEntity,
+                         (interface == All_All_Interface) );
+          break;
+        }
+      }
+      else
+        DUNE_THROW( NotImplemented, "Communication on interface type " << interface << " not implemented." );
+#else
+        DUNE_THROW( NotImplemented, "MPI not found!" );
+#endif //HAVE_MPI
     }
 
     //! Return if interface segment is part of the interface
@@ -613,7 +647,7 @@ namespace Dune
     // **********************************************************
 
   private:
-    Communication< Comm > ccobj;
+    Communication<Comm> comm_;
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {

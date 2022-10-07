@@ -98,16 +98,9 @@ struct PartitionHelper
   }
 
   //! List of connected ranks
-  LinksType links () const
+  const LinksType& links () const
   {
-    const int rank = comm().rank();
-    const int size = comm().size();
-    LinksType links;
-    if (rank > 0)
-      links.push_back( rank-1 );
-    if (rank < size-1)
-      links.push_back( rank+1 );
-    return links;
+    return links_;
   }
 
   auto& comm() const
@@ -127,6 +120,16 @@ struct PartitionHelper
       } catch (std::out_of_range&) {
         return ConnectivityType();
       }
+  }
+
+  //! Get rank of an entity
+  template <class Entity>
+  int rank(const Entity &e) const
+  {
+    if constexpr (Entity::dimension == dim)
+      return e.impl().hostEntity()->info().rank;
+    else
+      return grid().asIntersection(e).inside().impl().hostEntity()->info().rank;
   }
 
   const LeafIterator& leafInteriorBegin() const
@@ -194,6 +197,10 @@ private:
       e.impl().hostEntity()->info().connectivity.insert(rank);
     else
       interfaceConnectivity_[e.impl().id()].insert(rank);
+
+    if (partition(e) == 0)
+      if (std::find(links_.begin(), links_.end(), rank) == links_.end())
+        links_.push_back(rank);
   }
 
   //! Clear connectivity
@@ -241,13 +248,15 @@ private:
   //! Compute partition type for every entity
   void computePartitions()
   {
+    links_.clear();
+
     for (int i = 0; i <= dim; ++i)
       partition_[i].clear();
 
-    // Set elements
+    // Set interior elements
     forEntityDim<dim>([this](const auto& fc){
       const auto e = grid().entity(fc);
-      if (e.impl().hostEntity()->info().rank == grid().comm().rank())
+      if (rank(e) == grid().comm().rank())
         setPartition(e, 0); // interior
       else
         setPartition(e, -1); // none
@@ -270,8 +279,8 @@ private:
         if ((pIn == 0 && pOut != 0) or (pIn != 0 && pOut == 0))
         {
           setPartition(pIn == 0 ? outside : inside, 2); // ghost
-          addConnectivity(inside, outside.impl().hostEntity()->info().rank);
-          addConnectivity(outside, inside.impl().hostEntity()->info().rank);
+          addConnectivity(inside, rank(outside));
+          addConnectivity(outside, rank(inside));
         }
       }
     });
@@ -379,6 +388,7 @@ private:
     });
   }
 
+public:
   //! Compute partition type for every interface entity
   void computeInterfacePartitions()
   {
@@ -395,14 +405,49 @@ private:
       const auto e = grid().interfaceGrid().entity(fc);
       const auto is = grid().asIntersection(e);
 
-      if (is.inside().impl().hostEntity()->info().rank == grid().comm().rank())
-        // interior
-        setPartition(e, 0);
-      else
-        // ghost
-        setPartition(e, 2);
-
       clearConnectivity(e);
+
+      if (rank(e) == grid().comm().rank())
+      {
+        setPartition(e, 0); // interior
+
+//        // add connectivity to this entity being ghost on outside rank
+//        if (rank(is.outside()) != grid().comm().rank())
+//          addConnectivity(e, rank(is.outside()));
+      }
+      else
+        setPartition(e, -1); // none
+
+//      // if outside bulk entity is interior, the interface element is at least ghost
+//      if (rank(is.outside()) == grid().comm().rank())
+//        if (partition(e) == -1)
+//        {
+//          setPartition(e, 2); // ghost
+//          addConnectivity(e, rank(is.inside()));
+//        }
+    });
+
+    // Set ghosts
+    forEntityDim<idim-1>([this](const auto& fc){
+      if (!grid().isInterface( grid().entity(fc) ))
+        return;
+
+      // convert to interface vertex
+      const auto e = grid().interfaceGrid().entity(fc);
+
+      std::size_t count = 0, interior = 0, other = 0;
+      for (const auto& incident : incidentInterfaceElements(e))
+      {
+        count++;
+        if (partition(incident) == 0) interior++;
+        if (partition(incident) != 0) other++;
+      }
+
+      // if we find both interior and other entities we set none to ghost
+      if (interior > 0 and other > 0)
+        for (const auto& incident : incidentInterfaceElements(e))
+          if (partition(incident) == -1)
+            setPartition(incident, 2); // ghost
     });
 
     // Set facets
@@ -410,12 +455,8 @@ private:
       if (!grid().isInterface( grid().entity(fc) ))
         return;
 
+      // convert to interface vertex
       const auto e = grid().interfaceGrid().entity(fc);
-
-      auto rankOf = [&](const auto& e)
-      {
-        return grid().asIntersection(e).inside().impl().hostEntity()->info().rank;
-      };
 
       std::size_t count = 0, interior = 0, ghost = 0;
       std::unordered_set<int> connectivity;
@@ -424,7 +465,7 @@ private:
         count++;
         if (partition(incident) == 0) interior++;
         if (partition(incident) == 2) ghost++;
-        connectivity.insert( rankOf(incident) );
+        connectivity.insert( rank(incident) );
       }
 
       // interior
@@ -437,14 +478,18 @@ private:
         setPartition(e, 1);
 
         for (const auto& incident : incidentInterfaceElements(e))
-          for (auto rank : connectivity)
-            if (rank != rankOf(incident))
-              addConnectivity(incident, rank);
+          for (auto r : connectivity)
+            if (r != rank(incident))
+              addConnectivity(incident, r);
       }
 
       // ghost
-      else
+      else if (ghost > 0)
         setPartition(e, 2);
+
+      // none
+      else
+        setPartition(e, -1);
     });
 
     // Set vertices in 3d
@@ -473,12 +518,17 @@ private:
           setPartition(v, 1);
 
         // ghost
-        else
+        else if (ghost > 0)
           setPartition(v, 2);
+
+        // none
+        else
+          setPartition(v, -1);
       });
     }
   }
 
+private:
   template <int edim, class F>
   void forEntityDim(const F& f)
   {
@@ -513,6 +563,7 @@ private:
   std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
   std::unordered_map<IdType, ConnectivityType> interfaceConnectivity_;
   LeafIterator leafBegin_, leafEnd_;
+  LinksType links_;
   const Grid& grid_;
 };
 

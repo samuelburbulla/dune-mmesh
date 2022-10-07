@@ -1,57 +1,70 @@
-from dune.grid import reader, cartesianDomain
+from dune.grid import reader
 from dune.mmesh import mmesh
-from dune.alugrid import aluSimplexGrid
 from dune.fem.space import dglagrange
 from dune.fem.function import integrate
 from ufl import *
-from dune.ufl import Constant, DirichletBC
+from dune.ufl import Constant
 from dune.fem.scheme import galerkin
 from time import time
-from dune.fem import parameter
-parameter.append({"fem.verboserank": 0})
+from mpi4py import MPI
+rank = MPI.COMM_WORLD.Get_rank()
 
-domain = cartesianDomain([0, 0], [1, 1], [10, 10])
-gridView = mmesh(domain)
-#gridView = aluSimplexGrid(domain)
+def algorithm(grid, name):
+  space = dglagrange(grid, order=1, storage="istl")
+  x = SpatialCoordinate(space)
+  uh = space.interpolate(0, name="uh")
 
-space = dglagrange(gridView, order=1)
-x = SpatialCoordinate(space)
-uh = space.interpolate(0, name="uh")
+  u = TrialFunction(space)
+  v = TestFunction(space)
 
-print("uh.size =", uh.size)
+  exact = sin(pi*x[0]) * sin(pi*x[1])
+  beta = Constant(3.01, name="beta")
+  n = FacetNormal(space)
+  h = avg(FacetArea(space))
+  hBnd = FacetArea(space)
 
-u = TrialFunction(space)
-v = TestFunction(space)
+  A = inner(grad(u), grad(v)) * dx
+  A += beta / h * inner(jump(u), jump(v)) * dS
+  A -= dot(dot(avg(grad(u)), n('+')), jump(v)) * dS
+  A -= dot(dot(avg(grad(v)), n('+')), jump(u)) * dS
+  A += beta / hBnd * inner(u - exact, v) * ds
+  A -= dot(dot(grad(u), n), v) * ds
+  A -= dot(dot(grad(v), n), u - exact) * ds
 
-exact = sin(pi*x[0]) * sin(pi*x[1])
-beta = Constant(10, name="beta")
-n = FacetNormal(space)
-h = avg(FacetArea(space))
-hBnd = FacetArea(space)
+  if name == "interface":
+    b = -exact.dx(0).dx(0) * v * dx
+  else:
+    b = -div( grad(exact) ) * v * dx
 
-A = inner(grad(u), grad(v)) * dx
-A += beta / h * inner(jump(u), jump(v)) * dS
-A -= dot(dot(avg(grad(u)), n('+')), jump(v)) * dS
-A -= dot(dot(avg(grad(v)), n('+')), jump(u)) * dS
-A += beta / hBnd * inner(u - exact, v) * ds
-A -= dot(dot(grad(u), n), v) * ds
-A -= dot(dot(grad(v), n), u - exact) * ds
+  scheme = galerkin([A == b], solver='gmres')
 
-b = -div( grad(exact) ) * v * dx
+  took = -time()
+  scheme.solve(uh)
+  took += time()
 
-scheme = galerkin([A == b],
-  solver='cg',
-  parameters={
-    "newton.linear.maxiterations": 1000,
-    "newton.linear.verbose": "true"
-  })
+  if rank == 0:
+    print(f"Took {took:.6f}")
 
-start = time()
-scheme.solve(uh)
-print(f"Took {time()-start:.6f}")
+  grid.writeVTK("laplace-"+name, pointdata={"uh": uh, "exact": exact}, nonconforming=True)
 
-gridView.writeVTK("laplace", pointdata={"uh": uh, "exact": exact})
+  l2 = integrate(grid, sqrt(dot(uh-exact, uh-exact)), order=5)
+  if(l2 > 1e-2):
+    print(l2)
+    raise
 
-l2 = integrate(gridView, sqrt(dot(uh-exact, uh-exact)), order=5)
-print(l2)
-assert(l2 < 1e-3)
+
+########
+# MAIN #
+########
+
+
+from dune.mmesh.test.grids import line
+grid = mmesh((reader.gmsh, line.filename), 2)
+hgrid = grid.hierarchicalGrid
+igrid = hgrid.interfaceGrid
+
+# Run bulk
+algorithm(grid, "bulk")
+
+# Run interface
+algorithm(igrid, "interface")

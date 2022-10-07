@@ -417,7 +417,7 @@ namespace Dune
       : hostEntity_(hostEntity), grid_(grid), isLeaf_(true)
     {
       const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().index > mirrored.first->info().index )
+      if ( hostEntity_.first > mirrored.first )
         hostEntity_ = mirrored;
     }
 
@@ -425,7 +425,7 @@ namespace Dune
       : hostEntity_(std::move(hostEntity)), grid_(grid), isLeaf_(true)
     {
       const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().index > mirrored.first->info().index )
+      if ( hostEntity_.first > mirrored.first )
         hostEntity_ = mirrored;
     }
 

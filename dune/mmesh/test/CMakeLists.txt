@@ -92,5 +92,14 @@ set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDD
 dune_add_test(NAME test-comm SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-comm APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
+dune_add_test(NAME test-comm-3d SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+
+dune_add_test(NAME test-comm-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+dune_add_test(NAME test-comm-3d-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-3d-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
+
 dune_add_test(NAME test-mpi SOURCES test-mpi.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-mpi APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )

@@ -392,6 +392,9 @@ namespace Dune
 
       interfaceGrid_->setIds();
       interfaceGrid_->setIndices();
+
+      if (comm().size() > 0)
+        partitionHelper_.computeInterfacePartitions();
     }
 
     //! Add wrapped intersection to the interface
@@ -1773,7 +1776,7 @@ namespace Dune
 #if HAVE_MPI
       if( (interface == InteriorBorder_All_Interface) || (interface == All_All_Interface) )
       {
-        MMeshCommunication<GridImp> communication( partitionHelper_ );
+        MMeshCommunication<GridImp, GridImp> communication( partitionHelper_ );
         const auto& gv = this->leafGridView();
 
         switch( direction )

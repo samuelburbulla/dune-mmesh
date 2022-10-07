@@ -21,8 +21,13 @@
 using namespace Dune;
 using namespace Fem;
 
-static constexpr int dim = 2;
-using GridType = MovingMesh<dim>;
+static constexpr int dim = GRIDDIM;
+using BulkGridType = MovingMesh<dim>;
+#ifdef INTERFACE
+  using GridType = typename MovingMesh<dim>::InterfaceGrid;
+#else
+  using GridType = BulkGridType;
+#endif
 static constexpr bool verbose = false;
 
 // Custom data handle
@@ -143,9 +148,14 @@ int main(int argc, char *argv[])
 {
   MPIHelper::instance(argc, argv);
 
-  GridPtr< GridType > gridptr_ ("grids/2dgrid.dgf");
-  GridType& grid = *gridptr_;
-  grid.loadBalance();
+  GridPtr< BulkGridType > gridptr_ ((dim == 2) ? "grids/junction2d.msh" : "grids/plane3d.msh");
+  BulkGridType& bulkGrid = *gridptr_;
+
+#ifdef INTERFACE
+  GridType& grid = bulkGrid.interfaceGrid();
+#else
+  GridType& grid = bulkGrid;
+#endif
 
   // Communicate data with custom data handle
   // ========================================
@@ -164,7 +174,8 @@ int main(int argc, char *argv[])
       data[idx] = id;
   }
 
-  DataType dataVertex(grid.size(dim)), dataVertexCheck(grid.size(dim));
+  static constexpr int dimgrid = GridType::dimension;
+  DataType dataVertex(grid.size(dimgrid)), dataVertexCheck(grid.size(dimgrid));
   for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
   {
     auto idx = grid.leafIndexSet().index(v);
@@ -190,7 +201,7 @@ int main(int argc, char *argv[])
   // Communicate
   using DataHandleType = DataHandle< DataType, typename GridType::LeafIndexSet >;
   DataHandleType dataHandle (data, grid.leafIndexSet());
-  DataHandleType dataHandleVertex (dataVertex, grid.leafIndexSet(), dim);
+  DataHandleType dataHandleVertex (dataVertex, grid.leafIndexSet(), dimgrid);
 
   // Print
   printData();
@@ -206,11 +217,19 @@ int main(int argc, char *argv[])
   printData(false);
 
   // Test
-  for (std::size_t i = 0; i < data.size(); ++i)
-    assert(data[i] == dataCheck[i]);
-  for (std::size_t i = 0; i < dataVertex.size(); ++i)
+  for (const auto& e : elements(grid.leafGridView(), Partitions::all))
+  {
+    auto i = grid.leafIndexSet().index(e);
+    if(data[i] != dataCheck[i])
+      DUNE_THROW(InvalidStateException, "Element at (" << e.geometry().center() << ") is wrong: " << i << " (" << data[i] << " != " << dataCheck[i] << ")");
+  }
+
+  for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
+  {
+    auto i = grid.leafIndexSet().index(v);
     if(dataVertex[i] != dataVertexCheck[i])
-      DUNE_THROW(InvalidStateException, "Index is wrong" + std::to_string(i));
+      DUNE_THROW(InvalidStateException, "Vertex at (" << v.geometry().center() << ") is wrong: " << i << " (" << dataVertex[i] << " != " << dataVertexCheck[i] << ")");
+  }
 
 
   // Communicate discrete function

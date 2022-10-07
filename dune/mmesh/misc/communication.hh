@@ -12,11 +12,11 @@
 namespace Dune
 {
 
-  template< class Grid >
+  template< class Grid, class MMeshType >
   class MMeshCommunication
   {
-    typedef MMeshCommunication< Grid > This;
-    typedef PartitionHelper< Grid > PartitionHelperType;
+    typedef MMeshCommunication< Grid, MMeshType > This;
+    typedef PartitionHelper< MMeshType > PartitionHelperType;
     typedef typename PartitionHelperType::LinksType Links;
 
     // prohibit copying and assignment
@@ -170,9 +170,9 @@ namespace Dune
   // MMeshCommunication::PackData
   // -----------------------------------
 
-  template< class Grid >
+  template< class Grid, class MMeshType >
   template< int codim >
-  struct MMeshCommunication< Grid >::PackData
+  struct MMeshCommunication< Grid, MMeshType >::PackData
   {
     typedef typename Grid::template Codim< 0 >::Entity Element;
 
@@ -220,9 +220,9 @@ namespace Dune
   // MMeshCommunication::UnpackData
   // -------------------------------------
 
-  template< class Grid >
+  template< class Grid, class MMeshType >
   template< int codim >
-  struct MMeshCommunication< Grid >::UnpackData
+  struct MMeshCommunication< Grid, MMeshType >::UnpackData
   {
     using Element = typename Grid::template Codim< 0 >::Entity;
 
@@ -247,7 +247,7 @@ namespace Dune
         for (int link = 0; link < links.size(); ++link)
         {
           // make sure entity belongs to the rank of the link
-          if (links[link] != element.impl().hostEntity()->info().rank)
+          if (links[link] != partitionHelper.rank(element))
             continue;
 
           // read size from stream
