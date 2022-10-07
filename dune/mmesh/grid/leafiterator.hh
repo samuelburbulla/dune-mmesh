@@ -30,11 +30,9 @@ namespace Dune
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<0, pitype, GridImp, std::enable_if_t<GridImp::dimension == 2>>
   {
-  private:
-    //! The type of the underlying entities
-   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_faces_iterator;
-
   public:
+    //! The type of the underlying entities
+    using HostGridLeafIterator = typename GridImp::HostGridType::Finite_faces_iterator;
     enum {codimension = 0};
 
     typedef typename GridImp::template Codim<0>::Entity Entity;
@@ -45,7 +43,9 @@ namespace Dune
 
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_faces_begin())
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorBegin()
+        : mMesh->getHostGrid().finite_faces_begin())
     {
       while( proceed() )
         increment();
@@ -57,7 +57,9 @@ namespace Dune
      */
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_faces_end())
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorEnd()
+        : mMesh->getHostGrid().finite_faces_end())
     {}
 
     //! prefix increment
@@ -81,7 +83,7 @@ namespace Dune
     //! return if this iterator should further be incremented
     bool proceed()
     {
-      if (hostLeafIterator_ == mMesh_->getHostGrid().finite_faces_end())
+      if (hostLeafIterator_ == (pitype == Interior_Partition ? mMesh_->partitionHelper().leafInteriorEnd() : mMesh_->getHostGrid().finite_faces_end()))
         return false;
       return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
     }
@@ -218,11 +220,10 @@ namespace Dune
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<0, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
   {
-  private:
-    //! The type of the underlying entities
-   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_cells_iterator;
-
   public:
+    //! The type of the underlying entities
+    using HostGridLeafIterator = typename GridImp::HostGridType::Finite_cells_iterator;
+
     enum {codimension = 0};
 
     typedef typename GridImp::template Codim<0>::Entity Entity;

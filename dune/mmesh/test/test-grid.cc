@@ -54,17 +54,13 @@ int main(int argc, char *argv[])
 
   double vol = 0.0;
   for (const auto& e : elements(gv, Dune::Partitions::interior))
-  {
     vol += e.geometry().volume();
-    std::this_thread::sleep_for(std::chrono::microseconds(10)); // to see strong scaling
-  }
   double sumvol = grid.comm().sum(vol);
+  assert(std::abs(sumvol - 1.0) < 1e-6);
 
+  auto dt = timer.elapsed();
   if (grid.comm().rank() == 0)
-  {
-    std::cout << "Vol = " << sumvol << std::endl;
-    std::cout << "Took " << timer.elapsed() << std::endl;
-  }
+    std::cout << "Took " << dt << std::endl;
 
   // Call gridcheck from dune-grid
   gridcheck( grid );

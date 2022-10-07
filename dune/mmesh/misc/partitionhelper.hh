@@ -17,11 +17,24 @@ struct PartitionHelper
   using IdType = typename Grid::IdType;
   using ConnectivityType = std::unordered_set<int>;
   using LinksType = std::vector<int>;
+  using LeafIterator = typename Grid::LeafIterator::Implementation::HostGridLeafIterator;
 
   PartitionHelper(const Grid& grid) : grid_(grid) {}
 
   void distribute()
   {
+    // Initialize leafBegin_ and leafEnd_
+    if constexpr (dim == 2)
+    {
+      leafBegin_ = grid().getHostGrid().finite_faces_begin();
+      leafEnd_ = grid().getHostGrid().finite_faces_end();
+    }
+    else if constexpr (dim == 3)
+    {
+      leafBegin_ = grid().getHostGrid().finite_cells_begin();
+      leafEnd_ = grid().getHostGrid().finite_cells_end();
+    }
+
     if (grid().comm().size() == 1)
       return;
 
@@ -116,6 +129,16 @@ struct PartitionHelper
       }
   }
 
+  const LeafIterator& leafInteriorBegin() const
+  {
+    return leafBegin_;
+  }
+
+  const LeafIterator& leafInteriorEnd() const
+  {
+    return leafEnd_;
+  }
+
 private:
 
   //! Get partition marker
@@ -181,6 +204,38 @@ private:
       e.impl().hostEntity()->info().connectivity.clear();
     else
       interfaceConnectivity_[e.impl().id()].clear();
+  }
+
+  //! Set rank for every entity. We use a naiv partitioning using the entity iterator.
+  void setRanks()
+  {
+    int rank = grid().comm().rank();
+    int size = grid().comm().size();
+
+    std::size_t N;
+    if constexpr (dim == 2)
+      N = grid().getHostGrid().number_of_faces();
+    else
+      N = grid().getHostGrid().number_of_cells();
+
+    std::size_t i = 0;
+    forEntityDim<dim>([this, &i, &rank, &size, &N](const auto& fc)
+    {
+      auto getRank = [&size, &N](std::size_t i){ return i * size / N; };
+      int r = getRank(i);
+
+      // store begin iterator
+      if (r == rank && getRank(i-1) == rank-1)
+        this->leafBegin_ = fc;
+
+      // store end iterator
+      if (r == rank+1 && getRank(i-1) == rank)
+        this->leafEnd_ = fc;
+
+      auto e = grid().entity(fc);
+      e.impl().hostEntity()->info().rank = r;
+      i++;
+    });
   }
 
   //! Compute partition type for every entity
@@ -424,36 +479,6 @@ private:
     }
   }
 
-  //! Set rank for every entity. We use a naiv partition slicing the x-axis here.
-  void setRanks()
-  {
-    xbounds_[0] = std::numeric_limits<double>::max();
-    xbounds_[1] = std::numeric_limits<double>::lowest();
-
-    forEntityDim<0>([this](const auto& fc){
-      auto v = grid().entity(fc);
-      auto x = v.geometry().center()[0];
-      xbounds_[0] = std::min(xbounds_[0], x);
-      xbounds_[1] = std::max(xbounds_[1], x);
-    });
-
-    auto rank = [this](const auto& e)
-    {
-      int size = grid().comm().size();
-      auto x = e.geometry().center()[0];
-      double r = (x - xbounds_[0]) / (xbounds_[1] - xbounds_[0]);
-      int rank = int(r * size);
-      if (rank == size) rank = size-1;
-      assert(0 <= rank && rank < size);
-      return rank;
-    };
-
-    forEntityDim<dim>([this, rank](const auto& fc){
-      auto e = grid().entity(fc);
-      e.impl().hostEntity()->info().rank = rank( e );
-    });
-  }
-
   template <int edim, class F>
   void forEntityDim(const F& f)
   {
@@ -487,6 +512,7 @@ private:
   std::array<std::unordered_map<IdType, int>, dim-1> partition_;
   std::array<std::unordered_map<IdType, int>, dim> interfacePartition_;
   std::unordered_map<IdType, ConnectivityType> interfaceConnectivity_;
+  LeafIterator leafBegin_, leafEnd_;
   const Grid& grid_;
 };
 

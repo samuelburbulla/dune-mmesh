@@ -1703,9 +1703,8 @@ namespace Dune
       std::size_t size = 0;
 
       if (codim == 0)
-        for (const auto& e : elements(this->leafGridView()))
-          if (e.partitionType() == GhostEntity)
-            size++;
+        for (const auto& e : elements(this->leafGridView(), Partitions::ghost))
+          size++;
 
       if (codim == 1)
         for (const auto& f : facets(this->leafGridView()))
@@ -1736,8 +1735,7 @@ namespace Dune
      */
     void loadBalance()
     {
-      if (comm().size() > 1)
-        partitionHelper_.distribute();
+      partitionHelper_.distribute();
       update();
     };
 
