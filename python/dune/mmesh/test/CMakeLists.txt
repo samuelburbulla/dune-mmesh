@@ -17,7 +17,7 @@ foreach(test ${TESTS})
                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                        MPI_RANKS 1 2 4
                        TIMEOUT 999999
-                       LABELS quick)
+                       LABELS python)
 
  add_python_targets(test ${test})
 endforeach()

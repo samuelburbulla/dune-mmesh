@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     };
 
     // time loop
-    for ( int t = 1; t <= 100; t++ )
+    for ( int t = 1; t <= 10; t++ )
     {
       std::cout << "t = " << t << std::endl;
 

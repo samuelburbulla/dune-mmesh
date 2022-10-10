@@ -207,14 +207,14 @@ int main(int argc, char *argv[])
         );
       }
 
-      if (elementCount == 3)
+      if (elementCount == 2)
       {
-        std::cout << "- Check fourth element -" << std::endl;
+        std::cout << "- Check third element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.5, 0.41666666666666663 } );
         checkProperty( "geometry volume", geo.volume(), 0.4375 );
-        checkProperty( "element index", indexSet.index( e ), 3ul );
+        checkProperty( "element index", indexSet.index( e ), 2ul );
 
         // check vertices
         checkProperties( "vertex sub indices",

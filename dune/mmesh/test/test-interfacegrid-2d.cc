@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
     checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 7ul );
     unsigned int vertexCount = 0;
-    std::vector< unsigned int > idxMap {{ 4, 6, 1, 2, 5, 0, 3 }};
+    std::vector< unsigned int > idxMap {{ 6, 0, 2, 5, 4, 1, 3 }};
     for(auto v : vertices(gridView))
       checkProperty( "index mapped by vertex mapper", vertexMapper.index(v), idxMap[ vertexCount++ ] );
 
@@ -134,19 +134,19 @@ int main(int argc, char *argv[])
     {
       const auto geo = e.geometry();
 
-      if (elementCount == 0)
+      if (elementCount == 1)
       {
-        std::cout << "- Check first element -" << std::endl;
+        std::cout << "- Check second element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.375, 0.5 } );
         checkProperty( "geometry volume", geo.volume(), 0.25 );
-        checkProperty( "element index", indexSet.index( e ), 0ul );
+        checkProperty( "element index", indexSet.index( e ), 1ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 1 ), 1ul },
-            { indexSet.subIndex( e, 1, 1 ), 0ul } }
+          { { indexSet.subIndex( e, 0, 1 ), 2ul },
+            { indexSet.subIndex( e, 1, 1 ), 1ul } }
         );
 
         checkProperties( "vertex positions",
@@ -189,8 +189,8 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal2 = vertexMapper.subIndex(e, vIdxLocal2, 1);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 1u },
-            { vIdxGlobal2, 0u } }
+          { { vIdxGlobal1, 2u },
+            { vIdxGlobal2, 1u } }
         );
 
         // try to obtain mmesh intersection
