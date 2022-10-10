@@ -1235,6 +1235,8 @@ namespace Dune
           markAgain = false;
           insertComponentIds.clear();
           removeComponentIds.clear();
+          insertComponentIds.reserve(insert_.size());
+          removeComponentIds.reserve(remove_.size());
 
           // mark elements as mightVanish
           for ( const auto& ip : insert_ )
@@ -1397,6 +1399,7 @@ namespace Dune
           writeComponents_();
       }
 
+      loadBalance();
       return newVertices.size() > 0;
     }
 

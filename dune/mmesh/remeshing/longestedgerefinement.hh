@@ -80,36 +80,45 @@ public:
         return Vertex();
       }
 
-      // return some non-interface vertex at the shortest edge
-      ctype shortest = 1e100;
-      Vertex vertex;
+      // return some non-interface vertex at the shortest edges
+      static constexpr int dimw = Grid::dimensionworld;
+      std::array<std::pair<Vertex, double>, dimw+1> vertices;
+      const auto& refElem = ReferenceElements< double, dimw >::simplex();
 
       for( std::size_t i = 0; i < element.subEntities(edgeCodim); ++i )
       {
         const auto& edge = element.template subEntity<edgeCodim>(i);
         const ctype edgeLength = edge.geometry().volume();
 
-        if (edgeLength < shortest)
+        for( std::size_t j = 0; j < 2; ++j )
         {
-          const auto& v = edge.impl().template subEntity<vertexCodim>(0);
-          if( !v.impl().isInterface() && !atBoundary(v) ) // give prio to interior points
-          {
-            vertex = v;
-            shortest = edgeLength;
-          }
-          else
-          {
-            const auto& v2 = edge.impl().template subEntity<vertexCodim>(1);
-            if( !v2.impl().isInterface() && boundaryFlag(v2) == 0 )
-            {
-              vertex = v2;
-              shortest = edgeLength;
-            }
-          }
+          const auto& v = edge.impl().template subEntity<vertexCodim>(j);
+          const int vIdx = refElem.subEntity(i, dimw-1, j, vertexCodim);
+          vertices[vIdx].first = v;
+          vertices[vIdx].second += edgeLength;
         }
       }
 
-      return vertex;
+      std::sort(vertices.begin(), vertices.end(), [&](auto a, auto b){
+        // higher insertionLevel gives higher priority
+        if (a.first.impl().hostEntity()->info().insertionLevel < b.first.impl().hostEntity()->info().insertionLevel)
+          return true;
+
+        // lower edgeLength gives higher priority
+        if (a.second < b.second - 1e-14)
+          return true;
+
+        // give prio to non-constrained points
+        auto constrained = [&](auto v){ return v.impl().isInterface() || atBoundary(v); };
+        if (!constrained(a.first) and constrained(b.first))
+          return true;
+
+        // we consider a and b as equal
+        return false;
+      });
+
+      // return vertex with highest priority
+      return vertices[0].first;
     }
 
     //! return if vertex is incident to infinite vertex
