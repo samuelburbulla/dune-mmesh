@@ -1,4 +1,4 @@
-from dune.grid import reader, cartesianDomain
+from dune.grid import reader
 from dune.mmesh import mmesh
 from dune.fem.space import dglagrange
 from dune.fem.function import integrate
@@ -62,8 +62,6 @@ from dune.mmesh.test.grids import line
 grid = mmesh((reader.gmsh, line.filename), 2)
 hgrid = grid.hierarchicalGrid
 igrid = hgrid.interfaceGrid
-
-#grid = mmesh(cartesianDomain([0,0],[1,1],[400,400]))
 
 # Run bulk
 algorithm(grid, "bulk")

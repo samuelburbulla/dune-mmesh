@@ -126,12 +126,6 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
     n = len(uh.as_numpy)
     m = len(th.as_numpy)
 
-    if m == 0:
-        if verbose:
-            print("second scheme is empty, forward to scheme.solve()", flush=True)
-        scheme.solve(target=uh)
-        return
-
     def call():
         if callback is not None:
             callback()
