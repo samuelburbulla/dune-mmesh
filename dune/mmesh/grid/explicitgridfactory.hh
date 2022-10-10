@@ -75,6 +75,8 @@ namespace Dune
     typedef typename HostGrid::Vertex_handle Vertex_handle;
     typedef typename Grid::template HostGridEntity<0> Element_handle;
 
+    using Tuple = std::tuple<std::vector< unsigned int >, std::size_t, std::size_t>;
+
     using Base::insertElement;
   public:
     //! are boundary ids supported by this factory?
@@ -114,7 +116,7 @@ namespace Dune
       auto w = v;
 
       // Create element
-      createElement( w, countElements, domainMarker );
+      storeElement( w, countElements, domainMarker );
 
       // Increase element count
       countElements++;
@@ -124,6 +126,12 @@ namespace Dune
     };
 
   private:
+    //! Store element to sort elements before insertion
+    void storeElement( std::vector< unsigned int >& v, const size_t insertionIndex, const size_t domainMarker )
+    {
+      elements_.push_back( std::make_tuple(v, insertionIndex, domainMarker) );
+    }
+
     /** \brief Creates an element (face) in the underlying triangulation data structure
      *  \ingroup 2D
      *
@@ -393,6 +401,14 @@ namespace Dune
 
     std::unique_ptr<Grid> createGrid ()
     {
+      // Sort elements by x-coordinate for partitioning
+      std::sort(elements_.begin(), elements_.end(), [this](const auto& a, const auto& b){
+        return vhs_[std::get<0>(a)[0]]->point().x()
+             < vhs_[std::get<0>(b)[0]]->point().x();
+      });
+      for (auto& t : elements_)
+        createElement(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+
       // Create the infinite cells (neighbors of boundary cells)
       createInfiniteVertex();
 
@@ -585,6 +601,7 @@ namespace Dune
     //! Private members
     HostGrid tr_;
     std::vector< Vertex_handle > vhs_;
+    std::vector<Tuple> elements_;
     BoundarySegments boundarySegments_, interfaceBoundarySegments_;
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;

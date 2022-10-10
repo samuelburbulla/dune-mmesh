@@ -1,4 +1,4 @@
-from dune.grid import reader
+from dune.grid import reader, cartesianDomain
 from dune.mmesh import mmesh
 from dune.fem.space import dglagrange
 from dune.fem.function import integrate
@@ -36,7 +36,7 @@ def algorithm(grid, name):
   else:
     b = -div( grad(exact) ) * v * dx
 
-  scheme = galerkin([A == b], solver='gmres')
+  scheme = galerkin([A == b], solver='cg')
 
   took = -time()
   scheme.solve(uh)
@@ -62,6 +62,8 @@ from dune.mmesh.test.grids import line
 grid = mmesh((reader.gmsh, line.filename), 2)
 hgrid = grid.hierarchicalGrid
 igrid = hgrid.interfaceGrid
+
+#grid = mmesh(cartesianDomain([0,0],[1,1],[400,400]))
 
 # Run bulk
 algorithm(grid, "bulk")

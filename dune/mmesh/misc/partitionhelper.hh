@@ -425,6 +425,7 @@ public:
 //          setPartition(e, 2); // ghost
 //          addConnectivity(e, rank(is.inside()));
 //        }
+
     });
 
     // Set ghosts

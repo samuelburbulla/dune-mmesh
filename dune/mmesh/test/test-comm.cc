@@ -39,8 +39,8 @@ struct DataHandle
 {
   using DataType = typename Data::value_type;
 
-  DataHandle (Data& data, const IndexSet& indexSet, int codim = 0)
-  : data_(data), indexSet_(indexSet), mycodim_(codim)
+  DataHandle (Data& data, Data& dataCheck, const IndexSet& indexSet, int codim = 0)
+  : data_(data), dataCheck_(dataCheck), indexSet_(indexSet), mycodim_(codim)
   {}
 
   bool contains( int dimension, int codim ) const
@@ -66,7 +66,11 @@ struct DataHandle
   {
     DataType d;
     buffer.read( d );
-    data_[ indexSet_.index(entity) ] = d;
+    auto i = indexSet_.index(entity);
+    data_[ i ] = d;
+
+    if(data_[i] != dataCheck_[i])
+      DUNE_THROW(InvalidStateException, "Element at (" << entity.geometry().center() << ") is wrong: " << data_[i] << " != " << dataCheck_[i]);
   }
 
   static bool fixedSize( int dim, int codim )
@@ -74,7 +78,7 @@ struct DataHandle
     return false;
   }
 
-  Data& data_;
+  Data& data_, dataCheck_;
   const IndexSet& indexSet_;
   const int mycodim_;
 };
@@ -192,16 +196,16 @@ int main(int argc, char *argv[])
     if (!verbose) return;
     std::cout << "Rank " << grid.comm().rank() << " (" << (before ? "before" : "after ") << "): ";
     for (const auto d : data)
-      std::cout << d << ",  ";
+      std::cout << d << "|  ";
     for (const auto d : dataVertex)
-      std::cout << d << ",  ";
+      std::cout << d << "|  ";
     std::cout << std::flush << std::endl;
   };
 
   // Communicate
   using DataHandleType = DataHandle< DataType, typename GridType::LeafIndexSet >;
-  DataHandleType dataHandle (data, grid.leafIndexSet());
-  DataHandleType dataHandleVertex (dataVertex, grid.leafIndexSet(), dimgrid);
+  DataHandleType dataHandle (data, dataCheck, grid.leafIndexSet());
+  DataHandleType dataHandleVertex (dataVertex, dataVertexCheck, grid.leafIndexSet(), dimgrid);
 
   // Print
   printData();
@@ -215,22 +219,6 @@ int main(int argc, char *argv[])
 
   // Print
   printData(false);
-
-  // Test
-  for (const auto& e : elements(grid.leafGridView(), Partitions::all))
-  {
-    auto i = grid.leafIndexSet().index(e);
-    if(data[i] != dataCheck[i])
-      DUNE_THROW(InvalidStateException, "Element at (" << e.geometry().center() << ") is wrong: " << i << " (" << data[i] << " != " << dataCheck[i] << ")");
-  }
-
-  for (const auto& v : vertices(grid.leafGridView(), Partitions::all))
-  {
-    auto i = grid.leafIndexSet().index(v);
-    if(dataVertex[i] != dataVertexCheck[i])
-      DUNE_THROW(InvalidStateException, "Vertex at (" << v.geometry().center() << ") is wrong: " << i << " (" << dataVertex[i] << " != " << dataVertexCheck[i] << ")");
-  }
-
 
   // Communicate discrete function
   // =============================

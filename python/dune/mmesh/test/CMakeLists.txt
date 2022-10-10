@@ -15,6 +15,8 @@ foreach(test ${TESTS})
   dune_python_add_test(NAME ${test}
                        SCRIPT ${test}.py
                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                       MPI_RANKS 1 2 4
+                       TIMEOUT 999999
                        LABELS quick)
 
  add_python_targets(test ${test})
