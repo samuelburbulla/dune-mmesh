@@ -411,21 +411,22 @@ public:
       {
         setPartition(e, 0); // interior
 
-//        // add connectivity to this entity being ghost on outside rank
-//        if (rank(is.outside()) != grid().comm().rank())
-//          addConnectivity(e, rank(is.outside()));
+        // add connectivity to this entity being ghost on outside rank
+        if (is.neighbor())
+          if (rank(is.outside()) != grid().comm().rank())
+            addConnectivity(e, rank(is.outside()));
       }
       else
         setPartition(e, -1); // none
 
-//      // if outside bulk entity is interior, the interface element is at least ghost
-//      if (rank(is.outside()) == grid().comm().rank())
-//        if (partition(e) == -1)
-//        {
-//          setPartition(e, 2); // ghost
-//          addConnectivity(e, rank(is.inside()));
-//        }
-
+      // if outside bulk entity is interior, the interface element is at least ghost
+      if (is.neighbor())
+        if (rank(is.outside()) == grid().comm().rank())
+          if (partition(e) == -1)
+          {
+            setPartition(e, 2); // ghost
+            addConnectivity(e, rank(is.inside()));
+          }
     });
 
     // Set ghosts

@@ -38,7 +38,12 @@
 // Global Type Definitions
 // -----------------------
 
-typedef Dune::MovingMesh<2> GridType;
+using BulkGridType = Dune::MovingMesh<GRIDDIM>;
+#ifdef INTERFACE
+  using GridType = typename BulkGridType::InterfaceGrid;
+#else
+  using GridType = BulkGridType;
+#endif
 static constexpr int polOrder = 1;
 
 typedef Dune::Fem::AdaptiveLeafGridPart< GridType > GridPartType;
@@ -56,7 +61,7 @@ class TestGrid
 {
   typedef TestGrid ThisType;
 public:
-  typedef GridType HGridType;
+  typedef BulkGridType HGridType;
 
 protected:
   TestGrid ( const std::string& name )
@@ -90,7 +95,7 @@ protected:
   static std::string macroGridName ()
   {
     std::ostringstream s;
-    s << "grids/" << HGridType::dimension << "dgrid.dgf";
+    s << "grids/junction2d.msh";
     return s.str();
   }
 
@@ -252,8 +257,13 @@ try
   // append parameters from the parameter file
   Dune::Fem::Parameter::append( (argc < 2) ? "parameter" : argv[ 1 ] );
 
-  GridType &grid = TestGrid::grid();
-  grid.loadBalance();
+  BulkGridType &bulkGrid = TestGrid::grid();
+
+#ifdef INTERFACE
+  GridType& grid = bulkGrid.interfaceGrid();
+#else
+  GridType& grid = bulkGrid;
+#endif
 
   if ( grid.comm().rank() == 0 )
     std::cout << grid.size(0) << " cells" << std::endl;

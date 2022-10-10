@@ -49,18 +49,31 @@ int main(int argc, char *argv[])
     std::cout << "Interface Rank " << grid.comm().rank() << ": Vertices " << igrid.size(dim-1) << " (" << igrid.ghostSize(dim-1) << " ghost)" << std::endl;
   }
 
-  Dune::Timer timer;
-  timer.start();
 
-  double vol = 0.0;
-  for (const auto& e : elements(gv, Dune::Partitions::interior))
-    vol += e.geometry().volume();
-  double sumvol = grid.comm().sum(vol);
-  assert(std::abs(sumvol - 1.0) < 1e-6);
+  auto computeVolume = [&](const auto& grid, bool interface = false)
+  {
+    const auto& gv = grid.leafGridView();
+    Dune::Timer timer;
+    timer.start();
 
-  auto dt = timer.elapsed();
+    double vol = 0.0;
+    for (const auto& e : elements(gv, Dune::Partitions::interior))
+      vol += e.geometry().volume();
+    double sumvol = grid.comm().sum(vol);
+
+    double sumexact = !interface ? 1.0 : ((dim == 2) ? 1.29155 : 0.191342);
+    assert(std::abs(sumvol - sumexact) < 1e-5);
+
+    auto dt = timer.elapsed();
+    if (grid.comm().rank() == 0)
+      std::cout << " " << (!interface ? "Bulk" : "Interface") << " took " << dt << std::endl;
+  };
+
+  // Compute volume
   if (grid.comm().rank() == 0)
-    std::cout << "Took " << dt << std::endl;
+    std::cout << "Compute volume:" << std::endl;
+  computeVolume(grid);
+  computeVolume(igrid, true);
 
   // Call gridcheck from dune-grid
   gridcheck( grid );
