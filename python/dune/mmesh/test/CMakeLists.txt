@@ -5,6 +5,7 @@ add_python_targets(test __main__)
 set(TESTS
   adaptation
   coupledsolve
+  boundary
   interfaceindicator
   normals
   distance

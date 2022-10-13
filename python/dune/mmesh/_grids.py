@@ -94,6 +94,15 @@ def mmesh(constructor, dimgrid=None, **parameters):
 
     gridView = gridModule.LeafGrid(gridModule.reader(constructor))
 
+
+    # in case of a cartesian domain store if old or new boundary ids was used
+    # this can be removed in later version - it is only used in dune-fem
+    # to give a warning that the boundary ids for the cartesian domains have changed
+    try:
+        gridView.hierarchicalGrid._cartesianConstructionWithIds = constructor.boundaryWasSet
+    except AttributeError:
+        pass
+
     interfaceGrid = lambda self: self.interfaceHierarchicalGrid.leafView
     gridModule.HierarchicalGrid.interfaceGrid = property(interfaceGrid)
 
