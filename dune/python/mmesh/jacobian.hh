@@ -26,6 +26,8 @@ namespace Dune
 
     namespace MMesh
     {
+      using Dune::Indices::_0;
+      using Dune::Indices::_1;
 
       //! Convert intersection if gridPart is wrapped, e.g. geometryGridPart
       template< class GridPart, class Intersection, class Entity >
@@ -134,27 +136,36 @@ namespace Dune
       template< class Sch, class ISch, class Sol, class ISol >
       class Jacobian
       {
+        using ThisType = Jacobian<Sch, ISch, Sol, ISol>;
       public:
         using Scheme = Sch;
         using IScheme = ISch;
         using Solution = Sol;
         using ISolution = ISol;
 
-        using SparseMatrix = Dune::Fem::SparseRowMatrix<double, int>;
-
         using AType = typename Scheme::JacobianOperatorType;
-        using BType = Dune::Fem::SparseRowLinearOperator<ISolution, Solution, SparseMatrix>;
-        using CType = Dune::Fem::SparseRowLinearOperator<Solution, ISolution, SparseMatrix>;
+        using BType = Dune::Fem::ISTLLinearOperator<ISolution, Solution>;
+        using CType = Dune::Fem::ISTLLinearOperator<Solution, ISolution>;
         using DType = typename IScheme::JacobianOperatorType;
 
-        using MatrixBlock = Dune::BCRSMatrix<double>;
-        using VectorBlock = Dune::BlockVector<double>;
-        using RowType = Dune::MultiTypeBlockVector<MatrixBlock, MatrixBlock>;
-        using BlockMatrix = Dune::MultiTypeBlockMatrix<RowType, RowType>;
-        using BlockVector = Dune::MultiTypeBlockVector<VectorBlock, VectorBlock>;
+        // Block Matrix
+        using AMatrixBlock = Dune::BCRSMatrix<typename AType::MatrixBlockType>;
+        using BMatrixBlock = Dune::BCRSMatrix<typename BType::MatrixBlockType>;
+        using CMatrixBlock = Dune::BCRSMatrix<typename CType::MatrixBlockType>;
+        using DMatrixBlock = Dune::BCRSMatrix<typename DType::MatrixBlockType>;
+
+        using ABRowType = Dune::MultiTypeBlockVector<AMatrixBlock, BMatrixBlock>;
+        using CDRowType = Dune::MultiTypeBlockVector<CMatrixBlock, DMatrixBlock>;
+        using BlockMatrix = Dune::MultiTypeBlockMatrix<ABRowType, CDRowType>;
+
+        // Block Vector
+        using AVectorBlock = typename AType::ColumnBlockVectorType;
+        using DVectorBlock = typename DType::ColumnBlockVectorType;
+        using BlockVector = Dune::MultiTypeBlockVector<AVectorBlock, DVectorBlock>;
 
         typedef typename AType::DomainSpaceType BulkSpaceType;
         typedef typename DType::DomainSpaceType InterfaceSpaceType;
+        using ParameterType = Fem::NewtonParameter<typename IScheme::LinearInverseOperatorType::SolverParameterType>;
 
         Jacobian( const Scheme &scheme, const IScheme &ischeme, const Solution &uh, const ISolution &th,
           const double eps, const std::function<void()> &callback )
@@ -165,7 +176,13 @@ namespace Dune
            D_( "D", th.space(), th.space() ),
            eps_(eps),
            callback_(callback)
-        {}
+        {
+          x_[_0] = uh.blockVector();
+          x_[_1] = th.blockVector();
+        }
+
+        const Scheme& scheme() const { return scheme_; };
+        const BlockMatrix& M() const { return M_; };
 
         void init()
         {
@@ -192,86 +209,41 @@ namespace Dune
 
         void solve( const Solution &f, const ISolution &g, Solution& u, ISolution& t )
         {
-          std::size_t n = B_.exportMatrix().rows();
-          std::size_t m = B_.exportMatrix().cols();
-
-          if (M_[Dune::Indices::_0][Dune::Indices::_0].buildStage() != MatrixBlock::built)
-            setup();
-          else
+          auto setBlock = [this](const auto& block, const auto blockrow, const auto blockcol)
           {
-            auto setBlock = [this](const auto& block, const auto blockrow, const auto blockcol)
-            {
-              auto crs = block.exportMatrix().exportCRS();
-              const auto& val = std::get<0>(crs);
-              const auto& col = std::get<1>(crs);
-              const auto& row = std::get<2>(crs);
+            this->M_[blockrow][blockcol] = block.exportMatrix();
+          };
 
-              for (std::size_t i = 0; i < row.size()-1; ++i)
-                for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                  this->M_[blockrow][blockcol].entry(i, col[j]) = val[j];
-            };
+          setBlock(A_, _0, _0);
+          setBlock(B_, _0, _1);
+          setBlock(C_, _1, _0);
+          setBlock(D_, _1, _1);
 
-            setBlock(A_, Dune::Indices::_0, Dune::Indices::_0);
-            setBlock(B_, Dune::Indices::_0, Dune::Indices::_1);
-            setBlock(C_, Dune::Indices::_1, Dune::Indices::_0);
-            setBlock(D_, Dune::Indices::_1, Dune::Indices::_1);
-          }
+          b_[_0] = f.blockVector();
+          b_[_1] = g.blockVector();
 
-          for (std::size_t i = 0; i < n; ++i)
-            b_[Dune::Indices::_0][i] = f.leakPointer()[i];
-          for (std::size_t i = 0; i < m; ++i)
-            b_[Dune::Indices::_1][i] = g.leakPointer()[i];
+          auto params = std::make_shared<Fem::ISTLSolverParameter>( ParameterType( scheme_.parameter() ).linear() );
+          const size_t numIterations = params->preconditionerIteration();
+          const double relaxFactor = params->relaxation();
 
-          Dune::MatrixAdapter<BlockMatrix, BlockVector, BlockVector> linop(M_);
-          Dune::InverseOperatorResult res;
-          Dune::SeqSSOR<BlockMatrix, BlockVector, BlockVector,2> prec(M_, 1, 1.);
-          Dune::RestartedGMResSolver<BlockVector> solver(linop, prec, 1e-3, 10, 100, 2);
-          solver.apply(x_, b_, res);
+          using SolverAdapterType = Fem::ISTLSolverAdapter<-1, BlockVector>;
+          using ReductionType = typename SolverAdapterType::ReductionType;
+          SolverAdapterType solver( ReductionType( params ), params );
+          solver.setMaxIterations( params->maxIterations() );
 
-          for (std::size_t i = 0; i < u.size(); ++i)
-            u.leakPointer()[i] = x_[Dune::Indices::_0][i];
-          for (std::size_t i = 0; i < t.size(); ++i)
-            t.leakPointer()[i] = x_[Dune::Indices::_1][i];
+          Dune::SeqSSOR<BlockMatrix, BlockVector, BlockVector, 2> prec(M_, numIterations, relaxFactor);
+
+          MatrixAdapter<BlockMatrix, BlockVector, BlockVector> linop(M_);
+          ScalarProduct<BlockVector> scp;
+          InverseOperatorResult res;
+
+          solver( linop, scp, prec, b_, x_, res );
+
+          u.blockVector() = x_[_0];
+          t.blockVector() = x_[_1];
         }
 
       private:
-
-        // Setup BlockMatrix
-        void setup()
-        {
-          std::size_t n = B_.exportMatrix().rows();
-          std::size_t m = B_.exportMatrix().cols();
-
-          x_[Dune::Indices::_0].resize(n);
-          x_[Dune::Indices::_1].resize(m);
-          b_[Dune::Indices::_0].resize(n);
-          b_[Dune::Indices::_1].resize(m);
-
-          auto setupBlock = [this](const auto& block, const auto blockrow, const auto blockcol, std::size_t rowsize, std::size_t colsize)
-          {
-            this->M_[blockrow][blockcol].setBuildMode(MatrixBlock::implicit);
-            this->M_[blockrow][blockcol].setImplicitBuildModeParameters(block.exportMatrix().maxNzPerRow(), 0.1);
-            this->M_[blockrow][blockcol].setSize(rowsize, colsize);
-
-            auto crs = block.exportMatrix().exportCRS();
-            const auto& val = std::get<0>(crs);
-            const auto& col = std::get<1>(crs);
-            const auto& row = std::get<2>(crs);
-
-            for (std::size_t i = 0; i < row.size()-1; ++i)
-              for (std::size_t j = row[i]; j < row[i+1]; ++j)
-                this->M_[blockrow][blockcol].entry(i, col[j]) = val[j];
-
-            this->M_[blockrow][blockcol].compress();
-          };
-
-          setupBlock(A_, Dune::Indices::_0, Dune::Indices::_0, n, n);
-          setupBlock(B_, Dune::Indices::_0, Dune::Indices::_1, n, m);
-          setupBlock(C_, Dune::Indices::_1, Dune::Indices::_0, m, n);
-          setupBlock(D_, Dune::Indices::_1, Dune::Indices::_1, m, m);
-        }
-
-
         template< class Scheme, class DomainGridFunction, class RangeGridFunction >
         void assembleB (const Scheme &scheme, const DomainGridFunction &t, const RangeGridFunction &u)
         {

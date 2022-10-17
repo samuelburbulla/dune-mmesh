@@ -3,6 +3,17 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
+# Return dof vector
+def as_vector(df):
+  try:
+    return df.as_numpy
+  except:
+    try:
+      return df.as_istl
+    except:
+      raise
+
+
 def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=None, verbose=False, accelerate=False):
     """Helper function to solve bulk and interface scheme coupled iteratively.
 
@@ -70,22 +81,22 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
             FFb.assign(v)
 
             # Irons-Tuck update
-            DA  = FFa.as_numpy - Fa.as_numpy
-            D2a = DA - Fa.as_numpy + a.as_numpy
-            u.as_numpy[:] = FFa.as_numpy
+            DA  = as_vector(FFa) - as_vector(Fa)
+            D2a = DA - as_vector(Fa) + as_vector(a)
+            as_vector(u)[:] = as_vector(FFa)
             if np.dot(D2a, D2a) != 0:
-                u.as_numpy[:] -= np.dot(DA, D2a) / np.dot(D2a, D2a) * DA
+                as_vector(u)[:] -= np.dot(DA, D2a) / np.dot(D2a, D2a) * DA
 
-            DB  = FFb.as_numpy - Fb.as_numpy
-            D2b  = DB - Fb.as_numpy + b.as_numpy
-            v.as_numpy[:] = FFb.as_numpy
+            DB  = as_vector(FFb) - as_vector(Fb)
+            D2b  = DB - as_vector(Fb) + as_vector(b)
+            as_vector(v)[:] = as_vector(FFb)
             if np.dot(D2b, D2b) != 0:
-                v.as_numpy[:] -= np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
+                as_vector(v)[:] -= np.dot(DB, D2b) / np.dot(D2b, D2b) * DB
 
         if callback is not None:
             callback()
 
-        res = residuum(u.as_numpy - a.as_numpy, v.as_numpy - b.as_numpy)
+        res = residuum(as_vector(u) - as_vector(a), as_vector(v) - as_vector(b))
 
         if verbose:
             print("{:3d}:".format(i), "[", "{:1.2e}".format(res), "]", flush=True)
@@ -98,11 +109,11 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e-5, eps=1.49012e-8, verbose=0):
+def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e-7, eps=1.49012e-8, verbose=0):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method assembling the underlying jacobian matrix.
        The coupling jacobian blocks are evaluated by finite differences.
-       We provide a fast version with a C++ backend using UMFPACK.
+       We provide a version with a C++ backend using a Schur complement.
 
     Args:
         schemes:  pair of schemes
@@ -123,8 +134,8 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
     (scheme, ischeme) = schemes
     (uh, th) = targets
 
-    n = len(uh.as_numpy)
-    m = len(th.as_numpy)
+    n = len(as_vector(uh))
+    m = len(as_vector(th))
 
     def call():
         if callback is not None:
@@ -168,13 +179,13 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e-8, f_tol=1e
 
         uh -= ux
         th -= tx
-        xres = np.sqrt(norm(ux.as_numpy)**2 + norm(tx.as_numpy)**2)
+        xres = np.sqrt(norm(as_vector(ux))**2 + norm(as_vector(tx))**2)
 
         call()
         scheme(uh, f)
         ischeme(th, g)
 
-        fres = np.sqrt(norm(f.as_numpy)**2 + norm(g.as_numpy)**2)
+        fres = np.sqrt(norm(as_vector(f))**2 + norm(as_vector(g))**2)
 
         if verbose > 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))

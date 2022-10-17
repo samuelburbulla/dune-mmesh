@@ -10,8 +10,8 @@ igridView = gridView.hierarchicalGrid.interfaceGrid
 
 from ufl import *
 from dune.fem.space import lagrange, dglagrange
-space = dglagrange(gridView, order=1)
-ispace = dglagrange(igridView, order=1)
+space = dglagrange(gridView, order=1, storage="istl")
+ispace = dglagrange(igridView, order=1, storage="istl")
 u = TrialFunction(space)
 v = TestFunction(space)
 iu = TrialFunction(ispace)
@@ -50,11 +50,15 @@ ia += (iu - trace(uh)('+')) / omega * iv * dx
 ia += (iu - trace(uh)('-')) / omega * iv * dx
 
 from dune.fem.scheme import galerkin
-scheme  = galerkin([a == 0], solver='cg')
-ischeme = galerkin([ia == ib], solver='cg')
+scheme  = galerkin([a == 0], solver='gmres', parameters={
+  "newton.linear.verbose": "true",
+  "newton.linear.preconditioning.method": "ssor",
+  "newton.linear.maxiterations": 10000
+})
+ischeme = galerkin([ia == ib])
 from dune.mmesh import monolithicSolve
 dt = -time()
-monolithicSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True)
+monolithicSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True, iter=1)
 dt += time()
 
 rank = MPI.COMM_WORLD.Get_rank()
@@ -65,5 +69,6 @@ from dune.fem.function import integrate
 intBulk = integrate(gridView, uh, order=1)
 intInterface = integrate(igridView, iuh, order=1)
 
-assert(abs(intBulk - 0.06473048252528972) < 1e-6)
-assert(abs(intInterface - 0.19198977421898397) < 1e-6)
+print(intBulk, intInterface)
+assert(abs(intBulk - 0.064730) < 1e-6)
+assert(abs(intInterface - 0.191989) < 1e-6)
