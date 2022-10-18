@@ -110,11 +110,12 @@ def distance(grid):
     return distance
 
 
-def domainMarker(grid):
+def domainMarker(grid, wrapped=False):
     """Return domain markers passed by .msh grid file.
 
     Args:
        grid: The grid.
+       wrapped: Set this to true if grid is wrapped.
 
     Returns:
        Grid function with cell-wise markers from .msh file.
@@ -131,11 +132,11 @@ def domainMarker(grid):
     """
     from dune.fem.space import finiteVolume
     from dune.fem.function import cppFunction
-    try:
+    if not wrapped:
         cppfunc = cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
-    except CompileError as e:
+    else:
         code = code.replace("impl()", "impl().hostEntity().impl()")
-        cppfunc = cppFunction(grid, name="domainMarker", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
+        cppfunc = cppFunction(grid, name="domainMarkerImpl", order=0, fctName="domainMarker", includes=io.StringIO(code), args=[grid])
     fvspace = finiteVolume(grid)
     return fvspace.interpolate(cppfunc, name="domainMarker")
 

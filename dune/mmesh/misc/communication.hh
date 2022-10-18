@@ -200,16 +200,16 @@ namespace Dune
         for (int link = 0; link < links.size(); ++link)
         {
           // make sure entity belongs to the link
-          if (connectivity.count(links[link]) == 0)
-            continue;
+          if (connectivity.count(links[link]) > 0 || links[link] == partitionHelper.rank(element))
+          {
+            std::size_t size = dataHandle.size( entity );
 
-          std::size_t size = dataHandle.size( entity );
+            // write size into stream
+            buffer[ link ].write( size );
 
-          // write size into stream
-          buffer[ link ].write( size );
-
-          // write data to message buffer using data handle
-          dataHandle.gather( buffer[ link ], entity );
+            // write data to message buffer using data handle
+            dataHandle.gather( buffer[ link ], entity );
+          }
         }
       }
     }
@@ -237,6 +237,8 @@ namespace Dune
       if( !dataHandle.contains( dimension, codim ) )
         return;
 
+      const auto& connectivity = partitionHelper.connectivity(element);
+
       // get number of sub entities
       const int numSubEntities = element.subEntities(codim);
       for( int subEntity = 0; subEntity < numSubEntities; ++subEntity )
@@ -247,15 +249,15 @@ namespace Dune
         for (int link = 0; link < links.size(); ++link)
         {
           // make sure entity belongs to the rank of the link
-          if (links[link] != partitionHelper.rank(element))
-            continue;
+          if (links[link] == partitionHelper.rank(element) || connectivity.count(links[link]) > 0)
+          {
+            // read size from stream
+            std::size_t size( 0 );
+            buffer[ link ].read( size );
 
-          // read size from stream
-          std::size_t size( 0 );
-          buffer[ link ].read( size );
-
-          // read data from message buffer using data handle
-          dataHandle.scatter( buffer[ link ], entity, size );
+            // read data from message buffer using data handle
+            dataHandle.scatter( buffer[ link ], entity, size );
+          }
         }
       }
     }

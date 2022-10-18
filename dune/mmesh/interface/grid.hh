@@ -626,6 +626,20 @@ namespace Dune
       return it->second;
     }
 
+    // Return if MMeshInterfaceEntity can be mirrored
+    bool canBeMirrored(const MMeshInterfaceEntity<0>& hostEntity) const
+    {
+      using HostGridEntity = typename GridImp::MMeshType::template HostGridEntity<0>;
+
+      if (hostEntity.first->neighbor(hostEntity.second) == HostGridEntity())
+        return false;
+
+      if constexpr (dimensionworld == 2)
+        return hostEntity.first->dimension() >= 1;
+
+      return true;
+    }
+
     //! Mirror a host entity (2d)
     template <int d = dimensionworld>
     std::enable_if_t< d == 2, const MMeshInterfaceEntity<0> >

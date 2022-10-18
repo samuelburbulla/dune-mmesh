@@ -59,6 +59,16 @@ namespace Dune
     {
       auto hostEntity = e.impl().hostEntity();
 
+      // handle invalid entity (occurs with empty interface)
+      using HostGridHandle = typename GridImp::MMeshType::template HostGridEntity<0>;
+      if (!grid_->canBeMirrored(hostEntity))
+      {
+        if constexpr (dimension == 1)
+          return (hostEntity.first->vertex(0) == grid_->getMMesh().getHostGrid().finite_faces_end()->vertex(0)) ? 1 : 0;
+        else // dimension == 2
+          return (hostEntity.first->vertex(0) == grid_->getMMesh().getHostGrid().finite_cells_end()->vertex(0)) ? 1 : 0;
+      }
+
       std::array<std::size_t, dimensionworld> ids;
       for( int i = 0; i < dimensionworld; ++i )
         try {

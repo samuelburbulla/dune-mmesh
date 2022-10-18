@@ -155,6 +155,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     import hashlib
     from dune.generator import Constructor
     from dune.generator.generator import SimpleGenerator
+    from mpi4py import MPI
 
     typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
         + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
@@ -187,7 +188,8 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
 
         fres = np.sqrt(norm(as_vector(f))**2 + norm(as_vector(g))**2)
 
-        if verbose > 0:
+        rank = MPI.COMM_WORLD.Get_rank()
+        if verbose > 0 and rank == 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
 
         if xres < tol and fres < f_tol:

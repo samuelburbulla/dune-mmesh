@@ -416,17 +416,23 @@ namespace Dune
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
       : hostEntity_(hostEntity), grid_(grid), isLeaf_(true)
     {
-      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
-        hostEntity_ = mirrored;
+      if (grid->canBeMirrored(hostEntity_))
+      {
+        const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+        if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
+          hostEntity_ = mirrored;
+      }
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
       : hostEntity_(std::move(hostEntity)), grid_(grid), isLeaf_(true)
     {
-      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
-        hostEntity_ = mirrored;
+      if (grid->canBeMirrored(hostEntity_))
+      {
+        const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+        if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
+          hostEntity_ = mirrored;
+      }
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity, const IdType& id)

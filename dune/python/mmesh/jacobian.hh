@@ -133,6 +133,103 @@ namespace Dune
         const RangeGridPart& rangeGridPart_;
       };
 
+
+      template<class X, class BulkDF, class InterfaceDF>
+      class ParallelizedScalarProduct : public ScalarProduct<X> {
+      public:
+        typedef X domain_type;
+        typedef typename X::field_type field_type;
+        typedef typename FieldTraits<field_type>::real_type real_type;
+
+        ParallelizedScalarProduct(const BulkDF& uh, const InterfaceDF& th)
+        : u(uh), v(uh), t(th), s(th)
+        {}
+
+        virtual field_type dot (const X& x, const X& y) const
+        {
+          u.blockVector() = x[_0];
+          t.blockVector() = x[_1];
+          u.communicate();
+          t.communicate();
+          v.blockVector() = y[_0];
+          s.blockVector() = y[_1];
+          v.communicate();
+          s.communicate();
+          return u.scalarProductDofs(v) + t.scalarProductDofs(s);
+        }
+
+        virtual real_type norm (const X& x) const
+        {
+          u.blockVector() = x[_0];
+          t.blockVector() = x[_1];
+          u.communicate();
+          t.communicate();
+          return std::sqrt( u.scalarProductDofs(u) + t.scalarProductDofs(t) );
+        }
+
+      private:
+        mutable BulkDF u, v;
+        mutable InterfaceDF t, s;
+      };
+
+      template<class M, class X, class Y, class BulkDF, class InterfaceDF>
+      class ParallelizedMatrixAdapter : public AssembledLinearOperator<M,X,Y>
+      {
+      public:
+        //! export types
+        typedef M matrix_type;
+        typedef X domain_type;
+        typedef Y range_type;
+        typedef typename X::field_type field_type;
+
+        //! constructor: just store a reference to a matrix
+        explicit ParallelizedMatrixAdapter (const M& A, const BulkDF& uh, const InterfaceDF& th)
+        : _A_(stackobject_to_shared_ptr(A)), u(uh), t(th)
+        {}
+
+        //! apply operator to x:  \f$ y = A(x) \f$
+        void apply (const X& x, Y& y) const override
+        {
+          _A_->mv(x, y);
+          communicate(y);
+        }
+
+        //! apply operator to x, scale and add:  \f$ y = y + \alpha A(x) \f$
+        void applyscaleadd (field_type alpha, const X& x, Y& y) const override
+        {
+          _A_->usmv(alpha, x, y);
+          communicate(y);
+        }
+
+        //! get matrix via *
+        const M& getmat () const override
+        {
+          return *_A_;
+        }
+
+        //! Category of the solver (see SolverCategory::Category)
+        SolverCategory::Category category() const override
+        {
+          return SolverCategory::sequential;
+        }
+
+      private:
+        void communicate(Y& y) const
+        {
+          u.blockVector() = y[_0];
+          t.blockVector() = y[_1];
+          u.communicate();
+          t.communicate();
+          y[_0] = u.blockVector();
+          y[_1] = t.blockVector();
+        }
+
+        const std::shared_ptr<const M> _A_;
+        mutable BulkDF u;
+        mutable InterfaceDF t;
+      };
+
+
       template< class Sch, class ISch, class Sol, class ISol >
       class Jacobian
       {
@@ -231,10 +328,9 @@ namespace Dune
           SolverAdapterType solver( ReductionType( params ), params );
           solver.setMaxIterations( params->maxIterations() );
 
-          Dune::SeqSSOR<BlockMatrix, BlockVector, BlockVector, 2> prec(M_, numIterations, relaxFactor);
-
-          MatrixAdapter<BlockMatrix, BlockVector, BlockVector> linop(M_);
-          ScalarProduct<BlockVector> scp;
+          ParallelizedMatrixAdapter<BlockMatrix, BlockVector, BlockVector, Solution, ISolution> linop(M_, u, t);
+          ParallelizedScalarProduct<BlockVector, Solution, ISolution> scp (u, t);
+          Dune::Richardson<BlockVector, BlockVector> prec(1.0);
           InverseOperatorResult res;
 
           solver( linop, scp, prec, b_, x_, res );
