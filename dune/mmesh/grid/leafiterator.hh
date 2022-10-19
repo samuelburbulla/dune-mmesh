@@ -461,6 +461,8 @@ namespace Dune
     {
       if (hostLeafIterator_ == HostGridLeafIterator(mMesh_->getHostGrid().finite_vertices_end()))
         return false;
+      if (hostLeafIterator_ == mMesh_->getHostGrid().infinite_vertex())
+        return true;
       return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
     }
 

@@ -401,11 +401,21 @@ namespace Dune
 
     std::unique_ptr<Grid> createGrid ()
     {
-      // Sort elements by x-coordinate for partitioning
+      // Sort elements by x-coordinate of center for partitioning
       std::sort(elements_.begin(), elements_.end(), [this](const auto& a, const auto& b){
-        return vhs_[std::get<0>(a)[0]]->point().x()
-             < vhs_[std::get<0>(b)[0]]->point().x();
+        const auto& va = std::get<0>(a);
+        const auto& vb = std::get<0>(b);
+
+        double xa = 0.0;
+        double xb = 0.0;
+        for (int i = 0; i < dimensionworld+1; ++i)
+        {
+          xa += vhs_[va[i]]->point().x();
+          xb += vhs_[vb[i]]->point().x();
+        }
+        return xa < xb;
       });
+
       for (auto& t : elements_)
         createElement(std::get<0>(t), std::get<1>(t), std::get<2>(t));
 
