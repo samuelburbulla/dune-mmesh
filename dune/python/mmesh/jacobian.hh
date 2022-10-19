@@ -149,22 +149,16 @@ namespace Dune
         {
           u.blockVector() = x[_0];
           t.blockVector() = x[_1];
-          u.communicate();
-          t.communicate();
           v.blockVector() = y[_0];
           s.blockVector() = y[_1];
-          v.communicate();
-          s.communicate();
-          return u.scalarProductDofs(v) + t.scalarProductDofs(s);
+          return u.scalarProductDofs(v) + t.scalarProductDofs(s); // already parallel
         }
 
         virtual real_type norm (const X& x) const
         {
           u.blockVector() = x[_0];
           t.blockVector() = x[_1];
-          u.communicate();
-          t.communicate();
-          return std::sqrt( u.scalarProductDofs(u) + t.scalarProductDofs(t) );
+          return std::sqrt( u.scalarProductDofs(u) + t.scalarProductDofs(t) ); // already parallel
         }
 
       private:

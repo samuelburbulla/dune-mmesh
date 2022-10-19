@@ -156,6 +156,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     from dune.generator import Constructor
     from dune.generator.generator import SimpleGenerator
     from mpi4py import MPI
+    comm = MPI.COMM_WORLD
 
     typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
         + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
@@ -173,6 +174,9 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     ux = uh.copy()
     tx = th.copy()
 
+    def norm(u, t):
+      return np.sqrt(u.scalarProductDofs(u) + t.scalarProductDofs(t))
+
     for i in range(1, iter+1):
 
         jacobian.update(uh, th)
@@ -180,15 +184,15 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
 
         uh -= ux
         th -= tx
-        xres = np.sqrt(norm(as_vector(ux))**2 + norm(as_vector(tx))**2)
+        xres = norm(ux, tx)
 
         call()
         scheme(uh, f)
         ischeme(th, g)
 
-        fres = np.sqrt(norm(as_vector(f))**2 + norm(as_vector(g))**2)
+        fres = norm(f, g)
 
-        rank = MPI.COMM_WORLD.Get_rank()
+        rank = comm.Get_rank()
         if verbose > 0 and rank == 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
 

@@ -757,7 +757,10 @@ namespace Dune
       {
         typename IdType::VT idlist( dim+1 );
         for( std::size_t i = 0; i < this->subEntities(dim); ++i )
-          idlist[i] = this->subEntity<dim>(i).impl().hostEntity()->info().id;
+          if (grid_->canBeMirrored(hostEntity_))
+            idlist[i] = this->subEntity<dim>(i).impl().hostEntity()->info().id;
+          else
+            idlist[i] = -i;
         std::sort( idlist.begin(), idlist.end() );
         id_ = IdType( idlist );
       }

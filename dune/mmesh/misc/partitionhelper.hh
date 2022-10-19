@@ -168,6 +168,9 @@ private:
       auto entry = interfacePartition_[cd].find(e.impl().id());
       if (entry != interfacePartition_[cd].end())
         return entry->second;
+
+      // handle empty interface
+      return -1;
     }
 
     DUNE_THROW(InvalidStateException, "Partition not set yet!");
