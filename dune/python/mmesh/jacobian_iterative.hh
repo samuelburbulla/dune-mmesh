@@ -43,7 +43,8 @@ namespace Dune
 
       //! Default (trivial) convert
       template< class GridPart, class Intersection, class Entity >
-      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, Dune::PriorityTag<1> )
+      std::enable_if_t<std::is_convertible_v<Intersection, typename GridPart::IntersectionType>, const typename GridPart::IntersectionType>
+      convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, Dune::PriorityTag<1> )
       {
         return intersection;
       }
