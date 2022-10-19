@@ -1,6 +1,7 @@
 set(HEADERS
   distance.hh
   grid.hh
+  jacobian_iterative.hh
   jacobian.hh
   pyskeletontrace.hh
   utility.hh

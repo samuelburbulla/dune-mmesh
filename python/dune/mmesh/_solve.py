@@ -109,11 +109,11 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
 
 
 
-def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e-7, eps=1.49012e-8, verbose=0):
+def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e-7, eps=1.49012e-8, verbose=0, iterative=False):
     """Helper function to solve bulk and interface scheme coupled monolithically.
        A newton method assembling the underlying jacobian matrix.
        The coupling jacobian blocks are evaluated by finite differences.
-       We provide a version with a C++ backend using a Schur complement.
+       We provide an implementation with a fast C++ backend.
 
     Args:
         schemes:  pair of schemes
@@ -124,6 +124,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
         f_tol:    objective residual of function value in two norm
         eps:      step size for finite difference
         verbose:  1: print residuum for each newton iteration, 2: print details
+        iterative: Use the experimental iterative solver backend instead of UMFPack. Remark that the solver arguments of the bulk scheme are taken and preconditioning is not supported yet.
 
     Returns:
         if converged
@@ -158,9 +159,13 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
 
+    if iterative:
+      header = "jacobian_iterative.hh"
+    else:
+      header = "jacobian.hh"
     typeName = "Dune::Python::MMesh::Jacobian< " + scheme.cppTypeName + ", " \
         + ischeme.cppTypeName + ", " + uh.cppTypeName + ", " + th.cppTypeName + " >"
-    includes = scheme.cppIncludes + ischeme.cppIncludes + ["dune/python/mmesh/jacobian.hh"]
+    includes = scheme.cppIncludes + ischeme.cppIncludes + ["dune/python/mmesh/"+header]
     moduleName = "jacobian_" + hashlib.md5(typeName.encode('utf8')).hexdigest()
     constructor = Constructor(['const '+scheme.cppTypeName+'& scheme','const '+ischeme.cppTypeName+' &ischeme', 'const '+uh.cppTypeName+' &uh', 'const '+th.cppTypeName+' &th', 'const double eps', 'const std::function<void()> &callback'],
                               ['return new ' + typeName + '( scheme, ischeme, uh, th, eps, callback );'],

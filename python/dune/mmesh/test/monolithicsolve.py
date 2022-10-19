@@ -1,5 +1,4 @@
 from time import time
-from mpi4py import MPI
 
 from dune.mmesh.test.grids import tjunction
 
@@ -10,8 +9,8 @@ igridView = gridView.hierarchicalGrid.interfaceGrid
 
 from ufl import *
 from dune.fem.space import lagrange, dglagrange
-space = dglagrange(gridView, order=1, storage="istl")
-ispace = dglagrange(igridView, order=1, storage="istl")
+space = dglagrange(gridView, order=1)
+ispace = dglagrange(igridView, order=1)
 u = TrialFunction(space)
 v = TestFunction(space)
 iu = TrialFunction(ispace)
@@ -23,7 +22,7 @@ from dune.ufl import Constant
 from dune.mmesh import interfaceIndicator
 q     = Constant(1, name="q")
 omega = Constant(1e-6, name="omega")
-beta  = Constant(3.01, name="beta")
+beta  = Constant(1, name="beta")
 n = FacetNormal(space)
 ni = FacetNormal(ispace)
 I = interfaceIndicator(igridView)
@@ -31,15 +30,12 @@ I = interfaceIndicator(igridView)
 a  = inner(grad(u), grad(v)) * dx
 a += beta * inner(jump(u), jump(v)) * (1-I)*dS
 a -= dot(dot(avg(grad(u)), n('+')), jump(v)) * (1-I)*dS
-a -= dot(dot(avg(grad(v)), n('+')), jump(u)) * (1-I)*dS
 a += beta * inner(u - 0, v) * ds
 a -= dot(dot(grad(u), n), v) * ds
-a -= dot(dot(grad(v), n), u - 0) * ds
 
 ia  = inner(grad(iu), grad(iv)) * dx
 ia += beta * inner(jump(iu), jump(iv)) * dS
 ia -= dot(dot(avg(grad(iu)), ni('+')), jump(iv)) * dS
-ia -= dot(dot(avg(grad(iv)), ni('+')), jump(iu)) * dS
 ib  = q * iv * dx
 
 from dune.mmesh import skeleton, trace
@@ -50,25 +46,18 @@ ia += (iu - trace(uh)('+')) / omega * iv * dx
 ia += (iu - trace(uh)('-')) / omega * iv * dx
 
 from dune.fem.scheme import galerkin
-scheme  = galerkin([a == 0], solver='gmres', parameters={
-  "newton.linear.verbose": "true",
-  "newton.linear.preconditioning.method": "ssor",
-  "newton.linear.maxiterations": 10000
-})
+scheme  = galerkin([a == 0])
 ischeme = galerkin([ia == ib])
 from dune.mmesh import monolithicSolve
 dt = -time()
-monolithicSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True, iter=1)
+monolithicSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True)
 dt += time()
-
-rank = MPI.COMM_WORLD.Get_rank()
-if rank == 0:
-  print(f"Took {dt:.6f}")
+print(f"Took {dt:.6f}")
 
 from dune.fem.function import integrate
 intBulk = integrate(gridView, uh, order=1)
 intInterface = integrate(igridView, iuh, order=1)
 
 print(intBulk, intInterface)
-assert(abs(intBulk - 0.064730) < 1e-6)
-assert(abs(intInterface - 0.191989) < 1e-6)
+assert(abs(intBulk - 0.066354) < 1e-6)
+assert(abs(intInterface - 0.192894) < 1e-6)

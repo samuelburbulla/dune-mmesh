@@ -30,8 +30,8 @@ def coupledproblem(grid):
     λ_exact = lambda x : sin(pi * x[0])
     ig = lambda x : (pi * pi + 0.5) * sin(pi * x[0])
 
-    space = lagrange(grid, order=1, storage=None)
-    ispace = lagrange(igrid, order=1, storage=None)
+    space = lagrange(grid, order=1)
+    ispace = lagrange(igrid, order=1)
 
     x = SpatialCoordinate(space)
     u = TrialFunction(space)
@@ -54,11 +54,10 @@ def coupledproblem(grid):
     idbc_lft = DirichletBC(ispace, 0., ix[0] <= 1e-8)
     idbc_rgt = DirichletBC(ispace, 0., ix[0] >= 1. - 1e-8)
 
-    params = {"newton.verbose": "true"}
-    umfp = ("suitesparse","umfpack")
-    scheme = galerkin([b == 0., dbc_top, dbc_btm], solver=umfp, parameters=params)
-    ischeme = galerkin([ib == il, idbc_lft, idbc_rgt], solver=umfp, parameters=params)
-    monolithicSolve(schemes=(scheme, ischeme), targets=(uh, λh))
+    umfp = ("suitesparse", "umfpack")
+    scheme = galerkin([b == 0., dbc_top, dbc_btm], solver=umfp)
+    ischeme = galerkin([ib == il, idbc_lft, idbc_rgt], solver=umfp)
+    monolithicSolve(schemes=(scheme, ischeme), targets=(uh, λh), verbose=1)
 
     grid.writeVTK(f"coupledsolve-{dim}d", pointdata={"uh": uh, "u_exact": u_exact(x)})
     igrid.writeVTK(f"coupledsolve-{dim}d-interface", pointdata={"λh": λh, "λ_exact": λ_exact(ix)})
