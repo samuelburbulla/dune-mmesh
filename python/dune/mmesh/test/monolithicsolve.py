@@ -59,5 +59,5 @@ intBulk = integrate(gridView, uh, order=1)
 intInterface = integrate(igridView, iuh, order=1)
 
 print(intBulk, intInterface)
-assert(abs(intBulk - 0.066354) < 1e-6)
-assert(abs(intInterface - 0.192894) < 1e-6)
+assert(abs(intBulk - 0.066) < 1e-3)
+assert(abs(intInterface - 0.192) < 1e-3)

@@ -38,10 +38,8 @@ public:
 
     //! Constructor with grid reference
     Distance(const Grid& grid)
-     : grid_( &grid )
-    {
-      update();
-    }
+     : grid_( &grid ), initialized_(false)
+    {}
 
     //! Update the distances of all vertices
     void update()
@@ -60,6 +58,8 @@ public:
         // Compute vertex distances to this facet
         handleFacet(facet);
       }
+
+      initialized_ = true;
     };
 
     /*!
@@ -69,6 +69,7 @@ public:
      */
     ctype operator() (const Vertex& vertex) const
     {
+      assert(initialized_);
       assert( indexSet().index( vertex ) < size() );
       return distances_[ indexSet().index( vertex ) ];
     }
@@ -92,6 +93,7 @@ public:
      */
     ctype operator() (const Element& element) const
     {
+      assert(initialized_);
       ctype dist = 0.0;
       for ( std::size_t i = 0; i < dim+1; ++i )
       {
@@ -116,12 +118,14 @@ public:
     template< class Index >
     ctype operator[] (const Index& index) const
     {
+      assert(initialized_);
       return distances_[ index ];
     }
 
     //! return maximum distance
     ctype maximum() const
     {
+      assert(initialized_);
       double maximum = 0.0;
       for ( const auto& d : distances_ )
         maximum = std::max( d, maximum );
@@ -131,6 +135,7 @@ public:
     //! return size of distances vector
     std::size_t size() const
     {
+      assert(initialized_);
       return distances_.size();
     }
 
@@ -196,6 +201,7 @@ public:
 
     std::vector<ctype> distances_;
     const Grid* grid_;
+    bool initialized_;
 };
 
 } // end namespace Dune
