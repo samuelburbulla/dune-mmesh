@@ -61,7 +61,7 @@ namespace Dune
        *  \brief Stencil contaning the entries (ien,en) for all interface entities ien
        *         and adjacent bulk entities en.
        */
-      template <class DomainSpace, class RangeSpace, class Partition = Dune::Partitions::InteriorBorder>
+      template <class DomainSpace, class RangeSpace, class Partition = Dune::Partitions::All>
       struct NeighborInterfaceStencil : public Fem::Stencil<DomainSpace, RangeSpace>
       {
         typedef Fem::Stencil<DomainSpace, RangeSpace> BaseType;
@@ -99,7 +99,7 @@ namespace Dune
        *  \brief Stencil contaning the entries (en,ien) for all entities en in the bulk
        *         and interface edges ien.
        */
-      template <class DomainSpace, class RangeSpace, class Partition = Dune::Partitions::InteriorBorder>
+      template <class DomainSpace, class RangeSpace, class Partition = Dune::Partitions::All>
       struct InterfaceNeighborStencil : public Fem::Stencil<DomainSpace, RangeSpace>
       {
         typedef Fem::Stencil<DomainSpace, RangeSpace> BaseType;
@@ -267,7 +267,9 @@ namespace Dune
            C_( "C", uh.space(), th.space() ),
            D_( "D", th.space(), th.space() ),
            eps_(eps),
-           callback_(callback)
+           callback_(callback),
+           n_( uh.size() ),
+           m_( th.size() )
         {
           x_[_0] = uh.blockVector();
           x_[_1] = th.blockVector();
@@ -278,6 +280,9 @@ namespace Dune
 
         void init()
         {
+          if (n_ == 0 || m_ == 0)
+            return;
+
           NeighborInterfaceStencil< InterfaceSpaceType, BulkSpaceType > stencilB( B_.domainSpace(), B_.rangeSpace() );
           stencilB.setupStencil();
           B_.reserve( stencilB );
@@ -292,11 +297,13 @@ namespace Dune
           scheme_.jacobian(uh, A_);
           ischeme_.jacobian(th, D_);
 
-          B_.clear();
-          assembleB(scheme_, th, uh);
-
-          C_.clear();
-          assembleC(ischeme_, uh, th);
+          if (n_ > 0 && m_ > 0)
+          {
+            B_.clear();
+            C_.clear();
+            assembleB(scheme_, th, uh);
+            assembleC(ischeme_, uh, th);
+          }
         }
 
         void solve( const Solution &f, const ISolution &g, Solution& u, ISolution& t )
@@ -306,10 +313,15 @@ namespace Dune
             this->M_[blockrow][blockcol] = block.exportMatrix();
           };
 
-          setBlock(A_, _0, _0);
-          setBlock(B_, _0, _1);
-          setBlock(C_, _1, _0);
-          setBlock(D_, _1, _1);
+          if (n_ > 0)
+            setBlock(A_, _0, _0);
+          if (n_ > 0 && m_ > 0)
+          {
+            setBlock(B_, _0, _1);
+            setBlock(C_, _1, _0);
+          }
+          if (m_ > 0)
+            setBlock(D_, _1, _1);
 
           b_[_0] = f.blockVector();
           b_[_1] = g.blockVector();
@@ -332,6 +344,8 @@ namespace Dune
 
           u.blockVector() = x_[_0];
           t.blockVector() = x_[_1];
+          u.communicate();
+          t.communicate();
         }
 
       private:
@@ -367,7 +381,7 @@ namespace Dune
           TemporaryLocalMatrixType localMatrixIn( B_.domainSpace(), B_.rangeSpace() );
           TemporaryLocalMatrixType localMatrixOut( B_.domainSpace(), B_.rangeSpace() );
 
-          for( const auto &interface : elements( gridPart, Partitions::interiorBorder ) )
+          for( const auto &interface : elements( gridPart, Partitions::all ) )
           {
             tLocal.bind( interface );
             auto& tDof = tLocal.localDofVector();
@@ -465,7 +479,7 @@ namespace Dune
 
           TemporaryLocalMatrixType localMatrix( C_.domainSpace(), C_.rangeSpace() );
 
-          for( const auto &element : elements( gridPart, Partitions::interiorBorder ) )
+          for( const auto &element : elements( gridPart, Partitions::all ) )
           {
             for( const auto& intersection : intersections( gridPart, element ) )
             {
@@ -527,7 +541,7 @@ namespace Dune
         DType D_;
         BlockMatrix M_;
         BlockVector x_, b_;
-
+        std::size_t n_, m_;
         const double eps_;
         const std::function<void()> callback_;
       };

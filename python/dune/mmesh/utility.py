@@ -29,7 +29,7 @@ def interfaceIndicator(igrid, grid=None, restrict=True):
     # JIT version for wrapped grid
     else:
         moduleName = "interfaceindicator_" + hashIt(grid.cppTypeName)
-        signature = ""
+        signature = "Compiling InterfaceIndicator"
         source = """
 #include <config.h>
 #include <dune/mmesh/mmesh.hh>

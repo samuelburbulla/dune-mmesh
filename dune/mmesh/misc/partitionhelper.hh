@@ -452,7 +452,17 @@ public:
       if (interior > 0 and other > 0)
         for (const auto& incident : incidentInterfaceElements(e))
           if (partition(incident) == -1)
+          {
             setPartition(incident, 2); // ghost
+
+            // make sure that both adjacent bulk entities are at least ghost
+            auto intersection = grid().asIntersection(incident);
+            if (partition(intersection.inside()) == -1)
+              setPartition(intersection.inside(), 2); // ghost
+            if (intersection.neighbor())
+              if (partition(intersection.outside()) == -1)
+                setPartition(intersection.outside(), 2); // ghost
+          }
     });
 
     // Set facets
