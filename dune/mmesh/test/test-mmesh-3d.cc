@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     checkProperty( "size of element index set", indexSet.size(0), 2ul );
     checkProperty( "size of face index set", indexSet.size(1), 7ul );
     checkProperty( "size of edge index set", indexSet.size(2), 9ul );
-    checkProperty( "size of vertex index set", indexSet.size(3), 6ul );
+    checkProperty( "size of vertex index set", indexSet.size(3), 5ul );
 
     // Test iterators
     std::size_t countCells = 0;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
     // Test MMesh mcmgmapper
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
-    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 6ul );
+    checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5ul );
 
     int elementCount = 0;
     for(auto e : elements(gridView))

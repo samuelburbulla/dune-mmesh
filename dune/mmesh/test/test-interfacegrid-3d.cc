@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
     checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5ul );
     unsigned int vertexCount = 0;
-    std::vector< unsigned int > idxMap {{ 3, 4, 1, 0, 2 }};
+    std::vector< unsigned int > idxMap {{ 0, 3, 4, 2, 1 }};
     for(auto v : vertices(gridView))
       checkProperty( "index mapped by vertex mapper", vertexMapper.index(v), idxMap[vertexCount++] );
 
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 2 ), 4ul },
-            { indexSet.subIndex( e, 1, 2 ), 1ul },
-            { indexSet.subIndex( e, 2, 2 ), 2ul } }
+          { { indexSet.subIndex( e, 0, 2 ), 3ul },
+            { indexSet.subIndex( e, 1, 2 ), 4ul },
+            { indexSet.subIndex( e, 2, 2 ), 1ul } }
         );
 
         checkProperties( "vertex positions",
@@ -205,9 +205,9 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal3 = vertexMapper.subIndex(e, vIdxLocal3, 2);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 4u },
-            { vIdxGlobal2, 1u },
-            { vIdxGlobal3, 2u } }
+          { { vIdxGlobal1, 3u },
+            { vIdxGlobal2, 4u },
+            { vIdxGlobal3, 1u } }
         );
       }
       elementCount++;

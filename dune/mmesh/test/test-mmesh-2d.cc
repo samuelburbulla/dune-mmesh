@@ -139,14 +139,14 @@ int main(int argc, char *argv[])
     {
       const auto geo = e.geometry();
 
-      if (elementCount == 0)
+      if (elementCount == 2)
       {
-        std::cout << "- Check first element -" << std::endl;
+        std::cout << "- Check third element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.66666666666666663, 0.083333333333333329 } );
         checkProperty( "geometry volume", geo.volume(), 0.125 );
-        checkProperty( "element index", indexSet.index( e ), 0ul );
+        checkProperty( "element index", indexSet.index( e ), 2ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
@@ -207,14 +207,14 @@ int main(int argc, char *argv[])
         );
       }
 
-      if (elementCount == 2)
+      if (elementCount == 1)
       {
-        std::cout << "- Check third element -" << std::endl;
+        std::cout << "- Check second element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.5, 0.41666666666666663 } );
         checkProperty( "geometry volume", geo.volume(), 0.4375 );
-        checkProperty( "element index", indexSet.index( e ), 2ul );
+        checkProperty( "element index", indexSet.index( e ), 1ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
