@@ -10,6 +10,7 @@ from mpi4py import MPI
 rank = MPI.COMM_WORLD.Get_rank()
 
 def algorithm(grid, name):
+  print(grid.size(0), "cells,", grid.ghostSize(0), "ghost")
   space = dglagrange(grid, order=1, storage="istl")
   x = SpatialCoordinate(space)
   uh = space.interpolate(0, name="uh")
@@ -36,7 +37,7 @@ def algorithm(grid, name):
   else:
     b = -div( grad(exact) ) * v * dx
 
-  scheme = galerkin([A == b], solver='cg')
+  scheme = galerkin([A == b], solver='cg', parameters={"newton.linear.verbose": "false"})
 
   took = -time()
   scheme.solve(uh)
@@ -59,12 +60,14 @@ def algorithm(grid, name):
 
 
 from dune.mmesh.test.grids import line
-grid = mmesh((reader.gmsh, line.filename), 2)
-hgrid = grid.hierarchicalGrid
-igrid = hgrid.interfaceGrid
 
-# Run bulk
-algorithm(grid, "bulk")
+for file in [line.filename, "grids/vertical.msh"]:
+  grid = mmesh((reader.gmsh, file), 2)
+  hgrid = grid.hierarchicalGrid
+  igrid = hgrid.interfaceGrid
 
-# Run interface
-algorithm(igrid, "interface")
+  # Run bulk
+  algorithm(grid, "bulk")
+
+  # Run interface
+  algorithm(igrid, "interface")
