@@ -62,6 +62,12 @@ public:
       initialized_ = true;
     };
 
+    //! Return if distance has been initialized
+    bool initialized() const
+    {
+      return initialized_;
+    }
+
     /*!
      * \brief function call operator to return distance of vertex
      *
@@ -146,8 +152,9 @@ public:
       for (const auto& v : vertices(grid_->leafGridView(), Partitions::interior))
       {
         ctype dist = computeDistance(v, facet);
-        if (dist < operator()(v))
-          set(v, dist);
+        ctype &currentDist = distances_[ indexSet().index( v ) ];
+        if (dist < currentDist)
+          currentDist = dist;
       }
     }
 

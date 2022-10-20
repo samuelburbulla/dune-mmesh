@@ -40,7 +40,6 @@ struct PartitionHelper
 
     setRanks();
     computePartitions();
-    computeInterfacePartitions();
   }
 
   template <class Entity>
@@ -94,7 +93,6 @@ struct PartitionHelper
   void updatePartitions()
   {
     computePartitions();
-    computeInterfacePartitions();
   }
 
   //! List of connected ranks
@@ -287,6 +285,9 @@ private:
         }
       }
     });
+
+    // Compute interface partitions based on Codim 0 entities, this might add further ghost elements to the bulk
+    computeInterfacePartitions();
 
     // Set facets
     forEntityDim<dim-1>([this](const auto& fc){
