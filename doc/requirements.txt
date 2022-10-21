@@ -3,5 +3,5 @@ nbsphinx
 sphinxcontrib-tikz
 cmake
 ipython
-dune-common
+dune-common@git+https://gitlab.dune-project.org/core/dune-common.git
 ufl
