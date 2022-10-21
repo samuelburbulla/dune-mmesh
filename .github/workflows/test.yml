@@ -43,7 +43,7 @@ jobs:
       - name: Configure and build modules
         run: |
           cd ${{ github.workspace }}/..
-          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
+          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/debug.opts all
 
       - name: Build tests
         working-directory: ${{ github.workspace }}/build-cmake/
