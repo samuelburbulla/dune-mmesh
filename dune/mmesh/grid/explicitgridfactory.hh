@@ -54,12 +54,15 @@ namespace Dune
 
     //! type of a Dune boundary segment
     typedef Dune::BoundarySegment< dimension, dimensionworld > BoundarySegment;
+    //! type of an id
+    typedef typename Grid::IdType IdType;
+
     //! type of the boundary segment id map
-    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > BoundarySegments;
+    typedef std::unordered_map< IdType, std::size_t > BoundarySegments;
     typedef std::unordered_map< std::size_t, std::size_t > BoundaryIds;
 
     //! type of the interface segment set
-    typedef std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector > InterfaceSegments;
+    typedef std::unordered_map< IdType, std::size_t > InterfaceSegments;
 
     template< int codim >
     struct Codim
@@ -71,6 +74,8 @@ namespace Dune
     typedef typename HostGrid::Point Point;
     typedef typename HostGrid::Vertex_handle Vertex_handle;
     typedef typename Grid::template HostGridEntity<0> Element_handle;
+
+    using Tuple = std::tuple<std::vector< unsigned int >, std::size_t, std::size_t>;
 
     using Base::insertElement;
   public:
@@ -111,7 +116,7 @@ namespace Dune
       auto w = v;
 
       // Create element
-      createElement( w, countElements, domainMarker );
+      storeElement( w, countElements, domainMarker );
 
       // Increase element count
       countElements++;
@@ -121,6 +126,12 @@ namespace Dune
     };
 
   private:
+    //! Store element to sort elements before insertion
+    void storeElement( std::vector< unsigned int >& v, const size_t insertionIndex, const size_t domainMarker )
+    {
+      elements_.push_back( std::make_tuple(v, insertionIndex, domainMarker) );
+    }
+
     /** \brief Creates an element (face) in the underlying triangulation data structure
      *  \ingroup 2D
      *
@@ -390,6 +401,24 @@ namespace Dune
 
     std::unique_ptr<Grid> createGrid ()
     {
+      // Sort elements by x-coordinate of center for partitioning
+      std::sort(elements_.begin(), elements_.end(), [this](const auto& a, const auto& b){
+        const auto& va = std::get<0>(a);
+        const auto& vb = std::get<0>(b);
+
+        double xa = 0.0;
+        double xb = 0.0;
+        for (int i = 0; i < dimensionworld+1; ++i)
+        {
+          xa += vhs_[va[i]]->point().x();
+          xb += vhs_[vb[i]]->point().x();
+        }
+        return xa < xb;
+      });
+
+      for (auto& t : elements_)
+        createElement(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+
       // Create the infinite cells (neighbors of boundary cells)
       createInfiniteVertex();
 
@@ -402,7 +431,7 @@ namespace Dune
 
       // Mark interface vertices as isInterface
       for( const auto& interfaceSeg : interfaceSegments_ )
-        for( const auto& v : interfaceSeg.first )
+        for( const auto& v : interfaceSeg.first.vt() )
           vhs_[v]->info().isInterface = true;
 
       // Check if all inserted elements really exist in the triangulation
@@ -582,6 +611,7 @@ namespace Dune
     //! Private members
     HostGrid tr_;
     std::vector< Vertex_handle > vhs_;
+    std::vector<Tuple> elements_;
     BoundarySegments boundarySegments_, interfaceBoundarySegments_;
     BoundaryIds boundaryIds_;
     InterfaceSegments interfaceSegments_;

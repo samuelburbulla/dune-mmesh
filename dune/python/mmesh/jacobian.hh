@@ -30,19 +30,21 @@ namespace Dune
 
       //! Convert intersection if gridPart is wrapped, e.g. geometryGridPart
       template< class GridPart, class Intersection, class Entity >
-      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, int )
+      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, Dune::PriorityTag<0> )
       {
         const Entity outside = gridPart.convert(intersection.outside());
 
         for (auto is : intersections(gridPart, inside))
-          if (is.outside() == outside)
-            return is;
+          if (is.neighbor())
+            if (is.outside() == outside)
+              return is;
         DUNE_THROW(InvalidStateException, "Intersection not found!");
       }
 
       //! Default (trivial) convert
       template< class GridPart, class Intersection, class Entity >
-      const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, char )
+      std::enable_if_t<std::is_convertible_v<Intersection, typename GridPart::IntersectionType>, const typename GridPart::IntersectionType>
+      convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside, Dune::PriorityTag<1> )
       {
         return intersection;
       }
@@ -51,7 +53,7 @@ namespace Dune
       template< class GridPart, class Intersection, class Entity >
       const typename GridPart::IntersectionType convert( const GridPart& gridPart, const Intersection& intersection, const Entity& inside )
       {
-        return convert(gridPart, intersection, inside, 0);
+        return convert(gridPart, intersection, inside, Dune::PriorityTag<1>{});
       }
 
 

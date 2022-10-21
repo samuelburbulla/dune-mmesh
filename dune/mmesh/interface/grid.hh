@@ -14,6 +14,7 @@
 
 #include <dune/common/deprecated.hh>
 #include <dune/common/parallel/communication.hh>
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/version.hh>
 #include <dune/grid/common/capabilities.hh>
 #include <dune/grid/common/grid.hh>
@@ -36,6 +37,12 @@
 
 namespace Dune
 {
+
+#if HAVE_MPI
+  using Comm = MPI_Comm;
+#else
+  using Comm = No_Comm;
+#endif
 
   // MMeshInterfaceGrid family
   template<class MMesh>
@@ -63,7 +70,7 @@ namespace Dune
         MMeshImpl::MultiId, // GlobalIdSet::IdType,
         MMeshInterfaceGridGlobalIdSet< const MMeshInterfaceGrid<MMesh> >, // LocalIdSet
         MMeshImpl::MultiId, // LocalIdSet::IdType,
-        CollectiveCommunication< No_Comm >,
+        Communication< Comm >,
         DefaultLevelGridViewTraits,
         DefaultLeafGridViewTraits,
         MMeshInterfaceGridEntitySeed
@@ -93,8 +100,9 @@ namespace Dune
     static constexpr int dimensionworld = MMesh::dimension;
 
     using FieldType = typename MMesh::FieldType;
+    using IdType = typename MMesh::IdType;
 
-    using BoundarySegments = std::unordered_map< std::vector< std::size_t >, std::size_t, HashUIntVector >;
+    using BoundarySegments = std::unordered_map< IdType, std::size_t >;
 
     //**********************************************************
     // The Interface Methods
@@ -132,6 +140,9 @@ namespace Dune
     //! The type of the underlying vertex handle
     using VertexHandle = MMeshInterfaceEntity<dimension>;
 
+    //! The type of the underlying edge handle
+    using EdgeHandle = MMeshInterfaceEntity<dimension-1>;
+
     //! The type of the element output
     using ElementOutput = std::list<MMeshInterfaceEntity<0>>;
 
@@ -151,13 +162,12 @@ namespace Dune
     explicit MMeshInterfaceGrid(MMesh* mMesh, BoundarySegments boundarySegments = {})
      : mMesh_(mMesh),
        boundarySegments_(boundarySegments),
-       numBoundarySegments_(boundarySegments.size())
+       #ifdef HAVE_MPI
+       comm_( MPIHelper::getCommunicator() )
+      #endif
     {
       leafIndexSet_ = std::make_unique<MMeshInterfaceGridLeafIndexSet<const GridImp>>( this );
       globalIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
-      localIdSet_ = std::make_unique<MMeshInterfaceGridGlobalIdSet<const GridImp>>( this );
-
-      setIndices();
     }
 
     /** \brief Return maximum level defined in this grid.
@@ -179,12 +189,12 @@ namespace Dune
     /** \brief returns the number of boundary segments within the macro grid
      */
     size_t numBoundarySegments () const {
-      return numBoundarySegments_;
+      return localBoundarySegments_.size();
     }
 
     const BoundarySegments& boundarySegments() const
     {
-      return boundarySegments_;
+      return localBoundarySegments_;
     }
 
     void addBoundarySegment ( const std::vector< std::size_t >& ids, std::size_t bndSegIdx )
@@ -225,7 +235,7 @@ namespace Dune
 
     /** \brief Access to the LocalIdSet */
     const typename Traits::LocalIdSet& localIdSet() const {
-      return *localIdSet_;
+      return *globalIdSet_;
     }
 
 
@@ -269,6 +279,13 @@ namespace Dune
     typename Traits::template Codim<0>::Entity entity(const MMeshInterfaceEntity<0>& hostEntity) const
     {
       return entity( typename Traits::template Codim<0>::EntitySeed( hostEntity ) );
+    }
+
+    /** \brief Create codim 0 entity from a host entity */
+    template<int dimw = dimension+1>
+    std::enable_if_t<dimw == 3, typename Traits::template Codim<1>::Entity> entity(const MMeshInterfaceEntity<1>& hostEntity) const
+    {
+      return entity( typename Traits::template Codim<1>::EntitySeed( hostEntity ) );
     }
 
     //! Iterator to first entity of given codim on level
@@ -439,8 +456,21 @@ namespace Dune
 
 
     /** \brief Size of the ghost cell layer on the leaf level */
-    unsigned int ghostSize(int codim) const {
-      return 0;
+    unsigned int ghostSize(int codim) const
+    {
+      std::size_t size = 0;
+
+      if (codim == 0)
+        for (const auto& e : elements(this->leafGridView()))
+          if (e.partitionType() == GhostEntity)
+            size++;
+
+      if (codim == dimension)
+        for (const auto& v : vertices(this->leafGridView()))
+          if (v.partitionType() == GhostEntity)
+            size++;
+
+      return size;
     }
 
 
@@ -473,19 +503,51 @@ namespace Dune
     }
 
 
-    /** \brief dummy collective communication */
-    const CollectiveCommunication< No_Comm >& comm () const
+    /** \brief Collective communication */
+    const Communication< Comm >& comm () const
     {
-      return ccobj;
+      return comm_;
     }
 
     template< class Data, class InterfaceType, class CommunicationDirection >
     void communicate (
-      Data &data,
-      InterfaceType iftype,
-      CommunicationDirection dir,
+      Data &dataHandle,
+      InterfaceType interface,
+      CommunicationDirection direction,
       int level = 0 ) const
-    {}
+    {
+      if (comm().size() <= 1)
+        return;
+
+#if HAVE_MPI
+      if( (interface == InteriorBorder_All_Interface) || (interface == All_All_Interface) )
+      {
+        MMeshCommunication<GridImp, MMeshType> communication( getMMesh().partitionHelper() );
+        const auto& gv = this->leafGridView();
+
+        switch( direction )
+        {
+        case ForwardCommunication:
+          communication( gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         dataHandle, InteriorEntity, GhostEntity,
+                         (interface == All_All_Interface) );
+          break;
+
+        case BackwardCommunication:
+          communication( gv.template begin< 0, Ghost_Partition >(), gv.template end< 0, Ghost_Partition >(),
+                         gv.template begin< 0, Interior_Partition >(), gv.template end< 0, Interior_Partition >(),
+                         dataHandle, GhostEntity, InteriorEntity,
+                         (interface == All_All_Interface) );
+          break;
+        }
+      }
+      else
+        DUNE_THROW( NotImplemented, "Communication on interface type " << interface << " not implemented." );
+#else
+        DUNE_THROW( NotImplemented, "MPI not found!" );
+#endif //HAVE_MPI
+    }
 
     //! Return if interface segment is part of the interface
     bool isInterface( const MMeshInterfaceEntity<0>& segment ) const
@@ -564,6 +626,20 @@ namespace Dune
       return it->second;
     }
 
+    // Return if MMeshInterfaceEntity can be mirrored
+    bool canBeMirrored(const MMeshInterfaceEntity<0>& hostEntity) const
+    {
+      using HostGridEntity = typename GridImp::MMeshType::template HostGridEntity<0>;
+
+      if (hostEntity.first->neighbor(hostEntity.second) == HostGridEntity())
+        return false;
+
+      if constexpr (dimensionworld == 2)
+        return hostEntity.first->dimension() >= 1;
+
+      return true;
+    }
+
     //! Mirror a host entity (2d)
     template <int d = dimensionworld>
     std::enable_if_t< d == 2, const MMeshInterfaceEntity<0> >
@@ -585,7 +661,7 @@ namespace Dune
     // **********************************************************
 
   private:
-    CollectiveCommunication< No_Comm > ccobj;
+    Communication<Comm> comm_;
 
     static inline auto getVertexIds_( const MMeshInterfaceEntity<0>& entity )
     {
@@ -597,10 +673,26 @@ namespace Dune
     }
 
   public:
-    //! compute the grid indices and ids
+    //! compute the grid ids
+    void setIds()
+    {
+      globalIdSet_->update(this);
+    }
+
+    //! compute the grid indices
     void setIndices()
     {
       leafIndexSet_->update(this);
+
+      localBoundarySegments_.clear();
+      std::size_t count = 0;
+      for (const auto& e : elements(this->leafGridView()))
+        for (const auto& is : intersections(this->leafGridView(), e))
+          if (is.boundary())
+          {
+            auto iid = globalIdSet_->id( entity( is.impl().getHostIntersection() ) );
+            localBoundarySegments_.insert( std::make_pair(iid, count++) );
+          }
     }
 
     //! Return reference to MMesh
@@ -621,12 +713,15 @@ namespace Dune
       return sequence_;
     }
 
+    const auto& partitionHelper() const
+    {
+      return mMesh_->partitionHelper();
+    }
+
   private:
     std::unique_ptr<MMeshInterfaceGridLeafIndexSet<const GridImp>> leafIndexSet_;
 
     std::unique_ptr<MMeshInterfaceGridGlobalIdSet<const GridImp>> globalIdSet_;
-
-    std::unique_ptr<MMeshInterfaceGridGlobalIdSet<const GridImp>> localIdSet_;
 
     std::unordered_map< std::vector< std::size_t >, ConnectedComponent, HashUIntVector > childrenConnectedComponentMap_;
 
@@ -634,9 +729,7 @@ namespace Dune
     //! The host grid which contains the actual grid hierarchy structure
     MMesh* mMesh_;
 
-    BoundarySegments boundarySegments_;
-
-    std::size_t numBoundarySegments_;
+    BoundarySegments boundarySegments_, localBoundarySegments_;
 
     mutable std::unordered_map< MMeshImpl::MultiId, int > mark_;
 

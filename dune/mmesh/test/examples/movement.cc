@@ -15,8 +15,9 @@
 // dune-mmesh includes
 #include <dune/mmesh/mmesh.hh>
 
-int main()
+int main(int argc, char** argv)
 {
+  Dune::MPIHelper::instance(argc, argv);
   try
   {
     static constexpr int dim = GRIDDIM;
@@ -60,7 +61,7 @@ int main()
     };
 
     // time loop
-    for ( int t = 1; t <= 100; t++ )
+    for ( int t = 1; t <= 10; t++ )
     {
       std::cout << "t = " << t << std::endl;
 

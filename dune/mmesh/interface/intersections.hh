@@ -81,12 +81,12 @@ namespace Dune
 
       if constexpr (dim == 1)
       {
-        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_] )->info().index );
+        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_] )->info().id );
       }
       else // dim == 2
       {
-        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().index );
-        ids[1] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().index );
+        ids[0] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().id );
+        ids[1] = indexSet.vertexIndexMap().at( interfaceEntity_.first->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().id );
       }
       std::sort(ids.begin(), ids.end());
       try {
@@ -126,7 +126,7 @@ namespace Dune
       const auto& vertexIndexMap = grid_->leafIndexSet().vertexIndexMap();
 
       std::size_t myLastVertexIndex = vertexIndexMap.at(
-        interfaceEntity_.first->vertex(cgalIndex_[dim-index_])->info().index
+        interfaceEntity_.first->vertex(cgalIndex_[dim-index_])->info().id
       );
 
       // get the i-th index map entry
@@ -153,13 +153,13 @@ namespace Dune
       const auto& vertex0 = interfaceEntity_.first->vertex( cgalIndex_[v0idx] );
 
       std::array< std::size_t, dimensionworld > vIdx;
-      vIdx[0] = vertexIndexMap.at( vertex0->info().index );
+      vIdx[0] = vertexIndexMap.at( vertex0->info().id );
       vIdx[1] = it->first;
 
       if constexpr ( dimensionworld == 3 )
         try {
           std::size_t v1idx = (index_ == 1) ? 2 : 1;
-          vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex( cgalIndex_[v1idx] )->info().index );
+          vIdx[2] = vertexIndexMap.at( interfaceEntity_.first->vertex( cgalIndex_[v1idx] )->info().id );
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
@@ -172,7 +172,7 @@ namespace Dune
         bool notInterface = false;
         for( std::size_t i = 0; i < facet.subEntities(dimensionworld); ++i )
         {
-          std::size_t idx = facet.impl().template subEntity<dimensionworld>(i).impl().hostEntity()->info().index;
+          std::size_t idx = facet.impl().template subEntity<dimensionworld>(i).impl().hostEntity()->info().id;
           auto it = vertexIndexMap.find( idx );
           if( it != vertexIndexMap.end() )
             tmpIdx[i] = it->second;
@@ -211,22 +211,8 @@ namespace Dune
     //! return the boundary segment index
     size_t boundarySegmentIndex() const
     {
-      auto face = interfaceEntity_.first;
-
-      std::vector< std::size_t > vertices;
-
-      if constexpr ( dimension == 1 )
-      {
-        vertices.push_back( face->vertex( cgalIndex_[index_] )->info().id );
-      }
-      else // dimension == 2
-      {
-        vertices.push_back( face->vertex( cgalIndex_[index_==2 ? 1 : 0] )->info().id );
-        vertices.push_back( face->vertex( cgalIndex_[index_==0 ? 1 : 2] )->info().id );
-        std::sort(vertices.begin(), vertices.end());
-      }
-
-      auto it = grid_->boundarySegments().find( vertices );
+      auto iid = grid_->globalIdSet().id( grid_->entity( getHostIntersection() ) );
+      auto it = grid_->boundarySegments().find( iid );
       if( it == grid_->boundarySegments().end() )
         return 0;
 

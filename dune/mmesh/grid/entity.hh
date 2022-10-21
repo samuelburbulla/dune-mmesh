@@ -21,6 +21,7 @@ namespace Dune
 // MMesh includes
 #include <dune/mmesh/grid/connectedcomponent.hh>
 #include <dune/mmesh/grid/polygoncutting.hh>
+#include <dune/mmesh/misc/partitionhelper.hh>
 
 namespace Dune
 {
@@ -67,10 +68,14 @@ namespace Dune
   private:
     typedef typename GridImp::ctype ctype;
 
-    // equivalent entity in the host grid
+    // The equivalent entity in the host grid
     typedef typename GridImp::template HostGridEntity<codim> HostGridEntity;
 
+    //! The type of the Entity interface class
+    typedef typename GridImp::template Codim<codim>::Entity Entity;
+
   public:
+    //! The type of the Geometry interface class
     typedef typename GridImp::template Codim<codim>::Geometry Geometry;
 
     //! The type of the EntitySeed interface class
@@ -176,8 +181,13 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType( 0 );
+    PartitionType partitionType () const
+    {
+      const auto& ph = mMesh_->partitionHelper();
+      if constexpr (codim == 0 || codim == dim)
+        return ph.partitionType( hostEntity_->info().partition );
+      else
+        return ph.partitionType( grid().entity(hostEntity_) );
     }
 
     //! Return the number of subEntities of codimension codim
@@ -261,6 +271,22 @@ namespace Dune
     incidentEnd () const {
       using Impl = typename MMeshIncidentIterator<GridImp>::Implementation;
       return MMeshIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
+    }
+
+    //! First incident element
+    template <bool enable = true>
+    std::enable_if_t< codim == dim-1 && enable, MMeshEdgeIncidentIterator<GridImp> >
+    incidentBegin () const {
+      using Impl = typename MMeshEdgeIncidentIterator<GridImp>::Implementation;
+      return MMeshEdgeIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_) );
+    }
+
+    //! Last incident element
+    template <bool enable = true>
+    std::enable_if_t< codim == dim-1 && enable, MMeshEdgeIncidentIterator<GridImp> >
+    incidentEnd () const {
+      using Impl = typename MMeshEdgeIncidentIterator<GridImp>::Implementation;
+      return MMeshEdgeIncidentIterator<GridImp>( Impl( mMesh_, hostEntity_, true ) );
     }
 
     //! First incident facet
@@ -608,8 +634,14 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType::InteriorEntity; /* dummy */
+    PartitionType partitionType () const
+    {
+      // for caching entities
+      if (hostEntity_ == decltype(hostEntity_)())
+        return InteriorEntity;
+
+      const auto& ph = mMesh_->partitionHelper();
+      return ph.partitionType( hostEntity_->info().partition );
     }
 
     //! Geometry of this entity

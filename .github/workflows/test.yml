@@ -21,7 +21,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt update
-            sudo apt install libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh libboost-all-dev
+            sudo apt install libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh libboost-all-dev libmpfr-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew update
             brew install openmpi suite-sparse gmsh boost
@@ -42,13 +42,14 @@ jobs:
 
       - name: Configure and build modules
         run: |
+          export MAKEFLAGS=-j2
           cd ${{ github.workspace }}/..
-          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/config.opts all
+          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/debug.opts all
 
       - name: Build tests
         working-directory: ${{ github.workspace }}/build-cmake/
-        run: make build_tests
+        run: make build_tests -j4
 
       - name: Test
         working-directory: ${{ github.workspace }}/build-cmake/
-        run: make test
+        run: ctest -j4

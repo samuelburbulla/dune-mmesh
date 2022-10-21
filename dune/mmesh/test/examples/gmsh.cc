@@ -11,8 +11,9 @@
 #include <config.h>
 #include <dune/mmesh/mmesh.hh>
 
-int main()
+int main(int argc, char** argv)
 {
+  Dune::MPIHelper::instance(argc, argv);
   static constexpr int dim = GRIDDIM;
 
   using Grid = Dune::MovingMesh< dim >;

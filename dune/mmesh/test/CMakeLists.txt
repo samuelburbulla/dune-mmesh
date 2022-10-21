@@ -2,12 +2,16 @@ add_subdirectory(examples EXCLUDE_FROM_ALL)
 
 dune_symlink_to_source_files(FILES
   grids
+  parameter
 )
 
-dune_add_test(NAME test-grid-2d SOURCES test-grid.cc)
+install(FILES massoperator.hh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/mmesh/test)
+
+dune_add_test(NAME test-grid-2d SOURCES test-grid.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property( TARGET test-grid-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
-dune_add_test(NAME test-grid-3d SOURCES test-grid.cc)
+dune_add_test(NAME test-grid-3d SOURCES test-grid.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property( TARGET test-grid-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 
 dune_add_test(NAME test-mmesh-2d SOURCES test-mmesh-2d.cc)
@@ -81,3 +85,24 @@ set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "G
 
 dune_add_test(NAME test-distance SOURCES test-distance.cc)
 set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-l2projection-interface SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-l2projection-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+dune_add_test(NAME test-comm SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+dune_add_test(NAME test-comm-3d SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+
+dune_add_test(NAME test-comm-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+dune_add_test(NAME test-comm-3d-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-comm-3d-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
+
+dune_add_test(NAME test-mpi SOURCES test-mpi.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+set_property(TARGET test-mpi APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )

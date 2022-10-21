@@ -9,7 +9,17 @@ Using Docker
 ------------
 
 The easiest starting point is to use Docker with a preconfigured setup.
-Build the corresponding Docker container as follows:
+
+Using the pre-built Docker container you can simply run:
+
+docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
+
+.. code-block:: bash
+
+  docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
+
+
+Alternatively, you can build the corresponding Docker container yourself:
 
 .. code-block:: bash
 
@@ -30,7 +40,7 @@ CMake (3.13 or later),
 Python3 (3.7 or later) + pip (+ venv),
 pkg-config,
 Boost (1.66 or later),
-OpenMPI (this will become optional),
+OpenMPI (optional),
 SuiteSparse (we use UMFPack) and
 Gmsh.
 

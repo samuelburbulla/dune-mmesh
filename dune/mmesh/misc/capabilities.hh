@@ -50,6 +50,12 @@ namespace Dune
         static const bool v = true;
       };
 
+      template< class MMesh >
+      struct isMMesh< MMeshInterfaceGrid< MMesh > >
+      {
+        static const bool v = true;
+      };
+
     } // namespace Capabilities
 
   } // namespace Fem

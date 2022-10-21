@@ -19,6 +19,7 @@ using namespace Dune;
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     static constexpr int dim = GRIDDIM;
 
     std::cout << "-- Interface iterator test for " + std::to_string(dim) + "D --" << std::endl;

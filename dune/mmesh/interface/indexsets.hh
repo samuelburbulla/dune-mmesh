@@ -59,10 +59,20 @@ namespace Dune
     {
       auto hostEntity = e.impl().hostEntity();
 
+      // handle invalid entity (occurs with empty interface)
+      using HostGridHandle = typename GridImp::MMeshType::template HostGridEntity<0>;
+      if (!grid_->canBeMirrored(hostEntity))
+      {
+        if constexpr (dimension == 1)
+          return (hostEntity.first->vertex(0) == grid_->getMMesh().getHostGrid().finite_faces_end()->vertex(0)) ? 1 : 0;
+        else // dimension == 2
+          return (hostEntity.first->vertex(0) == grid_->getMMesh().getHostGrid().finite_cells_end()->vertex(0)) ? 1 : 0;
+      }
+
       std::array<std::size_t, dimensionworld> ids;
       for( int i = 0; i < dimensionworld; ++i )
         try {
-          ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().index );
+          ids[i] = vertexIndices_.at( hostEntity.first->vertex((hostEntity.second+i+1)%(dimensionworld+1))->info().id );
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
@@ -90,8 +100,8 @@ namespace Dune
 
       std::array<std::size_t, 2> ids;
       try {
-          ids[0] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.second)->info().index );
-          ids[1] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.third)->info().index );
+          ids[0] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.second)->info().id );
+          ids[1] = vertexIndices_.at( hostEntity.first->vertex(hostEntity.third)->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -114,7 +124,7 @@ namespace Dune
       auto hostEntity = e.impl().hostEntity();
       IndexType index;
       try {
-        index = vertexIndices_.at( hostEntity->info().index );
+        index = vertexIndices_.at( hostEntity->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -137,7 +147,7 @@ namespace Dune
       assert( i == 0 && codim == dimension );
       const HostGridEntity<dimension> hostEntity = e.impl().hostEntity();
       try {
-        return vertexIndices_.at( hostEntity->info().index );
+        return vertexIndices_.at( hostEntity->info().id );
       } catch (std::exception &e) {
         DUNE_THROW(InvalidStateException, e.what());
       }
@@ -230,14 +240,14 @@ namespace Dune
       // Count the finite edges and build index map
       std::size_t vertexCount = 0;
       std::size_t elementCount = 0;
-      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        if ( contains( *eh ) )
-        {
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+      {
+          auto eh = &element.impl().hostEntity();
           auto vh0 = eh->first->vertex((eh->second+1)%3);
           auto vh1 = eh->first->vertex((eh->second+2)%3);
 
-          std::size_t idx0 = vh0->info().index;
-          std::size_t idx1 = vh1->info().index;
+          std::size_t idx0 = vh0->info().id;
+          std::size_t idx1 = vh1->info().id;
 
           addVertexIndex( idx0, vertexCount );
           addVertexIndex( idx1, vertexCount );
@@ -252,7 +262,7 @@ namespace Dune
           } catch (std::exception &e) {
             DUNE_THROW(InvalidStateException, e.what());
           }
-        }
+      }
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;
@@ -278,18 +288,19 @@ namespace Dune
 
       vertexIndices_.clear();
       indexMap_.clear();
+      edgeIndexMap_.clear();
 
       // Count the finite edges and build index map
       std::size_t vertexCount = 0;
       std::size_t edgeCount = 0;
       std::size_t elementCount = 0;
-      for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
-        if ( contains( *eh ) )
-        {
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+      {
+          auto eh = &element.impl().hostEntity();
           std::array<std::size_t, dimensionworld> ids;
           for( int i = 0; i < dimensionworld; ++i )
           {
-            std::size_t idx = eh->first->vertex((eh->second+i+1)%4)->info().index;
+            std::size_t idx = eh->first->vertex((eh->second+i+1)%4)->info().id;
             addVertexIndex( idx, vertexCount );
             try {
               ids[i] = vertexIndices_.at( idx );
@@ -315,7 +326,7 @@ namespace Dune
             if ( edgeIndexMap_.count( edgeIds ) == 0 )
               edgeIndexMap_.insert( { edgeIds, edgeCount++ } );
           }
-        }
+      }
 
       // Cache sizes since it is expensive to compute them
       sizeOfCodim_[0] = elementCount;

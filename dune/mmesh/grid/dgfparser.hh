@@ -158,7 +158,7 @@ namespace Dune
   {
     static int refineStepsForHalf ()
     {
-      return 1;
+      return 2;
     }
 
     static double refineWeight ()

@@ -106,6 +106,7 @@ int main(int argc, char** argv)
 {
   try
   {
+    Dune::MPIHelper::instance(argc, argv);
     using Grid = Dune::MovingMesh<dim>;
     using GridFactory = Dune::GmshGridFactory<Grid, /*implicit=*/false>;
     using IGridView = typename Grid::InterfaceGrid::LeafGridView;

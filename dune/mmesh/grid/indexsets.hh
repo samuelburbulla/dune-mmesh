@@ -249,24 +249,24 @@ namespace Dune
 
       // Store face indices within face infos
       std::size_t elementCount = 0;
-      for ( auto fc = hostgrid.finite_faces_begin(); fc != hostgrid.finite_faces_end(); ++fc)
-        fc->info().index = elementCount++;
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+        element.impl().hostEntity()->info().index = elementCount++;
 
       // Store vertex indices within vertex infos
       std::size_t vertexCount = 0;
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-        vh->info().index = vertexCount++;
+      for (const auto& vertex : vertices(grid_->leafGridView(), Partitions::all))
+        vertex.impl().hostEntity()->info().index = vertexCount++;
 
       // Store the finite edge indices in a map
       codimIndexMap_[0].clear();
       std::size_t edgeCount = 0;
-      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        codimIndexMap_[0][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = edgeCount++;
+      for (const auto& edge : edges(grid_->leafGridView(), Partitions::all))
+        codimIndexMap_[0][ grid_->globalIdSet().id( edge ) ] = edgeCount++;
 
       // Cache sizes since it is expensive to compute them
-      sizeOfCodim_[0] = hostgrid.number_of_faces();
+      sizeOfCodim_[0] = elementCount;
       sizeOfCodim_[1] = edgeCount;
-      sizeOfCodim_[2] = hostgrid.number_of_vertices();
+      sizeOfCodim_[2] = vertexCount;
     }
 
     //! update index set in 3d
@@ -279,31 +279,31 @@ namespace Dune
 
       // Store cell indices within cell infos
       std::size_t elementCount = 0;
-      for ( auto fc = hostgrid.finite_cells_begin(); fc != hostgrid.finite_cells_end(); ++fc)
-          fc->info().index = elementCount++;
+      for (const auto& element : elements(grid_->leafGridView(), Partitions::all))
+        element.impl().hostEntity()->info().index = elementCount++;
 
       // Store vertex indices within vertex infos
       std::size_t vertexCount = 0;
-      for ( auto vh = hostgrid.finite_vertices_begin(); vh != hostgrid.finite_vertices_end(); ++vh)
-          vh->info().index = vertexCount++;
+      for (const auto& vertex : vertices(grid_->leafGridView(), Partitions::all))
+        vertex.impl().hostEntity()->info().index = vertexCount++;
 
       // Store the finite facet indices in a map
       codimIndexMap_[0].clear();
       std::size_t facetCount = 0;
-      for ( auto eh = hostgrid.finite_facets_begin(); eh != hostgrid.finite_facets_end(); ++eh)
-        codimIndexMap_[0][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = facetCount++;
+      for (const auto& facet : facets(grid_->leafGridView(), Partitions::all))
+        codimIndexMap_[0][ grid_->globalIdSet().id( facet ) ] = facetCount++;
 
       // Store the finite edge indices in a map
       codimIndexMap_[1].clear();
       std::size_t edgeCount = 0;
-      for ( auto eh = hostgrid.finite_edges_begin(); eh != hostgrid.finite_edges_end(); ++eh)
-        codimIndexMap_[1][ grid_->globalIdSet().id( grid_->entity(*eh) ) ] = edgeCount++;
+      for (const auto& edge : edges(grid_->leafGridView(), Partitions::all))
+        codimIndexMap_[1][ grid_->globalIdSet().id( edge ) ] = edgeCount++;
 
       // Cache sizes since it is expensive to compute them
-      sizeOfCodim_[0] = hostgrid.number_of_finite_cells();
-      sizeOfCodim_[1] = hostgrid.number_of_finite_facets();
-      sizeOfCodim_[2] = hostgrid.number_of_finite_edges();
-      sizeOfCodim_[3] = hostgrid.number_of_vertices();
+      sizeOfCodim_[0] = elementCount;
+      sizeOfCodim_[1] = facetCount;
+      sizeOfCodim_[2] = edgeCount;
+      sizeOfCodim_[3] = vertexCount;
     }
 
     GridImp* grid_;

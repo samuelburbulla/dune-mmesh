@@ -60,21 +60,24 @@ namespace Dune
         std::array< std::size_t, dimension > ids;
         if constexpr (dimension == 1)
         {
-          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d] )->info().index );
+          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d] )->info().id );
         }
         else // dim == 2
         {
-          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==2 ? 1 : 0] )->info().index );
-          ids[1] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==0 ? 1 : 2] )->info().index );
+          ids[0] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==2 ? 1 : 0] )->info().id );
+          ids[1] = indexSet.vertexIndexMap().at( hostEntity.first->vertex( cgalIndex[d==0 ? 1 : 2] )->info().id );
         }
 
         try {
           std::sort(ids.begin(), ids.end());
-          maxNbIdx_[d] = std::max( 0, (int)indexSet.indexMap().at( ids ).size() - 2 );
+          maxNbIdx_[d] = (int)indexSet.indexMap().at( ids ).size() - 2;
         } catch (std::exception &e) {
           DUNE_THROW(InvalidStateException, e.what());
         }
       }
+
+      while( skip() )
+        increment();
     }
 
     //! constructor for end iterator
@@ -97,13 +100,16 @@ namespace Dune
     //! prefix increment
     void increment()
     {
-      if ( nbIdx_ < maxNbIdx_[i_] )
+      if ( maxNbIdx_[i_] != -1 and nbIdx_ < maxNbIdx_[i_] )
         nbIdx_++;
       else
       {
         ++i_;
         nbIdx_ = 0;
       }
+
+      if (skip())
+        increment();
     }
 
     //! dereferencing
@@ -112,11 +118,20 @@ namespace Dune
     }
 
   private:
+    bool skip()
+    {
+      if (i_ == dimension + 1)
+        return false;
+      if (grid_->entity(hostEntity_).partitionType() == GhostEntity)
+        return maxNbIdx_[i_] == -1 || dereference().outside().partitionType() == GhostEntity;
+      return false;
+    }
+
     const GridImp* grid_;
     MMeshInterfaceEntity hostEntity_;
     std::size_t i_;
     std::size_t nbIdx_;
-    std::array<std::size_t, dimension+1> maxNbIdx_;
+    std::array<int, dimension+1> maxNbIdx_;
   };
 
 }  // namespace Dune

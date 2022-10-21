@@ -50,6 +50,9 @@ namespace Dune
     // equivalent entity in the host grid
     typedef typename GridImp::template MMeshInterfaceEntity<codim> MMeshInterfaceEntity;
 
+    //! define the type used for persistent indices
+    using IdType = MMeshImpl::MultiId;
+
   public:
     typedef typename GridImp::template Codim<codim>::Geometry Geometry;
 
@@ -140,8 +143,9 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType( 0 );
+    PartitionType partitionType () const
+    {
+      return grid().getMMesh().partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Return the number of subEntities of codimension codim
@@ -293,8 +297,13 @@ namespace Dune
         using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
         return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
       }
+      else if constexpr ( codim == dim-1 )
+      {
+        using Impl = typename MMeshEdgeIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshEdgeIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_ ) );
+      }
       else
-        DUNE_THROW( NotImplemented, "incidentInterfaceElementsBegin() for codim != dim" );
+        DUNE_THROW( NotImplemented, "incidentInterfaceElementsBegin() for codim <= dim-1" );
     }
 
     //! Last incident element
@@ -305,6 +314,11 @@ namespace Dune
         using Impl = typename MMeshIncidentInterfaceElementsIterator<GridImp>::Implementation;
         return MMeshIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
       }
+      else if constexpr ( codim == dim-1 )
+      {
+        using Impl = typename MMeshEdgeIncidentInterfaceElementsIterator<GridImp>::Implementation;
+        return MMeshEdgeIncidentInterfaceElementsIterator<GridImp>( Impl( grid_, hostEntity_, true ) );
+      }
       else
         DUNE_THROW( NotImplemented, "incidentInterfaceElementsEnd() for codim != dim" );
     }
@@ -313,6 +327,15 @@ namespace Dune
     const MMeshInterfaceEntity& hostEntity () const
     {
       return hostEntity_;
+    }
+
+    //! Return id
+    IdType id() const
+    {
+      if constexpr ( codim == dim )
+        return hostEntity_->info().id;
+      else
+        return grid().globalIdSet().id( *this );
     }
 
     //! returns the grid
@@ -393,17 +416,23 @@ namespace Dune
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity)
       : hostEntity_(hostEntity), grid_(grid), isLeaf_(true)
     {
-      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().index > mirrored.first->info().index )
-        hostEntity_ = mirrored;
+      if (grid->canBeMirrored(hostEntity_))
+      {
+        const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+        if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
+          hostEntity_ = mirrored;
+      }
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, MMeshInterfaceEntity&& hostEntity)
       : hostEntity_(std::move(hostEntity)), grid_(grid), isLeaf_(true)
     {
-      const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
-      if ( hostEntity_.first->info().index > mirrored.first->info().index )
-        hostEntity_ = mirrored;
+      if (grid->canBeMirrored(hostEntity_))
+      {
+        const auto mirrored = grid_->mirrorHostEntity( hostEntity_ );
+        if ( hostEntity_.first->info().insertionIndex > mirrored.first->info().insertionIndex )
+          hostEntity_ = mirrored;
+      }
     }
 
     MMeshInterfaceGridEntity(const GridImp* grid, const MMeshInterfaceEntity& hostEntity, const IdType& id)
@@ -578,8 +607,9 @@ namespace Dune
     }
 
     //! The partition type for parallel computing
-    PartitionType partitionType () const {
-      return PartitionType::InteriorEntity; /* dummy */
+    PartitionType partitionType () const
+    {
+      return grid().getMMesh().partitionHelper().partitionType( grid().entity(hostEntity_) );
     }
 
     //! Geometry of this entity
@@ -727,7 +757,10 @@ namespace Dune
       {
         typename IdType::VT idlist( dim+1 );
         for( std::size_t i = 0; i < this->subEntities(dim); ++i )
-          idlist[i] = this->subEntity<dim>(i).impl().hostEntity()->info().id;
+          if (grid_->canBeMirrored(hostEntity_))
+            idlist[i] = this->subEntity<dim>(i).impl().hostEntity()->info().id;
+          else
+            idlist[i] = -i;
         std::sort( idlist.begin(), idlist.end() );
         id_ = IdType( idlist );
       }

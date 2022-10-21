@@ -202,7 +202,7 @@ std::array<double, 2> algorithm ( HGridType &grid, IGridType &igrid, const int s
   IDataOutputType idataOutput( igrid, iioTuple, IDataOutputParameters( step ) );
   idataOutput.write();
 
-  for( int time = 0; time <= 5; time++ )
+  for( int time = 0; time <= 2; time++ )
   {
     if( Dune::Fem::MPIManager::rank() == 0 )
       std::cout << "step: " << time << std::endl;

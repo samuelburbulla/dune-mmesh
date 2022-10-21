@@ -30,11 +30,9 @@ namespace Dune
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<0, pitype, GridImp, std::enable_if_t<GridImp::dimension == 2>>
   {
-  private:
-    //! The type of the underlying entities
-   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_faces_iterator;
-
   public:
+    //! The type of the underlying entities
+    using HostGridLeafIterator = typename GridImp::HostGridType::Finite_faces_iterator;
     enum {codimension = 0};
 
     typedef typename GridImp::template Codim<0>::Entity Entity;
@@ -45,21 +43,30 @@ namespace Dune
 
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_faces_begin())
-    {}
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorBegin()
+        : mMesh->getHostGrid().finite_faces_begin())
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which creates the end iterator
-     *  \param endDummy      Here only to distinguish it from the other constructor
-     *  \param mMesh  pointer to grid instance
+     *  \param mMesh    Pointer to grid instance
+     *  \param endDummy Here only to distinguish it from the other constructor
      */
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_faces_end())
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorEnd()
+        : mMesh->getHostGrid().finite_faces_end())
     {}
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -73,8 +80,16 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      const auto endIterator = (pitype == Interior_Partition ? mMesh_->partitionHelper().leafInteriorEnd() : mMesh_->getHostGrid().finite_faces_end());
+      if (hostLeafIterator_ == endIterator)
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 
@@ -93,7 +108,10 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_edges_begin())
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which creates the end iterator
      *  \param endDummy      Here only to distinguish it from the other constructor
@@ -106,7 +124,9 @@ namespace Dune
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -120,6 +140,13 @@ namespace Dune
     }
 
   private:
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == mMesh_->getHostGrid().finite_edges_end())
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, dereference());
+    }
     const GridImp* mMesh_;
 
     HostGridLeafIterator hostLeafIterator_;
@@ -141,7 +168,10 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_begin())
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which create the end iterator
      *  \param endDummy      Here only to distinguish it from the other constructor
@@ -154,7 +184,9 @@ namespace Dune
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -168,8 +200,15 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == mMesh_->getHostGrid().finite_vertices_end())
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 
@@ -182,11 +221,10 @@ namespace Dune
   template<PartitionIteratorType pitype, class GridImp>
   class MMeshLeafIteratorImp<0, pitype, GridImp, std::enable_if_t<GridImp::dimension == 3>>
   {
-  private:
-    //! The type of the underlying entities
-   using HostGridLeafIterator = typename GridImp::HostGridType::Finite_cells_iterator;
-
   public:
+    //! The type of the underlying entities
+    using HostGridLeafIterator = typename GridImp::HostGridType::Finite_cells_iterator;
+
     enum {codimension = 0};
 
     typedef typename GridImp::template Codim<0>::Entity Entity;
@@ -197,21 +235,30 @@ namespace Dune
 
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_cells_begin())
-    {}
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorBegin()
+        : mMesh->getHostGrid().finite_cells_begin())
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which creates the end iterator
-     *  \param endDummy      Here only to distinguish it from the other constructor
-     *  \param mMesh  pointer to grid instance
+     *  \param mMesh    Pointer to grid instance
+     *  \param endDummy Here only to distinguish it from the other constructor
      */
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
-      hostLeafIterator_(mMesh->getHostGrid().finite_cells_end())
+      hostLeafIterator_(pitype == Interior_Partition
+        ? mMesh->partitionHelper().leafInteriorEnd()
+        : mMesh->getHostGrid().finite_cells_end())
     {}
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -225,8 +272,16 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      const auto endIterator = (pitype == Interior_Partition ? mMesh_->partitionHelper().leafInteriorEnd() : mMesh_->getHostGrid().finite_cells_end());
+      if (hostLeafIterator_ == endIterator)
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 
@@ -247,7 +302,10 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_facets_begin())
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which creates the end iterator
      *  \param endDummy      Here only to distinguish it from the other constructor
@@ -260,7 +318,9 @@ namespace Dune
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -274,8 +334,15 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == mMesh_->getHostGrid().finite_facets_end())
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, dereference());
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 
@@ -296,7 +363,10 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_edges_begin())
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which creates the end iterator
      *  \param endDummy      Here only to distinguish it from the other constructor
@@ -309,7 +379,9 @@ namespace Dune
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -323,8 +395,15 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == mMesh_->getHostGrid().finite_edges_end())
+        return false;
+      return !mMesh_->partitionHelper().contains(pitype, dereference());
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 
@@ -345,7 +424,10 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_begin())
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     /** \brief Constructor which create the end iterator
      *  \param endDummy      Here only to distinguish it from the other constructor
@@ -354,13 +436,13 @@ namespace Dune
     explicit MMeshLeafIteratorImp(const GridImp* mMesh, bool endDummy) :
       mMesh_(mMesh),
       hostLeafIterator_(mMesh->getHostGrid().finite_vertices_end())
-    {
-      hostLeafIterator_--; // a bit surprisingly, we have to do this to match the number of vertices
-    }
+    {}
 
     //! prefix increment
     void increment() {
-      ++hostLeafIterator_;
+      do {
+        ++hostLeafIterator_;
+      } while( proceed() );
     }
 
     //! dereferencing
@@ -374,8 +456,17 @@ namespace Dune
     }
 
   private:
-    const GridImp* mMesh_;
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (hostLeafIterator_ == HostGridLeafIterator(mMesh_->getHostGrid().finite_vertices_end()))
+        return false;
+      if (hostLeafIterator_ == mMesh_->getHostGrid().infinite_vertex())
+        return true;
+      return !mMesh_->partitionHelper().contains(pitype, hostLeafIterator_->info().partition);
+    }
 
+    const GridImp* mMesh_;
     HostGridLeafIterator hostLeafIterator_;
   };
 

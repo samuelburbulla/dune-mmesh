@@ -211,6 +211,8 @@ public:
     //! Returns distance object
     const DistanceType& distance () const
     {
+      if (!distance_.initialized())
+        distance_.update();
       return distance_;
     }
 
@@ -224,7 +226,7 @@ public:
     ctype distProportion_;
     ctype factor_;
     ctype maxDist_;
-    DistanceType distance_;
+    mutable DistanceType distance_;
 };
 
 } // end namespace Dune

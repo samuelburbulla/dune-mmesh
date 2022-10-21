@@ -44,6 +44,7 @@ void writeAndCheckDistance(const Grid& grid, double tol = 1e-8)
  */
 int main(int argc, char *argv[])
 {
+  MPIHelper::instance(argc, argv);
   std::cout << "-- Distance test --" << std::endl;
 
   using Grid2D = Dune::MovingMesh<2>;

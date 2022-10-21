@@ -50,7 +50,10 @@ namespace Dune
       : mMesh_(mMesh)
       , hostEntity_(hostEntity)
       , i_( 0 )
-    {}
+    {
+      while( proceed() )
+        increment();
+    }
 
     //! constructor for end iterator
     MMeshLeafIntersectionIterator(const GridImp* mMesh,
@@ -63,12 +66,14 @@ namespace Dune
 
     //! returns if iterators reference same intersection
     bool equals(const MMeshLeafIntersectionIterator& other) const {
-      return i_ == other.i_;
+      return i_ == other.i_ && hostEntity_ == other.hostEntity_;
     }
 
     //! prefix increment
     void increment() {
-      ++i_;
+      do {
+        ++i_;
+      } while( proceed() );
     }
 
     //! \brief dereferencing
@@ -78,6 +83,27 @@ namespace Dune
     }
 
   private:
+    //! return if this iterator should further be incremented
+    bool proceed()
+    {
+      if (i_ == dim + 1)
+        return false;
+
+      // on ghosts return intersection only if adjacent entity is interior
+      if (hostEntity_->info().partition == 2)
+      {
+        const auto& neighborHostEntity = hostEntity_->neighbor(dim-i_);
+
+        if (mMesh_->getHostGrid().is_infinite(neighborHostEntity))
+          return true;
+
+        // skip ghost neighbors
+        if (neighborHostEntity->info().partition != 0)
+          return true;
+      }
+      return false;
+    }
+
     const GridImp* mMesh_;
     HostGridEntity hostEntity_;
     int i_;

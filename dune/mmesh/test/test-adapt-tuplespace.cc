@@ -134,15 +134,15 @@ double algorithm ( MyGridType &grid, DiscreteFunctionType &solution, int step, i
     return 1e80;
   }
 
+  // output
+  vtkIO.write( "test-adapt-tuplespace-" + std::to_string(writestep+1) );
+
   // calculation L2 error on refined grid
   // pol ord for calculation the error chould by higher than
   // pol for evaluation the basefunctions
   Dune :: Fem :: L2Norm< GridPartType > l2norm ( solution.space().gridPart(), 2*order+2 ) ;
   double error = l2norm.distance( gridFunc, solution );
   std::cout << "After: " << error << std::endl;
-
-  // output
-  vtkIO.write( "test-adapt-tuplespace-" + std::to_string(writestep+1) );
 
   //! perform l2-projection to refined grid
   Dune::Fem::interpolate( gridFunc, solution );
@@ -175,7 +175,7 @@ try {
 
   // create grid from DGF file
   std::stringstream gridfilestr;
-  gridfilestr << "grids/2dgrid.dgf";
+  gridfilestr << "grids/2dcoarse.dgf";
 
   std::string gridfile;
   Dune::Fem::Parameter::get( "fem.io.macrogrid", gridfilestr.str(), gridfile );

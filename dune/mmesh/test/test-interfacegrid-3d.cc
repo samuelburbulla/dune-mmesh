@@ -71,6 +71,7 @@ void checkProperty( const std::string &name, const T& resultValue, const T& test
 int main(int argc, char *argv[])
 {
   try {
+    MPIHelper::instance(argc, argv);
     std::cout << "-- MMesh interface implementation test --" << std::endl;
 
     // Create MMesh
@@ -113,7 +114,7 @@ int main(int argc, char *argv[])
     MultipleCodimMultipleGeomTypeMapper< decltype( gridView ) > vertexMapper ( gridView, mcmgVertexLayout() );
     checkProperty( "size of mcmg vertex mapper", vertexMapper.size(), 5ul );
     unsigned int vertexCount = 0;
-    std::vector< unsigned int > idxMap {{ 4, 1, 0, 3, 2 }};
+    std::vector< unsigned int > idxMap {{ 0, 3, 4, 2, 1 }};
     for(auto v : vertices(gridView))
       checkProperty( "index mapped by vertex mapper", vertexMapper.index(v), idxMap[vertexCount++] );
 
@@ -131,20 +132,20 @@ int main(int argc, char *argv[])
     {
       const auto geo = e.geometry();
 
-      if (elementCount == 0)
+      if (elementCount == 3)
       {
-        std::cout << "- Check first element -" << std::endl;
+        std::cout << "- Check fourth element -" << std::endl;
 
         // check element
         checkProperty( "geometry center", geo.center(), { 0.83333333333333337, 0.5, 0.5 } );
         checkProperty( "geometry volume", geo.volume(), 0.25 );
-        checkProperty( "element index", indexSet.index( e ), 0ul );
+        checkProperty( "element index", indexSet.index( e ), 3ul );
 
         // check vertices
         checkProperties( "vertex sub indices",
-          { { indexSet.subIndex( e, 0, 2 ), 1ul },
-            { indexSet.subIndex( e, 1, 2 ), 0ul },
-            { indexSet.subIndex( e, 2, 2 ), 2ul } }
+          { { indexSet.subIndex( e, 0, 2 ), 3ul },
+            { indexSet.subIndex( e, 1, 2 ), 4ul },
+            { indexSet.subIndex( e, 2, 2 ), 1ul } }
         );
 
         checkProperties( "vertex positions",
@@ -204,9 +205,9 @@ int main(int argc, char *argv[])
         const auto vIdxGlobal3 = vertexMapper.subIndex(e, vIdxLocal3, 2);
 
         checkProperties( "reference element mapping",
-          { { vIdxGlobal1, 1u },
-            { vIdxGlobal2, 0u },
-            { vIdxGlobal3, 2u } }
+          { { vIdxGlobal1, 3u },
+            { vIdxGlobal2, 4u },
+            { vIdxGlobal3, 1u } }
         );
       }
       elementCount++;

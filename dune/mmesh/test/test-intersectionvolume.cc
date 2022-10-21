@@ -11,6 +11,7 @@ int main(int argc, char** argv)
 {
   try
   {
+    MPIHelper::instance(argc, argv);
     //dimension of the grid
     static constexpr int dim = GRIDDIM;
 
