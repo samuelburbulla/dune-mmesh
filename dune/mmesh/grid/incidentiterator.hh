@@ -214,7 +214,8 @@ namespace Dune
      *  \param mMesh  pointer to grid instance
      */
     explicit MMeshEdgeIncidentIteratorImp(const GridImp* mMesh, const HostGridEdge& hostEntity, bool endDummy)
-    : mMesh_(mMesh)
+    : mMesh_(mMesh),
+    i_(0)
     {
       Circulator circulator = mMesh_->getHostGrid().incident_cells( hostEntity );
       for(std::size_t i = 0; i < CGAL::circulator_size(circulator); circulator++, i++)
