@@ -5,3 +5,4 @@ cmake
 ipython
 dune-common@git+https://gitlab.dune-project.org/core/dune-common.git
 ufl
+mpi4py
