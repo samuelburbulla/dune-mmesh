@@ -1,3 +1,4 @@
+#pragma GCC diagnostic ignored "-Wattributes"
 #ifndef DUNE_MMESH_MISC_COMMUNICATION_HH
 #define DUNE_MMESH_MISC_COMMUNICATION_HH
 
