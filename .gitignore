@@ -33,6 +33,7 @@ __pycache__
 dist
 _skbuild
 MANIFEST
+*.egg-info/
 
 # always consider files containing source code regardless of their name
 !*.cc
