@@ -52,4 +52,4 @@ jobs:
 
       - name: Test
         working-directory: ${{ github.workspace }}/build-cmake/
-        run: ctest -j4 --output-on-failure
+        run: ctest --output-on-failure
