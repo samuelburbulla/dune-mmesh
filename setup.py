@@ -4,4 +4,4 @@ try:
 except ImportError:
     from packagemetadata import metaData
 from skbuild import setup
-setup(**metaData()[1])
+setup(**metaData('1.4')[1])
