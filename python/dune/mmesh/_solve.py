@@ -1,6 +1,7 @@
 import logging, traceback
 logger = logging.getLogger(__name__)
 
+from time import time
 import numpy as np
 
 # Return dof vector
@@ -158,6 +159,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     from dune.generator.generator import SimpleGenerator
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
 
     if iterative:
       header = "jacobian_iterative.hh"
@@ -174,7 +176,7 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     generator = SimpleGenerator("Jacobian", "Dune::Python::MMesh")
     module = generator.load(includes, typeName, moduleName, constructor)
     jacobian = module.Jacobian(scheme, ischeme, uh, th, eps, call)
-    jacobian.init();
+    jacobian.init()
 
     ux = uh.copy()
     tx = th.copy()
@@ -185,7 +187,11 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
     for i in range(1, iter+1):
 
         jacobian.update(uh, th)
+
+
+        solveTime = -time()
         jacobian.solve(f, g, ux, tx)
+        solveTime += time()
 
         uh -= ux
         th -= tx
@@ -197,9 +203,12 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
 
         fres = norm(f, g)
 
-        rank = comm.Get_rank()
         if verbose > 0 and rank == 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
+            print(f"Solve took {solveTime:.6f} seconds.\n")
+            f = open('runtime.txt', 'w')
+            f.write(str(solveTime))
+            f.close()
 
         if xres < tol and fres < f_tol:
             return True
