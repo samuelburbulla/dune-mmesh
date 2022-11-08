@@ -32,7 +32,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/..
           mkdir dune-common dune-geometry dune-grid dune-localfunctions dune-istl dune-alugrid dune-fem
-          git clone https://gitlab.dune-project.org/core/dune-common.git dune-common
+          git clone -b feature/upgradePybind11 https://gitlab.dune-project.org/core/dune-common.git dune-common
           git clone https://gitlab.dune-project.org/core/dune-geometry.git dune-geometry
           git clone https://gitlab.dune-project.org/core/dune-grid.git dune-grid
           git clone https://gitlab.dune-project.org/core/dune-localfunctions.git dune-localfunctions
