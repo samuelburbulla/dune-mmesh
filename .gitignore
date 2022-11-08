@@ -32,7 +32,7 @@ __pycache__
 *.tmp.msh
 dist
 _skbuild
-MANIFEST
+MANIFEST*
 *.egg-info/
 
 # always consider files containing source code regardless of their name
