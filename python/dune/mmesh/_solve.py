@@ -205,10 +205,11 @@ def monolithicSolve(schemes, targets, callback=None, iter=30, tol=1e10, f_tol=1e
 
         if verbose > 0 and rank == 0:
             print(" i:", i, " |Δx| =", "{:1.8e}".format(xres), "",  "|f| =", "{:1.8e}".format(fres))
-            print(f"Solve took {solveTime:.6f} seconds.\n")
-            f = open('runtime.txt', 'w')
-            f.write(str(solveTime))
-            f.close()
+            if verbose > 1:
+                print(f"Solve took {solveTime:.6f} seconds.\n")
+                file = open('runtime.txt', 'w')
+                file.write(str(solveTime))
+                file.close()
 
         if xres < tol and fres < f_tol:
             return True
