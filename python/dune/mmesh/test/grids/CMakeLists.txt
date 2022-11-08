@@ -2,6 +2,7 @@ set(GRIDFILES
   line
   plane
   tjunction
+  vertical
 )
 
 foreach(test ${GRIDFILES})

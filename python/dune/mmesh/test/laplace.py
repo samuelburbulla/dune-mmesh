@@ -59,9 +59,9 @@ def algorithm(grid, name):
 ########
 
 
-from dune.mmesh.test.grids import line
+from dune.mmesh.test.grids import line, vertical
 
-for file in [line.filename, "grids/vertical.msh"]:
+for file in [line.filename, vertical.filename]:
   grid = mmesh((reader.gmsh, file), 2)
   hgrid = grid.hierarchicalGrid
   igrid = hgrid.interfaceGrid

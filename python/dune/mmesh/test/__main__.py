@@ -4,10 +4,13 @@ import glob
 import subprocess
 
 if __name__ == '__main__':
-    print("===  Test dune.mmesh  ===")
+    print("===  Testing Dune-MMesh  ===")
 
     path = os.path.dirname(os.path.realpath(__file__))
     tests = glob.glob(path + '/[!_]*.py')
+
+    exclude = ["boundary.py"]
+    tests = [t for t in tests if not t.endswith(tuple(exclude))]
 
     N = len(tests)
     passed = 0
