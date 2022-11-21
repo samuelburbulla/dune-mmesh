@@ -8,10 +8,13 @@ ENV CXXFLAGS='-Wno-narrowing'
 RUN pip install dune-common
 RUN pip install dune-geometry
 RUN pip install dune-grid
+RUN pip install dune-istl
+RUN pip install dune-localfunctions
 RUN pip install dune-alugrid
 RUN pip install dune-fem
 RUN pip install dune-mmesh
 RUN pip install matplotlib
+RUN pip install mpi4py
 
 RUN git clone https://github.com/samuelburbulla/dune-mmesh.git
 
