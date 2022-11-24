@@ -4,36 +4,7 @@
 Installation
 ************
 
-
-Using Docker
-------------
-
-The easiest starting point is to use Docker with a preconfigured setup.
-
-Using the pre-built Docker container you can simply run:
-
-docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
-
-.. code-block:: bash
-
-  docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
-
-
-Alternatively, you can build the corresponding Docker container yourself:
-
-.. code-block:: bash
-
-  docker build -t mmesh \
-    https://raw.githubusercontent.com/samuelburbulla/dune-mmesh/master/scripts/Dockerfile
-  docker run -it mmesh
-
-This will open an interactive shell in the Dune-MMesh's examples directory.
-
-
-On your system
---------------
-
-In order to install and use Dune-MMesh you need:
+In order to install and use Dune-MMesh on your system you need:
 
 C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7),
 CMake (3.13 or later),
@@ -94,16 +65,6 @@ Now, you should be able to execute Dune-MMesh's python code. For instance:
 
 Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
 
-
-If you encounter problems with, e.g., Boost headers missing on an M1 Mac,
-make sure that the include paths can be found. For instance, use the export
-
-.. code-block:: bash
-
-  export CXXFLAGS="-I/opt/homebrew/Cellar/boost/1.66.0/include/"
-
-before installing Dune-MMesh.
-
 Please be aware that we use `git-lfs` for uploading the `.msh` files.
 In order to pull them, please activate large file storage.
 
@@ -145,3 +106,26 @@ and `dune-mmesh <https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh.git>
 .. code-block:: bash
 
   source ./dune-common/build-cmake/dune-env/bin/activate
+
+
+Using Docker
+------------
+
+The easiest starting point is to use Docker with a preconfigured setup.
+
+Using the pre-built Docker container you can simply run:
+
+.. code-block:: bash
+
+  docker run -it ghcr.io/samuelburbulla/dune-mmesh:master
+
+
+Alternatively, you can build the corresponding Docker container yourself:
+
+.. code-block:: bash
+
+  docker build -t mmesh \
+    https://raw.githubusercontent.com/samuelburbulla/dune-mmesh/master/scripts/Dockerfile
+  docker run -it mmesh
+
+This will open an interactive shell in the Dune-MMesh's examples directory.
