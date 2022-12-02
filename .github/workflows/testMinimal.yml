@@ -1,0 +1,51 @@
+name: Test minimal
+
+on: push
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+      
+      - name: Install dependencies
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt update
+            sudo apt install libboost-all-dev
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew update
+            brew install boost
+          fi
+        shell: bash
+
+      - name: Clone modules
+        run: |
+          cd ${{ github.workspace }}/..
+          mkdir dune-common dune-geometry dune-grid
+          git clone https://gitlab.dune-project.org/core/dune-common.git dune-common
+          git clone https://gitlab.dune-project.org/core/dune-geometry.git dune-geometry
+          git clone https://gitlab.dune-project.org/core/dune-grid.git dune-grid
+
+      - name: Configure and build modules
+        run: |
+          export MAKEFLAGS=-j2
+          cd ${{ github.workspace }}/..
+          ./dune-common/bin/dunecontrol --opts=dune-mmesh/cmake/debug.opts all
+
+      - name: Build tests
+        working-directory: ${{ github.workspace }}/build-cmake/
+        run: make build_tests -j4
+
+      - name: Test
+        working-directory: ${{ github.workspace }}/build-cmake/
+        run: ctest --output-on-failure
