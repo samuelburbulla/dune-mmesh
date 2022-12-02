@@ -2,6 +2,8 @@ add_subdirectory(grids)
 
 add_python_targets(test __main__)
 
+if(dune-fem_FOUND)
+
 set(TESTS
   adaptation
   coupledsolve
@@ -11,6 +13,11 @@ set(TESTS
   distance
   monolithicsolve
 )
+
+set(PARALLEL_TESTS
+  laplace
+)
+
 
 foreach(test ${TESTS})
   dune_python_add_test(NAME ${test}
@@ -22,10 +29,6 @@ foreach(test ${TESTS})
 endforeach()
 
 
-set(PARALLEL_TESTS
-  laplace
-)
-
 foreach(test ${PARALLEL_TESTS})
   dune_python_add_test(NAME ${test}
                        SCRIPT ${test}.py
@@ -36,3 +39,5 @@ foreach(test ${PARALLEL_TESTS})
 
  add_python_targets(test ${test})
 endforeach()
+
+endif() # dune-fem_FOUND
