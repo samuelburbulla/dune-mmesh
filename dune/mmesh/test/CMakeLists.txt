@@ -60,7 +60,7 @@ dune_add_test(NAME test-mpi SOURCES test-mpi.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-mpi APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
 
-if(HAVE_DUNE_FEM)
+if(dune-fem_FOUND)
   # Workaround to fix linking issue in dune-fem
   if(OPENMP_FOUND)
     if(APPLE)
@@ -108,4 +108,4 @@ if(HAVE_DUNE_FEM)
 
   #dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
   #set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
-endif()
+endif() # dune-fem_FOUND

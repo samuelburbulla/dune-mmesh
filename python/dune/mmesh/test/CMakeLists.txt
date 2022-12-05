@@ -2,7 +2,7 @@ add_subdirectory(grids)
 
 add_python_targets(test __main__)
 
-if(HAVE_DUNE_FEM)
+if(dune-fem_FOUND)
 
 set(TESTS
   adaptation
@@ -40,4 +40,4 @@ foreach(test ${PARALLEL_TESTS})
  add_python_targets(test ${test})
 endforeach()
 
-endif() # HAVE_DUNE_FEM
+endif() # dune-fem_FOUND
