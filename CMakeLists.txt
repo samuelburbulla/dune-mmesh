@@ -18,6 +18,7 @@ include(DuneMacros)
 dune_project()
 dune_enable_all_packages()
 
+find_package(Boost)
 install(DIRECTORY "CGAL"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
