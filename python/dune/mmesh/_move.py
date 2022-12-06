@@ -1,8 +1,6 @@
 import logging, traceback
 logger = logging.getLogger(__name__)
 
-from dune.fem import adapt
-
 def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[]):
     """Move the mesh and adapt given discrete functions.
 
@@ -16,6 +14,8 @@ def moveMesh(grid, gridFunctions, getShifts=None, igrid=None, igridFunctions=[])
     Returns:
         Number of ensure and mark steps.
     """
+    from dune.fem import adapt
+
     hgrid = grid.hierarchicalGrid
 
     ensure = 0
