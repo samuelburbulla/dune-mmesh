@@ -2,42 +2,52 @@ add_subdirectory(grids)
 
 add_python_targets(test __main__)
 
+# Add one parallel test without dune-fem
+dune_python_add_test(NAME grid
+                     SCRIPT grid.py
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                     MPI_RANKS 1 2 4
+                     TIMEOUT 100000
+                     LABELS python)
+add_python_targets(test grid)
+
+
 if(dune-fem_FOUND)
 
-set(TESTS
-  adaptation
-  coupledsolve
-  boundary
-  interfaceindicator
-  normals
-  distance
-  monolithicsolve
-)
+  # Python tests with dune-fem
+  set(TESTS
+    adaptation
+    coupledsolve
+    boundary
+    interfaceindicator
+    normals
+    distance
+    monolithicsolve
+  )
 
-set(PARALLEL_TESTS
-  laplace
-)
+  foreach(test ${TESTS})
+    dune_python_add_test(NAME ${test}
+                         SCRIPT ${test}.py
+                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                         LABELS python)
 
+   add_python_targets(test ${test})
+  endforeach()
 
-foreach(test ${TESTS})
-  dune_python_add_test(NAME ${test}
-                       SCRIPT ${test}.py
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       LABELS python)
+  # Parallel tests
+  set(PARALLEL_TESTS
+    laplace
+  )
 
- add_python_targets(test ${test})
-endforeach()
+  foreach(test ${PARALLEL_TESTS})
+    dune_python_add_test(NAME ${test}
+                         SCRIPT ${test}.py
+                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                         MPI_RANKS 1 2 4
+                         TIMEOUT 100000
+                         LABELS python)
 
-
-foreach(test ${PARALLEL_TESTS})
-  dune_python_add_test(NAME ${test}
-                       SCRIPT ${test}.py
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       MPI_RANKS 1 2 4
-                       TIMEOUT 100000
-                       LABELS python)
-
- add_python_targets(test ${test})
-endforeach()
+   add_python_targets(test ${test})
+  endforeach()
 
 endif() # dune-fem_FOUND
