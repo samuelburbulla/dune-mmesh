@@ -5,6 +5,15 @@ from dune.mmesh.test.grids import line
 grid = mmesh((reader.gmsh, line.filename), 2)
 igrid = grid.hierarchicalGrid.interfaceGrid
 
-print(grid.size(0), igrid.size(0))
-assert(grid.size(0) == 2684)
-assert(igrid.size(0) == 100)
+mpi_size = 1
+try:
+  from mpi4py import MPI
+  mpi_size = MPI.COMM_WORLD.Get_size()
+except:
+  pass
+
+size = [[2684], [1375], [], [703, 735]]
+isize = [[100], [51], [], [27, 26]]
+
+assert(grid.size(0) in size[mpi_size-1])
+assert(igrid.size(0) in isize[mpi_size-1])
