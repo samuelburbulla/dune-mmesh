@@ -7,5 +7,8 @@ from .utility import *
 registry = dict()
 registry["grid"] = grid_registry
 
-from dune.fem import parameter
-parameter.append({"fem.adaptation.method": "callback"})
+try:
+  from dune.fem import parameter
+  parameter.append({"fem.adaptation.method": "callback"})
+except:
+  pass

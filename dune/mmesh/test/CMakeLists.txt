@@ -53,56 +53,59 @@ set_property( TARGET test-curvature-2d APPEND PROPERTY COMPILE_DEFINITIONS "GRID
 dune_add_test(NAME test-curvature-3d SOURCES test-curvature.cc)
 set_property( TARGET test-curvature-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
 
-# Workaround to fix linking issue in dune-fem
-if(OPENMP_FOUND)
-  if(APPLE)
-    get_filename_component(OPENMP_LIB_PATH ${OpenMP_CXX_LIBRARIES} DIRECTORY)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp -L${OPENMP_LIB_PATH}")
-  endif()
-endif()
-# End of workaround
-
-dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
-set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-
-dune_add_test(NAME test-femadaptation SOURCES test-femadaptation.cc)
-set_property(TARGET test-femadaptation APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2; LAGRANGE" )
-
-#dune_add_test(NAME test-threading SOURCES test-threading.cc)
-#set_property(TARGET test-threading APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-
-#dune_add_test(NAME test-threading-interface SOURCES test-threading.cc)
-#set_property(TARGET test-threading-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
-
-#dune_add_test(NAME test-threading-3d SOURCES test-threading.cc)
-#set_property(TARGET test-threading-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
-
-#dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
-#set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
-
-#dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
-#set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-
 dune_add_test(NAME test-distance SOURCES test-distance.cc)
 set_property(TARGET test-distance APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
 
-dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-
-dune_add_test(NAME test-l2projection-interface SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-l2projection-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
-
-dune_add_test(NAME test-comm SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-comm APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
-
-dune_add_test(NAME test-comm-3d SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-comm-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
-
-dune_add_test(NAME test-comm-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-comm-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
-
-dune_add_test(NAME test-comm-3d-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
-set_property(TARGET test-comm-3d-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
-
 dune_add_test(NAME test-mpi SOURCES test-mpi.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
 set_property(TARGET test-mpi APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+
+if(dune-fem_FOUND)
+  # Workaround to fix linking issue in dune-fem
+  if(OPENMP_FOUND)
+    if(APPLE)
+      get_filename_component(OPENMP_LIB_PATH ${OpenMP_CXX_LIBRARIES} DIRECTORY)
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp -L${OPENMP_LIB_PATH}")
+    endif()
+  endif()
+  # End of workaround
+
+  dune_add_test(NAME test-l2projection SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-l2projection APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+  dune_add_test(NAME test-l2projection-interface SOURCES test-l2projection.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-l2projection-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+  #dune_add_test(NAME test-adapt-tuplespace SOURCES test-adapt-tuplespace.cc)
+  #set_property(TARGET test-adapt-tuplespace APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+  dune_add_test(NAME test-comm SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-comm APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+  dune_add_test(NAME test-comm-3d SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-comm-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+
+  dune_add_test(NAME test-comm-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-comm-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+  dune_add_test(NAME test-comm-3d-interface SOURCES test-comm.cc MPI_RANKS 1 2 4 8 TIMEOUT 300)
+  set_property(TARGET test-comm-3d-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
+
+  dune_add_test(NAME test-femadaptation-dg SOURCES test-femadaptation.cc)
+  set_property(TARGET test-femadaptation-dg APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+  dune_add_test(NAME test-femadaptation SOURCES test-femadaptation.cc)
+  set_property(TARGET test-femadaptation APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2; LAGRANGE" )
+
+  #dune_add_test(NAME test-threading SOURCES test-threading.cc)
+  #set_property(TARGET test-threading APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2" )
+
+  #dune_add_test(NAME test-threading-interface SOURCES test-threading.cc)
+  #set_property(TARGET test-threading-interface APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=2;INTERFACE" )
+
+  #dune_add_test(NAME test-threading-3d SOURCES test-threading.cc)
+  #set_property(TARGET test-threading-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3" )
+
+  #dune_add_test(NAME test-threading-interface-3d SOURCES test-threading.cc)
+  #set_property(TARGET test-threading-interface-3d APPEND PROPERTY COMPILE_DEFINITIONS "GRIDDIM=3;INTERFACE" )
+endif() # dune-fem_FOUND
