@@ -11,25 +11,6 @@ dune_python_add_test(NAME grid
                      LABELS python)
 add_python_targets(test grid)
 
-set(TESTS
-  adaptation
-  coupledsolve
-  boundary
-  interfaceindicator
-  normals
-  distance
-  solve
-)
-
-foreach(test ${TESTS})
-  dune_python_add_test(NAME ${test}
-                       SCRIPT ${test}.py
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       LABELS python)
-
- add_python_targets(test ${test})
-endforeach()
-
 
 if(dune-fem_FOUND)
 
@@ -41,7 +22,7 @@ if(dune-fem_FOUND)
     interfaceindicator
     normals
     distance
-    monolithicsolve
+    solve
   )
 
   foreach(test ${TESTS})
