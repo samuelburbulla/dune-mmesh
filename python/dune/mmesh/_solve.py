@@ -55,7 +55,7 @@ def iterativeSolve(schemes, targets, callback=None, iter=100, tol=1e-8, f_tol=No
         FFb = b.copy()
 
     def residuum(a, b):
-        return np.sqrt(np.dot(a, a)+np.dot(b, b))
+        return np.sqrt(np.sum(np.square(a)) + np.sum(np.square(b)))
 
     if callback is not None:
         callback()
