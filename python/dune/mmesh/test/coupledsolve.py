@@ -1,5 +1,5 @@
 from dune.grid import reader
-from dune.mmesh import mmesh, monolithicSolve, skeleton, trace
+from dune.mmesh import mmesh, monolithicSolve, iterativeSolve, skeleton, trace
 from dune.mmesh.test.grids import line, plane
 from dune.fem.space import lagrange
 from dune.fem.scheme import galerkin
@@ -57,16 +57,19 @@ def coupledproblem(grid):
     umfp = ("suitesparse", "umfpack")
     scheme = galerkin([b == 0., dbc_top, dbc_btm], solver=umfp)
     ischeme = galerkin([ib == il, idbc_lft, idbc_rgt], solver=umfp)
-    monolithicSolve(schemes=(scheme, ischeme), targets=(uh, λh), verbose=1)
+
+    for coupledSolve in [iterativeSolve, monolithicSolve]:
+        coupledSolve(schemes=(scheme, ischeme), targets=(uh, λh), verbose=1)
+
+        err = integrate(grid, abs(uh - u_exact(x)), order=5)
+        ierr = integrate(igrid, abs(λh - λ_exact(ix)), order=5)
+
+        assert(err < 1e-10)
+        assert(ierr < 5e-3)
 
     grid.writeVTK(f"coupledsolve-{dim}d", pointdata={"uh": uh, "u_exact": u_exact(x)})
     igrid.writeVTK(f"coupledsolve-{dim}d-interface", pointdata={"λh": λh, "λ_exact": λ_exact(ix)})
 
-    err = integrate(grid, abs(uh - u_exact(x)), order=5)
-    ierr = integrate(igrid, abs(λh - λ_exact(ix)), order=5)
-
-    assert(err < 1e-10)
-    assert(ierr < 5e-3)
 
 # 2D
 grid = mmesh((reader.gmsh, line.filename), 2)

@@ -48,16 +48,18 @@ ia += (iu - trace(uh)('-')) / omega * iv * dx
 from dune.fem.scheme import galerkin
 scheme  = galerkin([a == 0])
 ischeme = galerkin([ia == ib])
-from dune.mmesh import monolithicSolve
-dt = -time()
-monolithicSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True)
-dt += time()
-print(f"Took {dt:.6f}")
+from dune.mmesh import monolithicSolve, iterativeSolve
 
-from dune.fem.function import integrate
-intBulk = integrate(gridView, uh, order=1)
-intInterface = integrate(igridView, iuh, order=1)
+for coupledSolve in [monolithicSolve, iterativeSolve]:
+    dt = -time()
+    coupledSolve(schemes=(scheme, ischeme), targets=(uh, iuh), verbose=True)
+    dt += time()
+    print(f"Took {dt:.6f}")
 
-print(intBulk, intInterface)
-assert(abs(intBulk - 0.066) < 1e-3)
-assert(abs(intInterface - 0.192) < 1e-3)
+    from dune.fem.function import integrate
+    intBulk = integrate(gridView, uh, order=1)
+    intInterface = integrate(igridView, iuh, order=1)
+
+    print(intBulk, intInterface)
+    assert(abs(intBulk - 0.066) < 1e-3)
+    assert(abs(intInterface - 0.192) < 1e-3)
