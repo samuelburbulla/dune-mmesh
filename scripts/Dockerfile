@@ -18,6 +18,8 @@ RUN venv/bin/pip install matplotlib
 RUN venv/bin/pip install mpi4py
 
 RUN git clone https://github.com/samuelburbulla/dune-mmesh.git
-RUN . venv/bin/activate && python dune-mmesh/doc/examples/coupling.py
+WORKDIR dune-mmesh/doc/examples
+RUN . ../../../venv/bin/activate && python coupling.py
 
+WORKDIR $HOME
 RUN echo '. venv/bin/activate' >> ~/.bashrc
