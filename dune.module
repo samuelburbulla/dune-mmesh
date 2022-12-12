@@ -4,7 +4,7 @@ Author: Samuel Burbulla
 Maintainer: samuel.burbulla@ians.uni-stuttgart.de
 Description: MMesh is a grid implementation based on CGAL triangulations
 URL: https://gitlab.dune-project.org/samuel.burbulla/dune-mmesh
-Python-Requires: gmsh
+Python-Requires: gmsh dune-grid>=2.9.0.dev0
 Depends: dune-grid (>= 2.10)
 Suggests: dune-fem (>= 2.10)
 Whitespace-Hook: Yes
