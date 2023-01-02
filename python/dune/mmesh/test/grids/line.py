@@ -1,8 +1,10 @@
+"""Line mesh file."""
+import gmsh
+
 filename = "line.msh"
 h = 0.1
 hf = 0.01
 
-import gmsh
 gmsh.initialize()
 gmsh.option.setNumber("General.Verbosity", 0)
 gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)

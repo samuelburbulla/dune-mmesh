@@ -1,10 +1,16 @@
+"""Solve a simple laplace problem."""
+
+from ufl import TrialFunction, TestFunction, SpatialCoordinate, FacetNormal, FacetArea, inner, dot, grad, div, dx, dS, ds, jump, avg, sqrt, sin, pi
 from dune.grid import reader
 from dune.mmesh import mmesh
 from dune.fem.space import dglagrange
 from dune.fem.function import integrate
-from ufl import *
 from dune.ufl import Constant
 from dune.fem.scheme import galerkin
+
+from dune.mmesh.test.grids import line, vertical
+
+import sys
 from time import time
 from mpi4py import MPI
 rank = MPI.COMM_WORLD.Get_rank()
@@ -24,20 +30,20 @@ def algorithm(grid, name):
   h = avg(FacetArea(space))
   hBnd = FacetArea(space)
 
-  A = inner(grad(u), grad(v)) * dx
-  A += beta / h * inner(jump(u), jump(v)) * dS
-  A -= dot(dot(avg(grad(u)), n('+')), jump(v)) * dS
-  A -= dot(dot(avg(grad(v)), n('+')), jump(u)) * dS
-  A += beta / hBnd * inner(u - exact, v) * ds
-  A -= dot(dot(grad(u), n), v) * ds
-  A -= dot(dot(grad(v), n), u - exact) * ds
+  a = inner(grad(u), grad(v)) * dx
+  a += beta / h * inner(jump(u), jump(v)) * dS
+  a -= dot(dot(avg(grad(u)), n("+")), jump(v)) * dS
+  a -= dot(dot(avg(grad(v)), n("+")), jump(u)) * dS
+  a += beta / hBnd * inner(u - exact, v) * ds
+  a -= dot(dot(grad(u), n), v) * ds
+  a -= dot(dot(grad(v), n), u - exact) * ds
 
   if name == "interface":
     b = -exact.dx(0).dx(0) * v * dx
   else:
     b = -div( grad(exact) ) * v * dx
 
-  scheme = galerkin([A == b], solver='cg', parameters={"newton.linear.verbose": "false"})
+  scheme = galerkin([a == b], solver="cg", parameters={"newton.linear.verbose": "false"})
 
   took = -time()
   scheme.solve(uh)
@@ -49,25 +55,22 @@ def algorithm(grid, name):
   grid.writeVTK("laplace-"+name, pointdata={"uh": uh, "exact": exact}, nonconforming=True)
 
   l2 = integrate(grid, sqrt(dot(uh-exact, uh-exact)), order=5)
-  if(l2 > 1e-2):
+  if l2 > 1e-2:
     print(l2)
-    raise
+    sys.exit(1)
 
 
 ########
 # MAIN #
 ########
 
-
-from dune.mmesh.test.grids import line, vertical
-
 for file in [line.filename, vertical.filename]:
-  grid = mmesh((reader.gmsh, file), 2)
-  hgrid = grid.hierarchicalGrid
+  gridView = mmesh((reader.gmsh, file), 2)
+  hgrid = gridView.hierarchicalGrid
   igrid = hgrid.interfaceGrid
 
   # Run bulk
-  algorithm(grid, "bulk")
+  algorithm(gridView, "bulk")
 
   # Run interface
   algorithm(igrid, "interface")

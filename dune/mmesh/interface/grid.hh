@@ -159,7 +159,8 @@ class MMeshInterfaceGrid
       : mMesh_(mMesh),
         boundarySegments_(boundarySegments)
 #ifdef HAVE_MPI
-      , comm_(MPIHelper::getCommunicator())
+        ,
+        comm_(MPIHelper::getCommunicator())
 #endif
   {
     leafIndexSet_ =
