@@ -7,27 +7,26 @@
  * \brief The MMeshInterfaceGrid traits class
  */
 
-namespace Dune
-{
-  // Forward declarations
-  template<class MMesh>
-  struct MMeshInterfaceGridFamily;
+namespace Dune {
+// Forward declarations
+template <class MMesh>
+struct MMeshInterfaceGridFamily;
 
-  template<class MMesh>
-  class MMeshInterfaceGrid;
+template <class MMesh>
+class MMeshInterfaceGrid;
 
-  template<int codim, int dim, class GridImp>
-  class MMeshInterfaceGridEntity;
+template <int codim, int dim, class GridImp>
+class MMeshInterfaceGridEntity;
 
-  template<class GridImp>
-  class MMeshInterfaceGridLeafIntersectionIterator;
+template <class GridImp>
+class MMeshInterfaceGridLeafIntersectionIterator;
 
-  template<class GridImp>
-  class MMeshInterfaceGridHierarchicIterator;
+template <class GridImp>
+class MMeshInterfaceGridHierarchicIterator;
 
-  template<class GridImp>
-  class MMeshInterfaceConnectedComponent;
+template <class GridImp>
+class MMeshInterfaceConnectedComponent;
 
-} // namespace Dune
+}  // namespace Dune
 
-#endif // DUNE_MMESH_INTERFACE_TRAITS_HH
+#endif  // DUNE_MMESH_INTERFACE_TRAITS_HH
