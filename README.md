@@ -5,7 +5,7 @@
 
 # The Dune-MMesh Module
 
-In several physical and environmental processes that concern multiphase flows, biological systems, and geophysical phenomena, important physical processes occur along thin physical interfaces. These processes include effects that may alter the interface's position or topology over time creating a moving interface, which complicates traditional modeling techniques. Moving interface problems thus require advanced numerical tools with specific treatment of the interface and the simultaneous ability to implement complex physical effects.
+In several physical and environmental processes that concern multiphase flows, biological systems, and geophysical phenomena, important physical processes occur along thin physical interfaces. These processes include effects that may alter the interface's position or topology over time, creating a moving interface, which complicates traditional modeling techniques. Moving interface problems thus require advanced numerical tools with specific treatment of the interface and the simultaneous ability to implement complex physical effects.
 
 Dune-MMesh is tailored for numerical applications with moving physical interfaces. It is an implementation of the well-developed [Dune](https://www.dune-project.org) grid interface and is well-suited for the numerical discretization of partial differential equations. The package wraps two and three dimensional [CGAL](https://www.cgal.org) triangulations in high-level objects like intersections of grid entities, index and id sets and geometry transformations and exports a predefined set of facets as a separate interface grid.
 In two dimensions, the arbitrary movement of vertices is enhanced with a re-meshing algorithm that implements non-hierarchical adaptation procedures. Besides the adaptation of the triangulation, Dune-MMesh provides the necessary data structures to adapt discrete functions defined on the bulk grid or the interface. This adaptation approach complements existing grid implementations within the Dune framework that strictly rely on hierarchical adaptation.
@@ -27,7 +27,7 @@ Install the Dune-MMesh package using pip:
 ````
 pip install dune-mmesh
 ````
-This will take some time in order to compile all dependent Dune modules.
+This will take some time to compile all dependent Dune modules.
 
 Now, you should be able to execute Dune-MMesh's python code. For instance:
 ````
@@ -36,13 +36,13 @@ cd dune-mmesh/doc/examples
 python coupling.py
 ````
 
-For more details on the installation procedure we refer to [Installation](https://dune-mmesh.readthedocs.io/en/latest/installation.html).
+For more details on the installation procedure, we refer to [Installation](https://dune-mmesh.readthedocs.io/en/latest/installation.html).
 
 
 ### Docker image
 
 The easiest starting point is to use Docker with a preconfigured setup.
-Using the pre-built Docker container you can simply run:
+Using the pre-built Docker container, you can simply run:
 
 ````
 docker run -it ghcr.io/samuelburbulla/dune-mmesh:master

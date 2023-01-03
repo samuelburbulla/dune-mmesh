@@ -5,10 +5,10 @@ Moving Mesh
 ***********
 
 Most interface driven-problems have time-dependent interfaces :math:`\Gamma = \Gamma(t)`.
-Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial dimension two.
+Therefore, Dune-MMesh features capabilities of moving and re-meshing in spatial dimension two.
 
 .. note::
-  The remeshing feature is not (yet) supported in spatial dimension three because the removal of a vertex is not
+  The re-meshing feature is not (yet) supported in spatial dimension three because the removal of a vertex is not
   offered by the underlying CGAL Triangulation_3 class. In fact, it could appear that the region formed by its
   adjacent tetrahedrons is an instance of the untetrahedralizable Schönhardt's polyhedron. In this case, the
   removal of the vertex might be impossible without rebuilding the whole triangulation.
@@ -17,7 +17,7 @@ Therefore, Dune-MMesh features capabilities of moving and remeshing in spatial d
 Moving Vertices
 ***************
 
-Dune-MMesh allows the movement of interface vertices (or all grid vertices) by a predescribed movement.
+Dune-MMesh allows the movement of interface vertices (or all grid vertices) by a pre-described movement.
 
 For this, we assume that movement is given by the shift of vertices.
 This movement can be performed by simply changing the coordinates of the vertices.
@@ -68,8 +68,8 @@ Dune-MMesh provides the method :code:`moveInterface(shifts)` that takes a vector
 A second method :code:`moveVertices(shifts)` is available for moving all vertices of the triangulation that is indexed by bulk vertex indices.
 
 
-Remark that moving vertices might lead to degeneration of the triangulation, i.e. cells can have non-positive volume.
-To prevent that, Dune-MMesh is equipped with remeshing routines we describe in the following.
+Remark that moving vertices might lead to degeneration of the triangulation, i.e., cells can have non-positive volume.
+To prevent that, Dune-MMesh is equipped with re-meshing routines we describe in the following.
 
 
 Adaptation
@@ -82,11 +82,11 @@ the children cells are put together to form a parent cell one level lower.
 
 Hereby, the adaptation procedure is performed in two stages:
   1. Mark: Grid elements are marked for coarsening or refinement.
-  2. Adapt: The elements are adapted due to their markers and discrete functions are restricted or prolongated.
+  2. Adapt: The elements are adapted due to their markers, and discrete functions are restricted or prolongated.
 
-In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is inavoidable.
+In Dune-MMesh, due to the moving mesh, non-hierarchic adaptation is in-avoidable.
 However, we will try to follow the general DUNE approach of adaptation as good as possible.
-For this reason, we similarily separate the adaptation into two stages.
+For this reason, we similarly separate the adaptation into two stages.
 
 1. Mark
 -------
@@ -120,7 +120,7 @@ In advance of moving, two methods are provided for marking elements in a conveni
 
 First, the method :code:`ensureInterfaceMovement(shifts)` (respectively :code:`ensureVertexMovement(shifts)`) can be called
 to prepare Dune-MMesh for moving the vertices. The routine takes the vertex shifts as argument
-and marks presumbly degenerate cells for coarsening. Hence, they will be somehow removed during adaptation.
+and marks pre-sumbly degenerate cells for coarsening. Hence, they will be somehow removed during adaptation.
 
 The second method available for marking elements is :code:`markElements()`.
 This method uses a default indicator that marks elements depending on their current geometrical properties.
@@ -131,14 +131,14 @@ This indicator considers primarily maximal and minimal edge length and aims at a
  - If an edge is shorter than the minimum edge length :math:`h_{min}`, the cell will be marked for coarsening.
 
 Additionally, if the ratio of longest to shortest edge is larger than 4, the cell is marked for coarsening.
-The number 4 occurs from the fact that we we will use bisection and a triangle where two edges are longer then :math:`h_{max}`
-should not be splitted into smaller triangles where an edge is shorter than :math:`h_{min}`.
+The number 4 occurs from the fact that we will use bisection and a triangle where two edges are longer then :math:`h_{max}`
+should not be split into smaller triangles where an edge is shorter than :math:`h_{min}`.
 
 Finally, a maximal radius ratio is taken into account to remove very ugly cells.
 Always coarsening has priority before refinement because refinement would not remove ugly cells.
 
 The minimal and maximal edge lengths :math:`h_{max}` and :math:`h_{min}` are
-initialized automatically when constructing a mesh by determining the range of edge lengths occuring the grid.
+initialized automatically when constructing a mesh by determining the range of edge lengths occurring in the grid.
 
 Remark that :code:`markElements()` also checks the elements of the interface grid.
 Therefore, the interface will be refined and coarsened as well if edges of the interface get too long or too short.
@@ -151,7 +151,7 @@ Therefore, the interface will be refined and coarsened as well if edges of the i
 2. Adapt
 --------
 
-After marking elements the :code:`adapt()` routine performs the actual adaptation process.
+After marking elements, the :code:`adapt()` routine performs the actual adaptation process.
 The adaptation is performed by insertion and removal of points.
 
 .. tikz:: Inserting and removing points.
@@ -190,8 +190,8 @@ The adaptation is performed by insertion and removal of points.
   \draw[fill=black!10!red] (H) circle (2pt);
 
 
-- In each element that is marked for refinement the center of the longest edge is interserted, i.e. refinement is done via bisection.
-- In all elements marked for coarsening, one vertex is removed. Here, the vertex incident to the shortest edges of the cell is chosen, but we give priority on non-interface and non-boundary vertices.
+- In each element that is marked for refinement, the center of the longest edge is inserted, i.e., refinement is done via bisection.
+- In all elements marked for coarsening, one vertex is removed. Here, the vertex incident to the shortest edges of the cell is chosen, but we give priority to non-interface and non-boundary vertices.
 
 .. tikz:: Connected components.
   :xscale: 20
@@ -287,7 +287,7 @@ Though, we have to combine overlapping sets of these representatives.
 
 
 For a conservative projection of discrete functions we compute a cut-set triangulation
-which enables evalutation with agglomerated quadrature rules on triangles.
+which enables evaluation with agglomerated quadrature rules on triangles.
 Here, we prolong from an old cell onto such a cut triangle and prolong onto the new cell.
 This whole projection is performed under the hood and just assumes that you use the callback adaptation in dune-fem.
 We use a similar concept on the interface grid that enables projection of discrete functions on the interface.

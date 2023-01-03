@@ -4,9 +4,9 @@
 Installation
 ************
 
-In order to install and use Dune-MMesh on your system you need:
+To install and use Dune-MMesh on your system you need:
 
-C++ compiler (at least C++17 compatible, e.g. clang >= 5 or g++ >= 7),
+C++ compiler (at least C++17 compatible, e.g., clang >= 5 or g++ >= 7),
 CMake (3.13 or later),
 Python3 (3.7 or later) + pip (+ venv),
 pkg-config,
@@ -53,7 +53,7 @@ This requires that you have `venv` available (`apt install python3-venv`).
 
   pip install dune-mmesh
 
-Note that this takes some time in order to compile all dependent Dune modules.
+Note that this takes some time to compile all dependent Dune modules.
 
 Now, you should be able to execute Dune-MMesh's python code. For instance:
 
@@ -66,7 +66,7 @@ Now, you should be able to execute Dune-MMesh's python code. For instance:
 Remark that a `dune-py` module will be generated automatically that is necessary to perform the just-in-time compilation of DUNE python modules.
 
 Please be aware that we use `git-lfs` for uploading the `.msh` files.
-In order to pull them, please activate large file storage.
+To pull them, please activate large file storage.
 
 
 From Source
