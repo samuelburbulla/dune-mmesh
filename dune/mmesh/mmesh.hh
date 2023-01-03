@@ -7,9 +7,8 @@
  * \brief The MMesh include
  */
 
-#include "grid/declaration.hh"
 #include "cgal/defaults.hh"
 #include "cgal/triangulationwrapper.hh"
 #include "grid/mmesh.hh"
 
-#endif // DUNE_MMESH_MMESH_HH
+#endif  // DUNE_MMESH_MMESH_HH

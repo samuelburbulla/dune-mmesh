@@ -1,8 +1,10 @@
+"""Plane mesh file."""
+import gmsh
+
 filename = "plane.msh"
 h = 0.2
 hf = 0.05
 
-import gmsh
 gmsh.initialize()
 gmsh.option.setNumber("General.Verbosity", 0)
 gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)

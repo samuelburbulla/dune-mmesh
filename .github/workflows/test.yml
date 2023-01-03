@@ -24,6 +24,8 @@ jobs:
             sudo apt install libopenmpi-dev openmpi-bin libsuitesparse-dev gmsh libboost-all-dev libmpfr-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew update
+            brew install python@3.10 || true
+            brew install python@3.11 || true
             brew install openmpi suite-sparse gmsh boost mpfr
           fi
         shell: bash

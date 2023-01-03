@@ -1,8 +1,10 @@
+"""Vertical mesh file."""
+import gmsh
+
 filename = "vertical.msh"
 h = 0.05
 hf = 0.05
 
-import gmsh
 gmsh.initialize()
 gmsh.option.setNumber("General.Verbosity", 0)
 gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)

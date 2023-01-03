@@ -7,7 +7,7 @@ add_python_targets(mmesh
   _move
   _skeletontrace
   _solve
-  utility
+  _utility
 )
 
 set(PRECOMPILE

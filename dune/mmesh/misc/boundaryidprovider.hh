@@ -5,40 +5,34 @@
 
 #include <dune/fem/misc/boundaryidprovider.hh>
 
-namespace Dune
-{
+namespace Dune {
 
-  namespace Fem
-  {
+namespace Fem {
 
-    template <class HostGrid, int dim>
-    struct BoundaryIdProvider< MMesh<HostGrid,dim> >
-    {
-      typedef MMesh<HostGrid,dim> GridType;
+template <class HostGrid, int dim>
+struct BoundaryIdProvider<MMesh<HostGrid, dim> > {
+  typedef MMesh<HostGrid, dim> GridType;
 
-      template< class Intersection >
-      static int boundaryId ( const Intersection &intersection )
-      {
-        return (intersection.boundary() ? (intersection.impl().boundaryId()) : 0);
-      }
-    };
+  template <class Intersection>
+  static int boundaryId(const Intersection &intersection) {
+    return (intersection.boundary() ? (intersection.impl().boundaryId()) : 0);
+  }
+};
 
-    template <class MMesh>
-    struct BoundaryIdProvider< MMeshInterfaceGrid<MMesh> >
-    {
-      typedef MMeshInterfaceGrid<MMesh> GridType;
+template <class MMesh>
+struct BoundaryIdProvider<MMeshInterfaceGrid<MMesh> > {
+  typedef MMeshInterfaceGrid<MMesh> GridType;
 
-      template< class Intersection >
-      static int boundaryId ( const Intersection &intersection )
-      {
-        return (intersection.boundary() ? (intersection.impl().boundaryId()) : 0);
-      }
-    };
+  template <class Intersection>
+  static int boundaryId(const Intersection &intersection) {
+    return (intersection.boundary() ? (intersection.impl().boundaryId()) : 0);
+  }
+};
 
-  }  // namespace Fem
+}  // namespace Fem
 
-} // namespace Dune
+}  // namespace Dune
 
-#endif // #if HAVE_DUNE_FEM
+#endif  // #if HAVE_DUNE_FEM
 
-#endif // #ifndef DUNE_MMESH_MISC_TWISTUTILITY_HH
+#endif  // #ifndef DUNE_MMESH_MISC_TWISTUTILITY_HH

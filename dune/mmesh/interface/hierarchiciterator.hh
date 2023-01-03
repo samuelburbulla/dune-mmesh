@@ -7,63 +7,53 @@
  * \brief The MMeshInterfaceGridHierarchicIterator class
  */
 
-namespace Dune
-{
+namespace Dune {
 
-  //**********************************************************************
-  //
-  /** \brief Iterator over the descendants of an entity.
-   * \ingroup MMesh
-     Mesh entities of codimension 0 ("elements") allow to visit all entities of
-     codimension 0 obtained through nested, hierarchic refinement of the entity.
-     Iteration over this set of entities is provided by the HierarchicIterator,
-     starting from a given entity.
-   */
-  template<class GridImp>
-  class MMeshInterfaceGridHierarchicIterator
-  {
-  public:
-    enum {codimension = 0};
+//**********************************************************************
+//
+/** \brief Iterator over the descendants of an entity.
+ * \ingroup MMesh
+   Mesh entities of codimension 0 ("elements") allow to visit all entities of
+   codimension 0 obtained through nested, hierarchic refinement of the entity.
+   Iteration over this set of entities is provided by the HierarchicIterator,
+   starting from a given entity.
+ */
+template <class GridImp>
+class MMeshInterfaceGridHierarchicIterator {
+ public:
+  enum { codimension = 0 };
 
-    typedef typename GridImp::template Codim<0>::Entity Entity;
+  typedef typename GridImp::template Codim<0>::Entity Entity;
 
-    //! the default constructor of the iterator
-    explicit MMeshInterfaceGridHierarchicIterator(const GridImp* mMesh, const Entity& startEntity, int maxLevel) :
-      mMesh_(mMesh),
-      i_(0),
-      startEntity_(startEntity)
-    {}
+  //! the default constructor of the iterator
+  explicit MMeshInterfaceGridHierarchicIterator(const GridImp* mMesh,
+                                                const Entity& startEntity,
+                                                int maxLevel)
+      : mMesh_(mMesh), i_(0), startEntity_(startEntity) {}
 
-    //! the constructor of the end iterator
-    explicit MMeshInterfaceGridHierarchicIterator(const GridImp* mMesh, const Entity& startEntity, int maxLevel, bool endDummy) :
-      mMesh_(mMesh),
-      i_(1),
-      startEntity_(startEntity)
-    {}
+  //! the constructor of the end iterator
+  explicit MMeshInterfaceGridHierarchicIterator(const GridImp* mMesh,
+                                                const Entity& startEntity,
+                                                int maxLevel, bool endDummy)
+      : mMesh_(mMesh), i_(1), startEntity_(startEntity) {}
 
-    //! increment iterator
-    void increment()
-    {
-      ++i_;
-    }
+  //! increment iterator
+  void increment() { ++i_; }
 
-    //! dereference iterator
-    Entity dereference() const {
-      return startEntity_;
-    }
+  //! dereference iterator
+  Entity dereference() const { return startEntity_; }
 
-    //! compare iterators
-    bool equals(const MMeshInterfaceGridHierarchicIterator& other) const {
-      return startEntity_ == other.startEntity_ && i_ == other.i_;
-    }
+  //! compare iterators
+  bool equals(const MMeshInterfaceGridHierarchicIterator& other) const {
+    return startEntity_ == other.startEntity_ && i_ == other.i_;
+  }
 
-  private:
-    const GridImp* mMesh_;
-    int i_;
-    Entity startEntity_;
+ private:
+  const GridImp* mMesh_;
+  int i_;
+  Entity startEntity_;
+};
 
-  };
-
-} // end namespace Dune
+}  // end namespace Dune
 
 #endif

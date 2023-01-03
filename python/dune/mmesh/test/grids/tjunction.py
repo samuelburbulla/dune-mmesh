@@ -1,10 +1,10 @@
-# A rectangle grid with a T-shaped junction
+"""A rectangle grid with a T-shaped junction."""
+import gmsh
 
 name = "tjunction.msh"
 h = 0.1
 hf = 0.05
 
-import gmsh
 gmsh.initialize()
 gmsh.option.setNumber("General.Verbosity", 0)
 gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)

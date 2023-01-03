@@ -8,19 +8,18 @@
 #include "explicitgridfactory.hh"
 #include "implicitgridfactory.hh"
 
-namespace Dune
-{
+namespace Dune {
 
-  /** \brief specialization of the GridFactory for MMesh
-   *
-   *  \ingroup GridFactory
-   */
+/** \brief specialization of the GridFactory for MMesh
+ *
+ *  \ingroup GridFactory
+ */
 
-  //! Default grid factory for MMesh
-  template< class HostGrid, int dim >
-  class GridFactory< MMesh<HostGrid, dim> >
-   : public MMeshExplicitGridFactory< MMesh<HostGrid, dim> > {};
+//! Default grid factory for MMesh
+template <class HostGrid, int dim>
+class GridFactory<MMesh<HostGrid, dim> >
+    : public MMeshExplicitGridFactory<MMesh<HostGrid, dim> > {};
 
-} // end namespace Dune
+}  // end namespace Dune
 
 #endif

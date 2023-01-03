@@ -5,63 +5,52 @@
 
 #include <dune/fem/misc/capabilities.hh>
 
-namespace Dune
-{
+namespace Dune {
 
-  namespace Capabilities
-  {
+namespace Capabilities {
 
-    template< class HostGrid, int dim >
-    struct hasHierarchicIndexSet< MMesh< HostGrid, dim > >
-    {
-      static const bool v = false;
-    };
+template <class HostGrid, int dim>
+struct hasHierarchicIndexSet<MMesh<HostGrid, dim> > {
+  static const bool v = false;
+};
 
-  } // namespace Capabilities
+}  // namespace Capabilities
 
+namespace Fem {
 
-  namespace Fem
-  {
+namespace Capabilities {
 
-    namespace Capabilities
-    {
+template <class HostGrid, int dim>
+struct supportsCallbackAdaptation<MMesh<HostGrid, dim> > {
+  static const bool v = true;
+};
 
-      template< class HostGrid, int dim >
-      struct supportsCallbackAdaptation< MMesh< HostGrid, dim > >
-      {
-        static const bool v = true;
-      };
+template <class HostGrid, int dim>
+struct isLocallyAdaptive<MMesh<HostGrid, dim> > {
+  static const bool v = true;
+};
 
-      template< class HostGrid, int dim >
-      struct isLocallyAdaptive< MMesh< HostGrid, dim > >
-      {
-        static const bool v = true;
-      };
+template <class MMesh>
+struct supportsCallbackAdaptation<MMeshInterfaceGrid<MMesh> > {
+  static const bool v = true;
+};
 
-      template< class MMesh >
-      struct supportsCallbackAdaptation< MMeshInterfaceGrid< MMesh > >
-      {
-        static const bool v = true;
-      };
+template <class MMesh>
+struct isLocallyAdaptive<MMeshInterfaceGrid<MMesh> > {
+  static const bool v = true;
+};
 
-      template< class MMesh >
-      struct isLocallyAdaptive< MMeshInterfaceGrid< MMesh > >
-      {
-        static const bool v = true;
-      };
+template <class MMesh>
+struct isMMesh<MMeshInterfaceGrid<MMesh> > {
+  static const bool v = true;
+};
 
-      template< class MMesh >
-      struct isMMesh< MMeshInterfaceGrid< MMesh > >
-      {
-        static const bool v = true;
-      };
+}  // namespace Capabilities
 
-    } // namespace Capabilities
+}  // namespace Fem
 
-  } // namespace Fem
+}  // namespace Dune
 
-} // namespace Dune
+#endif  // #if HAVE_DUNE_FEM
 
-#endif // #if HAVE_DUNE_FEM
-
-#endif // #if DUNE_MMESH_MISC_CAPABILITIES_HH
+#endif  // #if DUNE_MMESH_MISC_CAPABILITIES_HH

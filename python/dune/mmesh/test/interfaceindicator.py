@@ -1,3 +1,7 @@
+"""Test interface indicator."""
+
+from ufl import TrialFunction, TestFunction, SpatialCoordinate, FacetNormal, inner, grad, dx, dS, ds, avg, conditional
+
 from dune.grid import reader
 from dune.mmesh import mmesh
 from dune.mmesh import interfaceIndicator
@@ -5,14 +9,11 @@ from dune.fem.space import lagrange
 from dune.fem.scheme import galerkin
 from dune.fem.function import integrate
 from dune.fem.view import geometryGridView
-from ufl import *
 
-# 2D
 from dune.mmesh.test.grids import line
-grid2 = mmesh((reader.gmsh, line.filename), 2)
-
-# 3D
 from dune.mmesh.test.grids import plane
+
+grid2 = mmesh((reader.gmsh, line.filename), 2)
 grid3  = mmesh((reader.gmsh, plane.filename), 3)
 
 # 2D GeometryGrid
@@ -45,4 +46,4 @@ for grid in [grid2, grid3, geoGrid]:
 
   intU = integrate(grid, uh, order=1)
   print(intU)
-  assert(abs(intU - 0.5) < 1e-2)
+  assert abs(intU - 0.5) < 1e-2
