@@ -7,11 +7,11 @@ import io
 import logging
 from dune.generator import builder
 from dune.common.hashit import hashIt
-from dune.ufl import GridFunction
 
 try:
   from dune.fem.function import cppFunction
   from dune.fem.space import lagrange, finiteVolume
+  from dune.ufl import GridFunction
   from ufl import avg
 except ImportError:
   pass

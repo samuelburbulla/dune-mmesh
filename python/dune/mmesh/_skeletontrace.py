@@ -4,8 +4,13 @@
 import logging
 import hashlib
 from dune.generator.generator import SimpleGenerator
-import dune.ufl
-import ufl
+
+try:
+  import dune.ufl
+  import ufl
+except ImportError:
+  pass
+
 logger = logging.getLogger(__name__)
 
 def skeleton(interfaceFunction, grid=None):
