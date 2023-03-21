@@ -362,9 +362,6 @@ class MMeshInterfaceGridGlobalIdSet
   enum { dimensionworld = std::remove_const<GridImp>::type::dimensionworld };
   enum { dimension = dimensionworld - 1 };
 
-  template <int codim>
-  using HostGridEntity = typename GridImp::template MMeshInterfaceEntity<codim>;
-
  public:
   //! constructor stores reference to a grid
   MMeshInterfaceGridGlobalIdSet(const GridImp* g) {}
