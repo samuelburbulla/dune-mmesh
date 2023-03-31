@@ -77,7 +77,7 @@ def trace(bulkFunction, igrid=None, restrictTo=None):
 
   if restrictTo is not None:
     if not restrictTo in ["+", "-"]:
-      raise Exception("restrictTo must be either "+" or "-"")
+      raise ValueError("restrictTo must be either "+" or "-"")
     return trace_p if restrictTo == "+" else trace_m
 
   if bulkFunction.scalar:
