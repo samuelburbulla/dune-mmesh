@@ -1,9 +1,7 @@
 name: Build Docker image
 
 on:
-  # schedule test for nightly build
-  schedule:
-    - cron: "0 0 * * 0"
+  push
 
   workflow_dispatch:
     inputs:
